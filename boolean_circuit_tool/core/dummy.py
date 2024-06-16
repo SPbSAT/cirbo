@@ -1,7 +1,5 @@
 """Just a dummy module."""
 
-from typing import Mapping
-
 __all__ = [
     "my_sum",
 ]
