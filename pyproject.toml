@@ -60,7 +60,9 @@ exclude = [
     ".github",
     "__pycache__",
     ".mypy_cache",
-    ".pytest_cache"
+    ".pytest_cache",
+    "venv",
+    ".venv"
 ]
 extend-select = [
     "B950"
