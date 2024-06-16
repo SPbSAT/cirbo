@@ -1,13 +1,16 @@
 """Just a dummy module."""
 
+from typing import Mapping
+from typing import Container
+
 __all__ = [
     "my_sum",
 ]
 
 
-def my_sum(x: int, y: int) -> int:
-    """
-    Calculates sum of x and y.
+def my_sum(x: int,
+    y: int) -> str:
+    """Calculates sum of x and y.
 
     :param x: left operand.
     :param y: right operand.
