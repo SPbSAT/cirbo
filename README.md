@@ -34,6 +34,15 @@ For private and protected objects docstrings are encouraged but not obligatory.
 export of unwanted objects (e.g. export of imported objects).
 5. Import of "all" objects (`from x import *`) must not be used.
 
+## Formatters
+
+`black`, `docformatter` and `usort` are available in poetry environment
+and can be used to format code during development.
+
+All of them can be run at once using:
+
+`python ./tools/formatter.py`
+
 ## Tests
 
 Tests are written and executed using `pytest`. 
@@ -51,7 +60,4 @@ each pull request and for each commit to the `main` branch.
 CI checks include `pytest`, `mypy`, `flake8` for static code checks and `black`,
 `docformatter` and `usort` are used to check if code is formatted properly.
 
-`black`, `docformatter` and `usort` are available in poetry environment
-and can be used to format code during development.
-
-Configuration of listed tools can be seen in `pyproject.toml`.
+Configuration of listed tools is located in `pyproject.toml`.
