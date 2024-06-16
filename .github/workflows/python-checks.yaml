@@ -52,10 +52,10 @@ jobs:
         with:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
-      - run: poetry shell
       - run: poetry install --no-interaction --no-root
         if: steps.cache-deps.outputs.cache-hit != 'true'
       - run: poetry install --no-interaction
+      - run: poetry shell
       - name: mypy
         if: always()
         run: poetry run mypy -p boolean_circuit_tool
