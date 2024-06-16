@@ -1,6 +1,10 @@
 # Boolean Circuit Tool
 
+
 ## Developer's environment
+
+Python >=3.9 is used to cover all currently
+[maintained versions](https://devguide.python.org/versions/).
 
 1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
 2. Setup virtual environment by running `poetry install`
@@ -56,6 +60,8 @@ repeat structure of main `boolean-circuit-tool` package.
 
 GitHub Actions are used for CI. Following checks are executed automatically for
 each pull request and for each commit to the `main` branch.
+
+Flow currently runs for `ubuntu` and `macos`, for python `3.9`.
 
 CI checks include `pytest`, `mypy`, `flake8` for static code checks and `black`,
 `docformatter` and `usort` are used to check if code is formatted properly.
