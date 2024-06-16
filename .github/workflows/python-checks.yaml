@@ -53,10 +53,10 @@ jobs:
         run: poetry run pytest
       - name: usort
         if: always()
-        run: poetry run usort check boolean_circuit_tool
+        run: poetry run usort check boolean_circuit_tool tools
       - name: docformatter
         if: always()
-        run: poetry run docformatter --check --diff boolean_circuit_tool/
+        run: poetry run docformatter --check --diff boolean_circuit_tool/ tools/
       - name: black
         if: always()
-        run: poetry run black --check --diff boolean_circuit_tool/ tests/
+        run: poetry run black --check --diff boolean_circuit_tool/ tests/ tools/
