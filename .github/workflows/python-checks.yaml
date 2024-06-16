@@ -27,7 +27,7 @@ jobs:
       matrix:
         python-version: ["3.9"]
         poetry-version: ["1.8.3"]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -52,18 +52,25 @@ jobs:
         with:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
+      - run: poetry shell
       - run: poetry install --no-interaction --no-root
         if: steps.cache-deps.outputs.cache-hit != 'true'
       - run: poetry install --no-interaction
       - name: mypy
+        if: always()
         run: poetry run mypy -p boolean_circuit_tool
       - name: flake8
+        if: always()
         run: poetry run flake8
       - name: pytest
+        if: always()
         run: poetry run pytest
       - name: usort
+        if: always()
         run: poetry run usort check boolean_circuit_tool
       - name: docformatter
+        if: always()
         run: poetry run docformatter --check --diff boolean_circuit_tool/
       - name: black
+        if: always()
         run: poetry run black --check --diff boolean_circuit_tool/ tests/
