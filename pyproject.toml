@@ -1,0 +1,87 @@
+[tool.poetry]
+name = "boolean-circuit-tool"
+version = "0.1.0"
+description = "Tools and utilities for boolean circuit manipulations."
+# TODO: list all authors.
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+# Temporary guard against occasional publishing.
+classifiers = [
+    "Private :: Do not Upload",
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+click = "^8.1.7"
+more-itertools = "^10.3.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.4.2"
+flake8 = "^7.1.0"
+flake8-bugbear = "^24.4.26"
+flake8-pyproject = "^1.2.3"
+mypy = "^1.9.0"
+pytest = "^8.2.2"
+usort = "^1.0.8.post1"
+docformatter = "^1.7.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+skip-string-normalization = 1
+
+[tool.flake8]
+max-line-length = 88
+statistics = true
+count = true
+show-source = true
+select = [
+    "E711",
+    "E74",
+    "E9",
+#    "F401",
+    "F406",
+    "F407",
+    "F5",
+    "F6",
+    "F7",
+    "F82",
+    "F83",
+    "F84",
+    "F9",
+    "N80",
+    "N818"
+]
+exclude = [
+    ".git",
+    ".github",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache"
+]
+extend-select = [
+    "B950"
+]
+extend-ignore = [
+    "F632",
+    # Following three are disabled for compatibility with black.
+    # https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#flake8
+    "E203",
+    "E501",
+    "E701"
+]
+
+[tool.usort]
+merge_imports = true
+
+[tool.docformatter]
+black = true
+blank = true
+recursive = true
+pre-summary-newline = true
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
