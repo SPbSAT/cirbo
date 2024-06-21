@@ -1,6 +1,6 @@
 import math
-from typing import Callable
 from itertools import product
+from typing import Callable
 
 
 __all__ = ['BooleanFunctionOut', 'BooleanFunction']
