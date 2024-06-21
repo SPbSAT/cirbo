@@ -3,16 +3,19 @@ from typing import Callable
 from itertools import product
 
 
+__all__ = ['BooleanFunctionOut', 'BooleanFunction']
+
+
 class BooleanFunctionOut:
 
     def __init__(self, size: int, at: Callable[[list[int]], int]):
         self.size = size
         self.at = at
 
-    def is_const(self) -> True:
+    def is_const(self) -> bool:
         value_set = set()
         for x in product((0, 1), repeat=self.size):
-            value = self.at(x)
+            value = self.at(list(x))
             value_set.add(value)
             if len(value_set) > 1:
                 return False
@@ -27,13 +30,17 @@ class BooleanFunction:
         self.outs = []
 
     @staticmethod
-    def from_truth_table(truth_table: list[list[int]]) -> 'BooleanFunction':
+    def from_truth_table(
+            truth_table: list[list[int]]
+    ) -> 'BooleanFunction':
         bf = BooleanFunction()
         bf.__set_up_by_truth_table(truth_table)
         return bf
 
     @staticmethod
-    def from_python_function(function: Callable[[list[int]], int], size: int) -> 'BooleanFunction':
+    def from_python_function(
+            function: Callable[[list[int]], int], size: int
+    ) -> 'BooleanFunction':
         bf = BooleanFunction()
         bf.__set_up_by_python_function(function, size)
         return bf
@@ -56,7 +63,9 @@ class BooleanFunction:
                 return truth_table[i][idx]
             self.outs.append(BooleanFunctionOut(self.in_size, at))
 
-    def __set_up_by_python_function(self, function: Callable[[list[int]], int], size: int):
+    def __set_up_by_python_function(
+            self, function: Callable[[list[int]], int], size: int
+    ):
         self.out_size = 1
         self.in_size = size
 
