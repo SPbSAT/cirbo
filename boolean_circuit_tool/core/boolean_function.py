@@ -30,16 +30,14 @@ class BooleanFunction:
         self.outs = []
 
     @staticmethod
-    def from_truth_table(
-            truth_table: list[list[int]]
-    ) -> 'BooleanFunction':
+    def from_truth_table(truth_table: list[list[int]]) -> 'BooleanFunction':
         bf = BooleanFunction()
         bf.__set_up_by_truth_table(truth_table)
         return bf
 
     @staticmethod
     def from_python_function(
-            function: Callable[[list[int]], int], size: int
+        function: Callable[[list[int]], int], size: int
     ) -> 'BooleanFunction':
         bf = BooleanFunction()
         bf.__set_up_by_python_function(function, size)
@@ -58,13 +56,15 @@ class BooleanFunction:
 
         self.outs = []
         for i in range(self.out_size):
+
             def at(x: list[int]) -> int:
                 idx = int(''.join(map(str, x)), 2)
                 return truth_table[i][idx]
+
             self.outs.append(BooleanFunctionOut(self.in_size, at))
 
     def __set_up_by_python_function(
-            self, function: Callable[[list[int]], int], size: int
+        self, function: Callable[[list[int]], int], size: int
     ):
         self.out_size = 1
         self.in_size = size
