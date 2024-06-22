@@ -12,7 +12,7 @@ class BooleanFunctionOut:
         self.size = size
         self.at = at
 
-    def is_const(self) -> bool:
+    def is_constant(self) -> bool:
         value_set = set()
         for x in product((0, 1), repeat=self.size):
             value = self.at(list(x))
@@ -20,6 +20,40 @@ class BooleanFunctionOut:
             if len(value_set) > 1:
                 return False
         return True
+
+    def does_depend_on_input(self, index: int) -> bool:
+        for x in product((0, 1), repeat=self.size):
+            value1 = self.at(x)
+            x[index] = not x[index]
+            value2 = self.at(x)
+            if value1 != value2:
+                return True
+        return False
+
+    def get_significant_inputs(self) -> list[int]:
+        result = []
+        for i in range(self.size):
+            if self.does_depend_on_input(i):
+                result.append(i)
+        return result
+
+    def is_symmetric(self) -> bool:
+        for negations in product((0, 1), repeat=self.size):
+            values = {}
+            symmetric = True
+            for x in product((0, 1), repeat=self.size):
+                amount = sum(
+                    [x[i] * (1 if negations[i] else -1) for i in range(self.size)]
+                )
+                value = self.at(x)
+                if amount not in values:
+                    values[amount] = value
+                elif values[amount] != values:
+                    symmetric = False
+                    break
+            if symmetric:
+                return True
+        return False
 
 
 class BooleanFunction:
