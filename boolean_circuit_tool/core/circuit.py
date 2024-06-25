@@ -145,13 +145,9 @@ class Circuit:
         :return: modified circuit
 
         """
-        new_inputs = set()
-        for input in self.input_gates:
-            if input == old_label:
-                new_inputs.add(new_label)
-            else:
-                new_inputs.add(input)
-        self.input_gates = new_inputs
+        if old_label in self.input_gates:
+            self.input_gates.remove(old_label)
+            self.input_gates.add(new_label)
 
         new_gates = {}
         for gate_label, gate in self.gates.items():
@@ -176,15 +172,10 @@ class Circuit:
 
         self.gates = new_gates
 
+        if old_label in self.output_gates:
+            self.output_gates.remove(old_label)
+            self.output_gates.add(new_label)
 
-        new_outputs = set()
-        for output in self.output_gates:
-            if output == old_label:
-                new_outputs.add(new_label)
-            else:
-                new_outputs.add(output)
-        self.output_gates = new_outputs
-        
         return self
 
     def mark_as_output(self, label: GateLabel) -> None:
