@@ -1,6 +1,6 @@
 import math
 from itertools import product
-from typing import Callable
+from typing import Callable, Optional
 
 
 __all__ = ['BooleanFunctionOut', 'BooleanFunction']
@@ -21,7 +21,33 @@ class BooleanFunctionOut:
                 return False
         return True
 
-    def does_depend_on_input(self, index: int) -> bool:
+    def is_monotonous(self) -> bool:
+        ones_started = False
+        for x in product((0, 1), repeat=self.size):
+            value = self.at(list(x))
+            if not ones_started and value:
+                ones_started = True
+            elif ones_started and not value:
+                return False
+        return True
+
+    def depends_only_on_input(self, index: int) -> bool:
+        return self.depends_only_on_input_and_negation(index) is not None
+
+    def depends_only_on_input_and_negation(self, index: int) -> Optional[int]:
+        for negation in (0, 1):
+            eq = True
+            for x in product((0, 1), repeat=self.size):
+                value = self.at(x)
+                var = x[index]
+                if value != (not var if negation else var):
+                    eq = False
+                    break
+            if eq:
+                return negation
+        return None
+
+    def depends_on_input(self, index: int) -> bool:
         for x in product((0, 1), repeat=self.size):
             value1 = self.at(x)
             x[index] = not x[index]
@@ -33,11 +59,14 @@ class BooleanFunctionOut:
     def get_significant_inputs(self) -> list[int]:
         result = []
         for i in range(self.size):
-            if self.does_depend_on_input(i):
+            if self.depends_on_input(i):
                 result.append(i)
         return result
 
     def is_symmetric(self) -> bool:
+        return self.get_symmetric_and_negations() is not None
+
+    def get_symmetric_and_negations(self) -> Optional[list[int]]:
         for negations in product((0, 1), repeat=self.size):
             values = {}
             symmetric = True
@@ -52,8 +81,8 @@ class BooleanFunctionOut:
                     symmetric = False
                     break
             if symmetric:
-                return True
-        return False
+                return negations
+        return None
 
 
 class BooleanFunction:
