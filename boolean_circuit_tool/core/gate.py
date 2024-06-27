@@ -7,6 +7,7 @@ __all__ = [
     'Gate',
     'GateLabel',
     'GateType',
+    'GateAssign',
 ]
 
 GateLabel = str
@@ -26,6 +27,12 @@ class GateType(enum.Enum):
     IFF = "IFF"
     BUFF = "BUFF"
     MUX = "MUX"
+
+
+class GateAssign(enum.Enum):
+    UNDEFINED = -1
+    FALSE = False
+    TRUE = True
 
 
 class Gate:

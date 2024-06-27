@@ -24,7 +24,7 @@ INPUT(E)\n
 
     assert instance.gates.keys() == {'B', 'C'}
     assert instance.gates['B'].label == 'B'
-    assert instance.gates['B'].gate_type == GateType.NOT    
+    assert instance.gates['B'].gate_type == GateType.NOT
     assert tuple(instance.gates['B'].operands) == ('A',)
 
     assert instance.gates['C'].label == 'C'

@@ -1,8 +1,10 @@
 """Functions that evaluate different operators."""
 
 import functools
+import operator
 
-import operators
+
+# TODO нужно ли поддерживать UNDEFINED ?
 
 __all__ = [
     'not_',
@@ -38,7 +40,7 @@ def nor_(arg1: bool, arg2: bool, *args: bool) -> bool:
 
 
 def xor_(arg1: bool, arg2: bool, *args: bool) -> bool:
-    return functools.reduce(operators.xor_, (arg1, arg2, *args))
+    return functools.reduce(operator.xor, (arg1, arg2, *args))
 
 
 def nxor_(arg1: bool, arg2: bool, *args: bool) -> bool:

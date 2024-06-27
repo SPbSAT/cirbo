@@ -2,14 +2,26 @@
 
 import collections
 import logging
-import os
 import typing as tp
 
 import typing_extensions as tp_ext
 
-from boolean_circuit_tool.core.gate import Gate, GateLabel, GateType
-from boolean_circuit_tool.core.utils.validation import check_init_gates, check_not_exist_gates_label
-
+from boolean_circuit_tool.core.gate import Gate, GateAssign, GateLabel, GateType
+from boolean_circuit_tool.core.operators import (
+    and_,
+    iff_,
+    mux_,
+    nand_,
+    nor_,
+    not_,
+    nxor_,
+    or_,
+    xor_,
+)
+from boolean_circuit_tool.core.utils.validation import (
+    check_init_gates,
+    check_not_exist_gates_label,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +41,9 @@ class Circuit:
 
     TODO: Circuit also implements BooleanFunction protocol, allowing
     it to be used as boolean function and providing related checks.
+    TODO def save_to_file
+    TODO def draw
+    TODO def top_sort
 
     """
 
@@ -50,11 +65,18 @@ class Circuit:
         self.output_gates: set[GateLabel] = set()
         self.gates: dict[GateLabel:Gate] = {}
 
-    # TODO def save_to_file
-
-    # TODO def draw
-
-    # TODO def top_sort
+        self._operators: tp.Dict[GateType, tp.Callable] = {
+            GateType.NOT: not_,
+            GateType.AND: and_,
+            GateType.NAND: nand_,
+            GateType.OR: or_,
+            GateType.NOR: nor_,
+            GateType.XOR: xor_,
+            GateType.NXOR: nxor_,
+            GateType.IFF: iff_,
+            GateType.BUFF: iff_,
+            GateType.MUX: mux_,
+        }
 
     def add_gate(self, gate: Gate) -> tp_ext.Self:
         """
@@ -100,7 +122,7 @@ class Circuit:
 
     def _add_gate(self, gate: Gate) -> tp_ext.Self:
         """
-        Add gate in the ciurcuit without checking the initialization of operands.
+        Add gate in the ciurcuit without any checkings.
 
         :param: gate
         :return: circuit with new gate
@@ -121,7 +143,7 @@ class Circuit:
         **kwargs,
     ) -> tp_ext.Self:
         """
-        Add gate in the ciurcuit without checking the initialization of operands.
+        Add gate in the ciurcuit without any checkings.
 
         :mandatory param label: new gate's label :mandatory param gate_type: new gate's
         type of operator :mandatory param operands: new gate's operands :optional params
@@ -182,7 +204,10 @@ class Circuit:
         check_init_gates((label,), self)
         self.output_gates.add(label)
 
-    def evaluate_circuit(self, assigment: tp.List[bool]) -> bool:
+    def evaluate_circuit(
+        self,
+        assigment: tp.List[bool],
+    ) -> bool:  # или мы хотим вектор значений выходов схемы
         """
         Evaluate the circuit with the given input values.
 
@@ -191,14 +216,32 @@ class Circuit:
         """
         assert len(assigment) == len(self.input_gates)
 
-        assigment_dict = collections.defaultdict(-1)
-        for i, input in enumerate(self.input_gates):
+        assigment_dict = collections.defaultdict(lambda: GateAssign.UNDEFINED.value)
+        for i, input in enumerate(sorted(self.input_gates)):
             assigment_dict[input] = assigment[i]
 
-        for gate in self.gates:
-            pass
+        queue_ = list()
 
-        return 0
+        for output in self.output_gates:
+            queue_.append(self.gates[output])
+
+        for gate in queue_:
+            for operand in gate.operands:
+                if operand not in self.input_gates:
+                    queue_.append(self.gates[operand])
+
+        for gate in reversed(queue_):
+            for operand in gate.operands:
+                assert (
+                    operand in assigment_dict
+                    and assigment_dict[operand] != GateAssign.UNDEFINED.value
+                )
+            if gate.label not in assigment_dict:
+                assigment_dict[gate.label] = self._operators[gate.gate_type](
+                    *[assigment_dict[op] for op in gate.operands]
+                )
+
+        return all([assigment_dict[output] for output in self.output_gates])
 
     @property
     def gates_number(self):
