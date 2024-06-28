@@ -2,7 +2,7 @@
 package."""
 
 __all__ = [
-    'BooleanCircuitToolException',
+    'BooleanCircuitToolError',
 ]
 
 

@@ -41,8 +41,8 @@ class Gate:
     def __init__(
         self,
         label: GateLabel,
-        gate_type: tp.Optional[GateType] = None,
-        operands: tp.Optional[tp.Tuple[GateLabel]] = None,
+        gate_type: GateType,
+        operands: tuple[GateLabel, ...] = (),
     ):
         self._label = label
         self._gate_type = gate_type
@@ -54,7 +54,7 @@ class Gate:
         return self._label
 
     @property
-    def gate_type(self) -> tp.Optional[GateType]:
+    def gate_type(self) -> GateType:
         """Return gate's type."""
         return self._gate_type
 
@@ -68,4 +68,4 @@ class Gate:
         return f"{self.__class__.__name__}({self._label}, {self._gate_type}, {self._operands})"
 
     def __str__(self):
-        return f"{self._label} = {self._gate_type.value}({', '.join(self._operands)})"
+        return f"{self._label} = {self.gate_type.value}({', '.join(self._operands)})"

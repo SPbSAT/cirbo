@@ -5,13 +5,13 @@ import typing as tp
 from boolean_circuit_tool.core.exceptions import CircuitValidationError
 from boolean_circuit_tool.core.gate import GateLabel
 
-__all__ = ['check_init_operands', 'check_not_exist_gates_label']
+__all__ = ['check_init_gates', 'check_not_exist_gates_label']
 
 if tp.TYPE_CHECKING:
     from boolean_circuit_tool.core.circuit import Circuit
 
 
-def check_init_gates(operands: tuple[GateLabel], circuit: 'Circuit') -> None:
+def check_init_gates(operands: tuple[GateLabel, ...], circuit: 'Circuit') -> None:
     """Check initializations operands into the circuit."""
     for operand in operands:
         if (

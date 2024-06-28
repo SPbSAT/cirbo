@@ -63,7 +63,7 @@ class Circuit:
     def __init__(self):
         self.input_gates: set[GateLabel] = set()
         self.output_gates: set[GateLabel] = set()
-        self.gates: dict[GateLabel:Gate] = {}
+        self.gates: dict[GateLabel, Gate] = {}
 
         self._operators: tp.Dict[GateType, tp.Callable] = {
             GateType.NOT: not_,
@@ -90,7 +90,7 @@ class Circuit:
         if gate.gate_type == GateType.INPUT:
             self.input_gates.add(gate.label)
         else:
-            check_init_gates(gate.operands, self)
+            check_init_gates(tuple(gate.operands), self)
             self.gates[gate.label] = gate
 
         return self
@@ -99,7 +99,7 @@ class Circuit:
         self,
         label: GateLabel,
         gate_type: GateType,
-        operands: tp.Optional[tp.Tuple[GateLabel]] = None,
+        operands: tuple[GateLabel, ...] = (),
         **kwargs,
     ) -> tp_ext.Self:
         """
@@ -139,7 +139,7 @@ class Circuit:
         self,
         label: GateLabel,
         gate_type: GateType,
-        operands: tp.Optional[tp.Tuple[GateLabel]] = None,
+        operands: tuple[GateLabel, ...] = (),
         **kwargs,
     ) -> tp_ext.Self:
         """
@@ -216,7 +216,7 @@ class Circuit:
         """
         assert len(assigment) == len(self.input_gates)
 
-        assigment_dict = collections.defaultdict(lambda: GateAssign.UNDEFINED.value)
+        assigment_dict: dict = collections.defaultdict(lambda: GateAssign.UNDEFINED.value)
         for i, input in enumerate(sorted(self.input_gates)):
             assigment_dict[input] = assigment[i]
 

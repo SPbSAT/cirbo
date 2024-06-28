@@ -5,8 +5,7 @@ import logging
 import typing as tp
 
 from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.core.exceptions import CircuitValidationError
-from boolean_circuit_tool.core.gate import GateLabel, GateType
+from boolean_circuit_tool.core.gate import GateType
 from boolean_circuit_tool.core.parser.abstract import AbstractParser
 from boolean_circuit_tool.core.utils.validation import check_init_gates
 
@@ -27,13 +26,6 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     elements of which are BENCH instance lines.
 
     Any derived class must implement methods of Operator Gate processing.
-    Since some operators could be defined using others, minimal complete
-    definition of class is:
-        _process_iff(...);
-        _process_and(...);
-        _process_or(...);
-        _process_xor(...);
-        _eof(...).
 
     :attribute gate_to_integer_dict - carries mapping of gate
     names to their unique integer encoding.
@@ -77,11 +69,11 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             # Operator Gate
             return self._process_operator_gate(line)
 
-    def _parse_operator_gate(self, line: str) -> tp.Tuple[str, int, tp.List[int]]:
+    def _parse_operator_gate(self, line: str) -> tuple[str, str, tp.List[str]]:
         """
         Parses line with operator gate.
 
-        :returns (operator: str, result_gate: int, operands: List[int]).
+        :returns (operator: str, result_gate: str, operands: List[str]).
 
         """
 
@@ -115,15 +107,6 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
         except KeyError:
             raise ValueError(f"Unknown operator {_operator}!")
 
-    def _process_nand(self, out: int, arg1: int, arg2: int, *args: int):
-        return self._process_and(-out, arg1, arg2, *args)
-
-    def _process_nor(self, out: int, arg1: int, arg2: int, *args: int):
-        return self._process_or(-out, arg1, arg2, *args)
-
-    def _process_nxor(self, out: int, arg1: int, arg2: int):
-        return self._process_xor(-out, arg1, arg2)
-
     @abc.abstractmethod
     def _process_input_gate(self, line: str) -> list:
         """Parses line with input gate."""
@@ -135,27 +118,39 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _process_not(self, out: int, arg: int):
+    def _process_not(self, out: str, arg: str):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _process_and(self, out: int, arg1: int, arg2: int, *args: int):
+    def _process_and(self, out: str, arg1: str, arg2: str, *args: str):
+        raise NotImplementedError()
+    
+    @abc.abstractmethod
+    def _process_nand(self, out: str, arg1: str, arg2: str, *args: str):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _process_or(self, out: int, arg1: int, arg2: int, *args: int):
+    def _process_or(self, out: str, arg1: str, arg2: str, *args: str):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _process_xor(self, out: int, arg1: int, arg2: int):
+    def _process_nor(self, out: str, arg1: str, arg2: str, *args: str):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _process_iff(self, out: int, arg: int):
+    def _process_xor(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+    
+    @abc.abstractmethod
+    def _process_nxor(self, out: str, arg1: str, arg2: str):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _process_mux(self, out: int, arg1: int, arg2: int, arg3: int):
+    def _process_iff(self, out: str, arg: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_mux(self, out: str, arg1: str, arg2: str, arg3: str):
         raise NotImplementedError()
 
 
@@ -175,7 +170,7 @@ class BenchToCircuit(AbstractBenchParser):
     def _eof(self) -> tp.Iterable:
         """Check initializations all operands into the circuit."""
         for _, gate in self._circuit.gates.items():
-            res = check_init_gates(tuple(gate.operands), self._circuit)
+            check_init_gates(tuple(gate.operands), self._circuit)
         return []
 
     def _add_gate(self, out: str, gate_type: GateType, arg1: str, *args: str):
@@ -201,29 +196,29 @@ class BenchToCircuit(AbstractBenchParser):
         self._circuit.output_gates.add(_gate)
         return []
 
-    def _process_not(self, out: int, arg: int):
+    def _process_not(self, out: str, arg: str):
         return self._add_gate(out, GateType.NOT, arg)
 
-    def _process_xor(self, out: int, arg1: int, arg2: int):
-        return self._add_gate(out, GateType.XOR, arg1, arg2)
+    def _process_xor(self, out: str, arg1: str, arg2: str, *args: str):
+        return self._add_gate(out, GateType.XOR, arg1, arg2, *args)
 
-    def _process_nxor(self, out: int, arg1: int, arg2: int):
-        return self._add_gate(out, GateType.NXOR, arg1, arg2)
+    def _process_nxor(self, out: str, arg1: str, arg2: str, *args: str):
+        return self._add_gate(out, GateType.NXOR, arg1, arg2, *args)
 
-    def _process_or(self, out: int, arg1: int, arg2: int, *args: int):
+    def _process_or(self, out: str, arg1: str, arg2: str, *args: str):
         return self._add_gate(out, GateType.OR, arg1, arg2, *args)
 
-    def _process_nor(self, out: int, arg1: int, arg2: int, *args: int):
+    def _process_nor(self, out: str, arg1: str, arg2: str, *args: str):
         return self._add_gate(out, GateType.NOR, arg1, arg2, *args)
 
-    def _process_and(self, out: int, arg1: int, arg2: int, *args: int):
+    def _process_and(self, out: str, arg1: str, arg2: str, *args: str):
         return self._add_gate(out, GateType.AND, arg1, arg2, *args)
 
-    def _process_nand(self, out: int, arg1: int, arg2: int, *args: int):
+    def _process_nand(self, out: str, arg1: str, arg2: str, *args: str):
         return self._add_gate(out, GateType.NAND, arg1, arg2, *args)
 
-    def _process_iff(self, out: int, arg: int):
+    def _process_iff(self, out: str, arg: str):
         return self._add_gate(out, GateType.IFF, arg)
 
-    def _process_mux(self, out: int, arg1: int, arg2: int, arg3: int):
+    def _process_mux(self, out: str, arg1: str, arg2: str, arg3: str):
         return self._add_gate(out, GateType.MUX, arg1, arg2, arg3)

@@ -66,7 +66,7 @@ OUTPUT(C)\n
 B = OR(A, D)\n
 """
     try:
-        instance = Circuit().from_bench(file_input.split("\n"))
+        Circuit().from_bench(file_input.split("\n"))
         assert False
     except CircuitValidationError:
         assert True
