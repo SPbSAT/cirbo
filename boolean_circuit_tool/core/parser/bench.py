@@ -124,7 +124,7 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _process_and(self, out: str, arg1: str, arg2: str, *args: str):
         raise NotImplementedError()
-    
+
     @abc.abstractmethod
     def _process_nand(self, out: str, arg1: str, arg2: str, *args: str):
         raise NotImplementedError()
@@ -140,7 +140,7 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _process_xor(self, out: str, arg1: str, arg2: str):
         raise NotImplementedError()
-    
+
     @abc.abstractmethod
     def _process_nxor(self, out: str, arg1: str, arg2: str):
         raise NotImplementedError()

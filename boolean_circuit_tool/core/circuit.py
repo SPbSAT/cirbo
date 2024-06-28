@@ -216,7 +216,9 @@ class Circuit:
         """
         assert len(assigment) == len(self.input_gates)
 
-        assigment_dict: dict = collections.defaultdict(lambda: GateAssign.UNDEFINED.value)
+        assigment_dict: dict = collections.defaultdict(
+            lambda: GateAssign.UNDEFINED.value
+        )
         for i, input in enumerate(sorted(self.input_gates)):
             assigment_dict[input] = assigment[i]
 
