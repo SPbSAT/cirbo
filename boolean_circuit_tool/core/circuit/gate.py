@@ -1,7 +1,18 @@
-"""Implementation gate's class."""
+"""Module defines Gate and related objects."""
 
 import enum
 import typing as tp
+
+from boolean_circuit_tool.core.circuit.operators import (
+    and_,
+    iff_,
+    nand_,
+    nor_,
+    not_,
+    nxor_,
+    or_,
+    xor_,
+)
 
 __all__ = [
     'Gate',
@@ -26,7 +37,6 @@ class GateType(enum.Enum):
     NXOR = "NXOR"
     IFF = "IFF"
     BUFF = "BUFF"
-    MUX = "MUX"
 
 
 class GateAssign(enum.Enum):
@@ -64,8 +74,27 @@ class Gate:
         for oper in self._operands:
             yield oper
 
+    @property
+    def operator(self):
+        return {
+            GateType.NOT: not_,
+            GateType.AND: and_,
+            GateType.NAND: nand_,
+            GateType.OR: or_,
+            GateType.NOR: nor_,
+            GateType.XOR: xor_,
+            GateType.NXOR: nxor_,
+            GateType.IFF: iff_,
+            GateType.BUFF: iff_,
+        }[self._gate_type]
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self._label}, {self._gate_type}, {self._operands})"
 
     def __str__(self):
-        return f"{self._label} = {self.gate_type.value}({', '.join(self._operands)})"
+        if self.gate_type == GateType.INPUT:
+            return f"INPUT({self._label})"
+        else:
+            return (
+                f"{self._label} = {self.gate_type.value}({', '.join(self._operands)})"
+            )

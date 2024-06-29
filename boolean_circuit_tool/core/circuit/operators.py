@@ -1,4 +1,11 @@
-"""Functions that evaluate different operators."""
+"""
+Functions that evaluate different operators.
+
+(!) Since not is reserved in python, an underscore was added to the function name (not_)
+to evaluate this operator, and for consistency, an underscore was added to all other
+functions too
+
+"""
 
 import functools
 import operator
@@ -15,7 +22,6 @@ __all__ = [
     'xor_',
     'nxor_',
     'iff_',
-    'mux_',
 ]
 
 
@@ -49,7 +55,3 @@ def nxor_(arg1: bool, arg2: bool, *args: bool) -> bool:
 
 def iff_(arg: bool) -> bool:
     return arg
-
-
-def mux_(arg1: bool, arg2: bool, arg3: bool) -> bool:
-    return arg3 if arg1 else arg2

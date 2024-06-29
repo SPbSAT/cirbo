@@ -19,7 +19,7 @@ class AbstractParser(metaclass=abc.ABCMeta):
 
     """
 
-    def convert(self, stream: tp.Iterable) -> tp.Iterable:
+    def convert(self, stream: tp.Iterable[str]) -> tp.Iterable:
         """
         Defines way elements are being collected from <stream>, and yields parsing
         result when possible.

@@ -1,6 +1,8 @@
-from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.core.exceptions import CircuitValidationError
-from boolean_circuit_tool.core.gate import Gate, GateType
+import pytest
+
+from boolean_circuit_tool.core.circuit.circuit import Circuit
+from boolean_circuit_tool.core.circuit.exceptions import CircuitValidationError
+from boolean_circuit_tool.core.circuit.gate import Gate, GateType
 
 
 def test_create_circuit():
@@ -11,7 +13,7 @@ def test_create_circuit():
     assert instance.gates_number == 1
     assert instance.input_gates == {'A'}
     assert instance.output_gates == set()
-    assert instance.gates == {}
+    assert instance.gates.keys() == {'A'}
 
     instance.add_gate(Gate('B', GateType.NOT, ('A',)))
     instance.add_gate(Gate('C', GateType.AND, ('A', 'B')))
@@ -21,7 +23,11 @@ def test_create_circuit():
     assert instance.input_gates == {'A'}
     assert instance.output_gates == {'C'}
 
-    assert instance.gates.keys() == {'B', 'C'}
+    assert instance.gates.keys() == {'A', 'B', 'C'}
+    assert instance.gates['A'].label == 'A'
+    assert instance.gates['A'].gate_type == GateType.INPUT
+    assert tuple(instance.gates['A'].operands) == ()
+
     assert instance.gates['B'].label == 'B'
     assert instance.gates['B'].gate_type == GateType.NOT
     assert tuple(instance.gates['B'].operands) == ('A',)
@@ -30,17 +36,11 @@ def test_create_circuit():
     assert instance.gates['C'].gate_type == GateType.AND
     assert tuple(instance.gates['C'].operands) == ('A', 'B')
 
-    try:
+    with pytest.raises(CircuitValidationError):
         instance.add_gate(Gate('A', GateType.OR, ('B', 'C')))
-        assert False
-    except CircuitValidationError:
-        assert True
 
-    try:
+    with pytest.raises(CircuitValidationError):
         instance.add_gate(Gate('D', GateType.OR, ('B', 'V')))
-        assert False
-    except CircuitValidationError:
-        assert True
 
 
 def test_rename_gate():
@@ -58,7 +58,11 @@ def test_rename_gate():
     assert instance.input_gates == {'V'}
     assert instance.output_gates == {'C'}
 
-    assert instance.gates.keys() == {'B', 'C'}
+    assert instance.gates.keys() == {'V', 'B', 'C'}
+    assert instance.gates['V'].label == 'V'
+    assert instance.gates['V'].gate_type == GateType.INPUT
+    assert tuple(instance.gates['V'].operands) == ()
+
     assert instance.gates['B'].label == 'B'
     assert instance.gates['B'].gate_type == GateType.NOT
     assert tuple(instance.gates['B'].operands) == ('V',)
@@ -73,7 +77,11 @@ def test_rename_gate():
     assert instance.input_gates == {'V'}
     assert instance.output_gates == {'C'}
 
-    assert instance.gates.keys() == {'B', 'C'}
+    assert instance.gates.keys() == {'V', 'B', 'C'}
+    assert instance.gates['V'].label == 'V'
+    assert instance.gates['V'].gate_type == GateType.INPUT
+    assert tuple(instance.gates['V'].operands) == ()
+
     assert instance.gates['B'].label == 'B'
     assert instance.gates['B'].gate_type == GateType.NOT
     assert tuple(instance.gates['B'].operands) == ('V',)
@@ -92,8 +100,8 @@ def test_evaluate_gate():
     instance.add_gate(Gate('C', GateType.AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    assert instance.evaluate_circuit([True]) == False
-    assert instance.evaluate_circuit([False]) == False
+    assert instance.evaluate_circuit({'A': True}) == False
+    assert instance.evaluate_circuit({'A': False}) == False
 
     instance = Circuit()
 
@@ -102,15 +110,15 @@ def test_evaluate_gate():
     instance.add_gate(Gate('C', GateType.NOT, ('A',)))
     instance.add_gate(Gate('D', GateType.OR, ('A', 'B')))
     instance.add_gate(Gate('E', GateType.XOR, ('A', 'C')))
-    instance.add_gate(Gate('F', GateType.MUX, ('A', 'C', 'B')))
+    instance.add_gate(Gate('F', GateType.AND, ('B', 'C')))
     instance.mark_as_output('D')
     instance.mark_as_output('E')
     instance.mark_as_output('F')
 
-    assert instance.evaluate_circuit([True, True]) == True
-    assert instance.evaluate_circuit([False, True]) == True
-    assert instance.evaluate_circuit([True, False]) == False
-    assert instance.evaluate_circuit([False, False]) == False
+    assert instance.evaluate_circuit({'A': True, 'B': True}) == False
+    assert instance.evaluate_circuit({'A': False, 'B': True}) == True
+    assert instance.evaluate_circuit({'A': True, 'B': False}) == False
+    assert instance.evaluate_circuit({'A': False, 'B': False}) == False
 
     instance = Circuit()
 
@@ -121,7 +129,7 @@ def test_evaluate_gate():
     instance.add_gate(Gate('E', GateType.OR, ('C', 'D')))
     instance.mark_as_output('E')
 
-    assert instance.evaluate_circuit([True, True]) == True
-    assert instance.evaluate_circuit([False, True]) == False
-    assert instance.evaluate_circuit([True, False]) == True
-    assert instance.evaluate_circuit([False, False]) == False
+    assert instance.evaluate_circuit({'A': True, 'B': True}) == True
+    assert instance.evaluate_circuit({'A': False, 'B': True}) == False
+    assert instance.evaluate_circuit({'A': True, 'B': False}) == True
+    assert instance.evaluate_circuit({'A': False, 'B': False}) == False

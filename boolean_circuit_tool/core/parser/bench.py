@@ -4,10 +4,10 @@ import abc
 import logging
 import typing as tp
 
-from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.core.gate import GateType
+from boolean_circuit_tool.core.circuit.circuit import Circuit
+from boolean_circuit_tool.core.circuit.gate import GateType
+from boolean_circuit_tool.core.circuit.validation import check_gates_exist
 from boolean_circuit_tool.core.parser.abstract import AbstractParser
-from boolean_circuit_tool.core.utils.validation import check_init_gates
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
         super(AbstractBenchParser, self).__init__(*args, **kwargs)
         # Dict of specific processing methods for gates
-        self._processings: tp.Dict[str, tp.Callable] = {
+        self._processings: dict[str, tp.Callable] = {
             GateType.NOT.value: self._process_not,
             GateType.AND.value: self._process_and,
             GateType.NAND.value: self._process_nand,
@@ -51,10 +51,9 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             GateType.NXOR.value: self._process_nxor,
             GateType.IFF.value: self._process_iff,
             GateType.BUFF.value: self._process_iff,
-            GateType.MUX.value: self._process_mux,
         }
 
-    def _process_line(self, line: str) -> tp.Iterable[str]:
+    def _process_line(self, line: str) -> tp.Iterable:
         logger.debug(f'Parsing line: "{line}"')
         if line == '' or line == '\n' or line[0] == '#':
             # Empty or comment line
@@ -69,7 +68,7 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             # Operator Gate
             return self._process_operator_gate(line)
 
-    def _parse_operator_gate(self, line: str) -> tuple[str, str, tp.List[str]]:
+    def _parse_operator_gate(self, line: str) -> tuple[str, str, list[str]]:
         """
         Parses line with operator gate.
 
@@ -149,10 +148,6 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     def _process_iff(self, out: str, arg: str):
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def _process_mux(self, out: str, arg1: str, arg2: str, arg3: str):
-        raise NotImplementedError()
-
 
 class BenchToCircuit(AbstractBenchParser):
     """Parser that processes stream of .bench file lines and returns new Circuit
@@ -162,7 +157,7 @@ class BenchToCircuit(AbstractBenchParser):
         super(BenchToCircuit, self).__init__(*args, **kwargs)
         self._circuit = Circuit()
 
-    def convert_to_circuit(self, stream: tp.Iterable) -> Circuit:
+    def convert_to_circuit(self, stream: tp.Iterable[str]) -> Circuit:
         for _ in self.convert(stream):
             pass
         return self._circuit
@@ -170,7 +165,7 @@ class BenchToCircuit(AbstractBenchParser):
     def _eof(self) -> tp.Iterable:
         """Check initializations all operands into the circuit."""
         for _, gate in self._circuit.gates.items():
-            check_init_gates(tuple(gate.operands), self._circuit)
+            check_gates_exist(tuple(gate.operands), self._circuit)
         return []
 
     def _add_gate(self, out: str, gate_type: GateType, arg1: str, *args: str):
@@ -219,6 +214,3 @@ class BenchToCircuit(AbstractBenchParser):
 
     def _process_iff(self, out: str, arg: str):
         return self._add_gate(out, GateType.IFF, arg)
-
-    def _process_mux(self, out: str, arg1: str, arg2: str, arg3: str):
-        return self._add_gate(out, GateType.MUX, arg1, arg2, arg3)

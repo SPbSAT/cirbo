@@ -1,26 +1,14 @@
-"""Implementation circuit's class."""
+"""Module contains implementation of Circuit class."""
 
-import collections
 import logging
 import typing as tp
 
 import typing_extensions as tp_ext
 
-from boolean_circuit_tool.core.gate import Gate, GateAssign, GateLabel, GateType
-from boolean_circuit_tool.core.operators import (
-    and_,
-    iff_,
-    mux_,
-    nand_,
-    nor_,
-    not_,
-    nxor_,
-    or_,
-    xor_,
-)
-from boolean_circuit_tool.core.utils.validation import (
-    check_init_gates,
-    check_not_exist_gates_label,
+from boolean_circuit_tool.core.circuit.gate import Gate, GateAssign, GateLabel, GateType
+from boolean_circuit_tool.core.circuit.validation import (
+    check_gate_lable_doesnt_exist,
+    check_gates_exist,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,7 +36,7 @@ class Circuit:
     """
 
     @staticmethod
-    def from_bench(stream: tp.Iterable) -> "Circuit":
+    def from_bench(stream: tp.Iterable[str]) -> "Circuit":
         """
         Initialization the circuit with given data.
 
@@ -65,19 +53,6 @@ class Circuit:
         self.output_gates: set[GateLabel] = set()
         self.gates: dict[GateLabel, Gate] = {}
 
-        self._operators: tp.Dict[GateType, tp.Callable] = {
-            GateType.NOT: not_,
-            GateType.AND: and_,
-            GateType.NAND: nand_,
-            GateType.OR: or_,
-            GateType.NOR: nor_,
-            GateType.XOR: xor_,
-            GateType.NXOR: nxor_,
-            GateType.IFF: iff_,
-            GateType.BUFF: iff_,
-            GateType.MUX: mux_,
-        }
-
     def add_gate(self, gate: Gate) -> tp_ext.Self:
         """
         Add gate in the ciurcuit.
@@ -86,12 +61,11 @@ class Circuit:
         :return: circuit with new gate
 
         """
-        check_not_exist_gates_label(gate.label, self)
+        check_gate_lable_doesnt_exist(gate.label, self)
+        check_gates_exist(tuple(gate.operands), self)
+        self.gates[gate.label] = gate
         if gate.gate_type == GateType.INPUT:
             self.input_gates.add(gate.label)
-        else:
-            check_init_gates(tuple(gate.operands), self)
-            self.gates[gate.label] = gate
 
         return self
 
@@ -111,12 +85,11 @@ class Circuit:
         :return: circuit with new gate
 
         """
-        check_not_exist_gates_label(label, self)
+        check_gate_lable_doesnt_exist(label, self)
+        check_gates_exist(operands, self)
+        self.gates[label] = Gate(label, gate_type, operands, **kwargs)
         if gate_type == GateType.INPUT:
             self.input_gates.add(label)
-        else:
-            check_init_gates(operands, self)
-            self.gates[label] = Gate(label, gate_type, operands, **kwargs)
 
         return self
 
@@ -128,10 +101,9 @@ class Circuit:
         :return: circuit with new gate
 
         """
+        self.gates[gate.label] = gate
         if gate.gate_type == GateType.INPUT:
             self.input_gates.add(gate.label)
-        else:
-            self.gates[gate.label] = gate
 
         return self
 
@@ -151,10 +123,9 @@ class Circuit:
         :return: circuit with new gate
 
         """
+        self.gates[label] = Gate(label, gate_type, operands, **kwargs)
         if gate_type == GateType.INPUT:
             self.input_gates.add(label)
-        else:
-            self.gates[label] = Gate(label, gate_type, operands, **kwargs)
 
         return self
 
@@ -173,12 +144,10 @@ class Circuit:
 
         new_gates = {}
         for gate_label, gate in self.gates.items():
-
             if gate_label == old_label:
                 new_gates[new_label] = Gate(
                     new_label, gate.gate_type, tuple(gate.operands)
                 )
-
             elif old_label in list(gate.operands):
                 new_gates[gate_label] = Gate(
                     gate.label,
@@ -188,10 +157,8 @@ class Circuit:
                         for oper in gate.operands
                     ),
                 )
-
             else:
                 new_gates[gate_label] = self.gates[gate_label]
-
         self.gates = new_gates
 
         if old_label in self.output_gates:
@@ -201,12 +168,12 @@ class Circuit:
         return self
 
     def mark_as_output(self, label: GateLabel) -> None:
-        check_init_gates((label,), self)
+        check_gates_exist((label,), self)
         self.output_gates.add(label)
 
     def evaluate_circuit(
         self,
-        assigment: tp.List[bool],
+        assigment: dict[str, bool],
     ) -> bool:  # или мы хотим вектор значений выходов схемы
         """
         Evaluate the circuit with the given input values.
@@ -214,13 +181,8 @@ class Circuit:
         :param assigment: assigment for inputs
 
         """
-        assert len(assigment) == len(self.input_gates)
-
-        assigment_dict: dict = collections.defaultdict(
-            lambda: GateAssign.UNDEFINED.value
-        )
-        for i, input in enumerate(sorted(self.input_gates)):
-            assigment_dict[input] = assigment[i]
+        assert sorted(self.input_gates) == sorted(assigment.keys())
+        assigment_dict: dict[str, bool] = assigment.copy()
 
         queue_ = list()
 
@@ -229,8 +191,7 @@ class Circuit:
 
         for gate in queue_:
             for operand in gate.operands:
-                if operand not in self.input_gates:
-                    queue_.append(self.gates[operand])
+                queue_.append(self.gates[operand])
 
         for gate in reversed(queue_):
             for operand in gate.operands:
@@ -239,7 +200,7 @@ class Circuit:
                     and assigment_dict[operand] != GateAssign.UNDEFINED.value
                 )
             if gate.label not in assigment_dict:
-                assigment_dict[gate.label] = self._operators[gate.gate_type](
+                assigment_dict[gate.label] = gate.operator(
                     *[assigment_dict[op] for op in gate.operands]
                 )
 
@@ -247,8 +208,8 @@ class Circuit:
 
     @property
     def gates_number(self):
-        """Return number of gates with inputs."""
-        return len(self.gates) + len(self.input_gates)
+        """Return number of gates."""
+        return len(self.gates)
 
     def __str__(self):
         s = ''
@@ -258,7 +219,8 @@ class Circuit:
         s += '\n'
 
         for gate in self.gates:
-            s += f'{gate}\n'
+            if gate.gate_type != GateType.INPUT:
+                s += f'{gate}\n'
         s += '\n'
 
         for output_label in self.output_gates:
