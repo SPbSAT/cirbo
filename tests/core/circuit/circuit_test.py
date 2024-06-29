@@ -3,6 +3,7 @@ import pytest
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.exceptions import CircuitValidationError
 from boolean_circuit_tool.core.circuit.gate import Gate, GateType
+from boolean_circuit_tool.core.circuit.operators import GateAssign
 
 
 def test_create_circuit():
@@ -100,8 +101,11 @@ def test_evaluate_gate():
     instance.add_gate(Gate('C', GateType.AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    assert instance.evaluate_circuit({'A': True}) == False
-    assert instance.evaluate_circuit({'A': False}) == False
+    assert instance.evaluate_circuit({'A': GateAssign.TRUE}) == GateAssign.FALSE
+    assert instance.evaluate_circuit({'A': GateAssign.FALSE}) == GateAssign.FALSE
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.UNDEFINED}) == GateAssign.UNDEFINED
+    )
 
     instance = Circuit()
 
@@ -109,27 +113,47 @@ def test_evaluate_gate():
     instance.add_gate(Gate('B', GateType.INPUT))
     instance.add_gate(Gate('C', GateType.NOT, ('A',)))
     instance.add_gate(Gate('D', GateType.OR, ('A', 'B')))
-    instance.add_gate(Gate('E', GateType.XOR, ('A', 'C')))
-    instance.add_gate(Gate('F', GateType.AND, ('B', 'C')))
+    instance.add_gate(Gate('E', GateType.XOR, ('A', 'B')))
+    instance.add_gate(Gate('F', GateType.AND, ('B', 'D')))
     instance.mark_as_output('D')
     instance.mark_as_output('E')
     instance.mark_as_output('F')
 
-    assert instance.evaluate_circuit({'A': True, 'B': True}) == False
-    assert instance.evaluate_circuit({'A': False, 'B': True}) == True
-    assert instance.evaluate_circuit({'A': True, 'B': False}) == False
-    assert instance.evaluate_circuit({'A': False, 'B': False}) == False
-
-    instance = Circuit()
-
-    instance.add_gate(Gate('A', GateType.INPUT))
-    instance.add_gate(Gate('B', GateType.INPUT))
-    instance.add_gate(Gate('C', GateType.AND, ('A', 'B')))
-    instance.add_gate(Gate('D', GateType.OR, ('A', 'C')))
-    instance.add_gate(Gate('E', GateType.OR, ('C', 'D')))
-    instance.mark_as_output('E')
-
-    assert instance.evaluate_circuit({'A': True, 'B': True}) == True
-    assert instance.evaluate_circuit({'A': False, 'B': True}) == False
-    assert instance.evaluate_circuit({'A': True, 'B': False}) == True
-    assert instance.evaluate_circuit({'A': False, 'B': False}) == False
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.FALSE, 'B': GateAssign.FALSE})
+        == GateAssign.FALSE
+    )
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.FALSE, 'B': GateAssign.TRUE})
+        == GateAssign.TRUE
+    )
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.FALSE, 'B': GateAssign.UNDEFINED})
+        == GateAssign.UNDEFINED
+    )
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.TRUE, 'B': GateAssign.FALSE})
+        == GateAssign.FALSE
+    )
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.TRUE, 'B': GateAssign.TRUE})
+        == GateAssign.FALSE
+    )
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.TRUE, 'B': GateAssign.UNDEFINED})
+        == GateAssign.UNDEFINED
+    )
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.UNDEFINED, 'B': GateAssign.FALSE})
+        == GateAssign.FALSE
+    )
+    assert (
+        instance.evaluate_circuit({'A': GateAssign.UNDEFINED, 'B': GateAssign.TRUE})
+        == GateAssign.UNDEFINED
+    )
+    assert (
+        instance.evaluate_circuit(
+            {'A': GateAssign.UNDEFINED, 'B': GateAssign.UNDEFINED}
+        )
+        == GateAssign.UNDEFINED
+    )

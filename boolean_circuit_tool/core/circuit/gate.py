@@ -14,12 +14,7 @@ from boolean_circuit_tool.core.circuit.operators import (
     xor_,
 )
 
-__all__ = [
-    'Gate',
-    'GateLabel',
-    'GateType',
-    'GateAssign',
-]
+__all__ = ['Gate', 'GateLabel', 'GateType']
 
 GateLabel = str
 
@@ -37,12 +32,6 @@ class GateType(enum.Enum):
     NXOR = "NXOR"
     IFF = "IFF"
     BUFF = "BUFF"
-
-
-class GateAssign(enum.Enum):
-    UNDEFINED = -1
-    FALSE = False
-    TRUE = True
 
 
 class Gate:
