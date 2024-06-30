@@ -7,11 +7,14 @@ functions too
 
 """
 
-import enum
 import functools
+import typing as tp
+
+from boolean_circuit_tool.core.circuit.exceptions import GateStateError
 
 __all__ = [
-    'GateAssign',
+    'GateState',
+    'Undefined',
     'iff_',
     'not_',
     'and_',
@@ -23,92 +26,127 @@ __all__ = [
 ]
 
 
-class GateAssign(enum.Enum):
-    FALSE = 0
-    TRUE = 1
-    UNDEFINED = 2
+class _Undefined:
+    def __bool__(self):
+        raise GateStateError("Bool can't be created from Undefined state.")
+
+    def __eq__(self, rhs):
+        return isinstance(rhs, _Undefined)
+
+    def __hash__(self):
+        return hash('Undefined')
 
 
+# To be similar to False and True.
+Undefined = _Undefined()
+
+GateState = tp.Union[bool, _Undefined]
 GateStateNumber: int = 3
 
-
-def iff_(arg: GateAssign) -> GateAssign:
-    return [
-        GateAssign.FALSE,  # arg = GateAssign.FALSE
-        GateAssign.TRUE,  # arg = GateAssign.TRUE
-        GateAssign.UNDEFINED,  # arg = GateAssign.UNDEFINED
-    ][arg.value]
+_state_to_index_map: tp.Dict[GateState, int] = {
+    False: 0,
+    True: 1,
+    Undefined: 2,
+}
 
 
-def not_(arg: GateAssign) -> GateAssign:
-    return [
-        GateAssign.TRUE,  # arg = GateAssign.FALSE
-        GateAssign.FALSE,  # arg = GateAssign.TRUE
-        GateAssign.UNDEFINED,  # arg = GateAssign.UNDEFINED
-    ][arg.value]
+def index_from_state(state: GateState) -> int:
+    """
+    :return: index of `state` in [False, True, Undefined] array,
+             suitable for truth table encodings.
+
+    """
+    return _state_to_index_map[state]
 
 
-def _and(arg1: GateAssign, arg2: GateAssign) -> GateAssign:
-    return [
-        GateAssign.FALSE,  # arg1 = GateAssign.FALSE
-        GateAssign.FALSE,
-        GateAssign.FALSE,
-        GateAssign.FALSE,  # arg1 = GateAssign.TRUE
-        GateAssign.TRUE,
-        GateAssign.UNDEFINED,
-        GateAssign.FALSE,  # arg1 = GateAssign.UNDEFINED
-        GateAssign.UNDEFINED,
-        GateAssign.UNDEFINED,
-    ][arg1.value * GateStateNumber + arg2.value]
+_not: list[GateState] = [
+    True,  # arg = False
+    False,  # arg = True
+    Undefined,  # arg = Undefined
+]
 
 
-def and_(arg1: GateAssign, arg2: GateAssign, *args: GateAssign) -> GateAssign:
-    return functools.reduce(_and, (arg1, arg2, *args))
+def not_(arg: GateState) -> GateState:
+    return _not[index_from_state(arg)]
 
 
-def nand_(arg1: GateAssign, arg2: GateAssign, *args: GateAssign) -> GateAssign:
+def iff_(arg: GateState) -> GateState:
+    return arg
+
+
+_and: list[GateState] = [
+    False,  # arg1 = False
+    False,
+    False,
+    False,  # arg1 = True
+    True,
+    Undefined,
+    False,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
+
+
+def and_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
+    return functools.reduce(
+        lambda p1, p2: _and[
+            index_from_state(p1) * GateStateNumber + index_from_state(p2)
+        ],
+        (arg1, arg2, *args),
+    )
+
+
+def nand_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
     return not_(and_(arg1, arg2, *args))
 
 
-def _or(arg1: GateAssign, arg2: GateAssign) -> GateAssign:
-    return [
-        GateAssign.FALSE,  # arg1 = GateAssign.FALSE
-        GateAssign.TRUE,
-        GateAssign.UNDEFINED,
-        GateAssign.TRUE,  # arg1 = GateAssign.TRUE
-        GateAssign.TRUE,
-        GateAssign.TRUE,
-        GateAssign.UNDEFINED,  # arg1 = GateAssign.UNDEFINED
-        GateAssign.TRUE,
-        GateAssign.UNDEFINED,
-    ][arg1.value * GateStateNumber + arg2.value]
+_or_truth_table: list[GateState] = [
+    False,  # arg1 = False
+    True,
+    Undefined,
+    True,  # arg1 = True
+    True,
+    True,
+    Undefined,  # arg1 = Undefined
+    True,
+    Undefined,
+]
 
 
-def or_(arg1: GateAssign, arg2: GateAssign, *args: GateAssign) -> GateAssign:
-    return functools.reduce(_or, (arg1, arg2, *args))
+def or_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
+    return functools.reduce(
+        lambda p1, p2: _or_truth_table[
+            index_from_state(p1) * GateStateNumber + index_from_state(p2)
+        ],
+        (arg1, arg2, *args),
+    )
 
 
-def nor_(arg1: GateAssign, arg2: GateAssign, *args: GateAssign) -> GateAssign:
+def nor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
     return not_(or_(arg1, arg2, *args))
 
 
-def _xor(arg1: GateAssign, arg2: GateAssign) -> GateAssign:
-    return [
-        GateAssign.FALSE,  # arg1 = GateAssign.FALSE
-        GateAssign.TRUE,
-        GateAssign.UNDEFINED,
-        GateAssign.TRUE,  # arg1 = GateAssign.TRUE
-        GateAssign.FALSE,
-        GateAssign.UNDEFINED,
-        GateAssign.UNDEFINED,  # arg1 = GateAssign.UNDEFINED
-        GateAssign.UNDEFINED,
-        GateAssign.UNDEFINED,
-    ][arg1.value * GateStateNumber + arg2.value]
+_xor: list[GateState] = [
+    False,  # arg1 = False
+    True,
+    Undefined,
+    True,  # arg1 = True
+    False,
+    Undefined,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
 
 
-def xor_(arg1: GateAssign, arg2: GateAssign, *args: GateAssign) -> GateAssign:
-    return functools.reduce(_xor, (arg1, arg2, *args))
+def xor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
+    return functools.reduce(
+        lambda p1, p2: _xor[
+            index_from_state(p1) * GateStateNumber + index_from_state(p2)
+        ],
+        (arg1, arg2, *args),
+    )
 
 
-def nxor_(arg1: GateAssign, arg2: GateAssign, *args: GateAssign) -> GateAssign:
+def nxor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
     return not_(xor_(arg1, arg2, *args))

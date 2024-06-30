@@ -6,7 +6,7 @@ import typing as tp
 import typing_extensions as tp_ext
 
 from boolean_circuit_tool.core.circuit.gate import Gate, GateLabel, GateType
-from boolean_circuit_tool.core.circuit.operators import and_, GateAssign
+from boolean_circuit_tool.core.circuit.operators import and_, GateState, Undefined
 from boolean_circuit_tool.core.circuit.validation import (
     check_gate_lable_doesnt_exist,
     check_gates_exist,
@@ -174,8 +174,8 @@ class Circuit:
 
     def evaluate_circuit(
         self,
-        assigment: dict[str, GateAssign],
-    ) -> GateAssign:  # или мы хотим вектор значений выходов схемы
+        assigment: dict[str, GateState],
+    ) -> GateState:  # или мы хотим вектор значений выходов схемы
         """
         Evaluate the circuit with the given input values.
 
@@ -186,7 +186,7 @@ class Circuit:
         assigment_dict = dict()
         for input in self.input_gates:
             assigment_dict[input] = (
-                assigment[input] if input in assigment else GateAssign.UNDEFINED
+                assigment[input] if input in assigment else Undefined
             )
 
         queue_ = list()
@@ -204,9 +204,7 @@ class Circuit:
                     *[assigment_dict[op] for op in gate.operands]
                 )
 
-        return and_(
-            GateAssign.TRUE, *[assigment_dict[output] for output in self.output_gates]
-        )
+        return and_(True, *[assigment_dict[output] for output in self.output_gates])
 
     @property
     def gates_number(self):
