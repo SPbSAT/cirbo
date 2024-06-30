@@ -74,7 +74,7 @@ def iff_(arg: GateState) -> GateState:
     return arg
 
 
-_and: list[GateState] = [
+_and_truth_table: list[GateState] = [
     False,  # arg1 = False
     False,
     False,
@@ -89,7 +89,7 @@ _and: list[GateState] = [
 
 def and_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
     return functools.reduce(
-        lambda p1, p2: _and[
+        lambda p1, p2: _and_truth_table[
             index_from_state(p1) * GateStateNumber + index_from_state(p2)
         ],
         (arg1, arg2, *args),
@@ -126,7 +126,7 @@ def nor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
     return not_(or_(arg1, arg2, *args))
 
 
-_xor: list[GateState] = [
+_xor_truth_table: list[GateState] = [
     False,  # arg1 = False
     True,
     Undefined,
@@ -141,7 +141,7 @@ _xor: list[GateState] = [
 
 def xor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
     return functools.reduce(
-        lambda p1, p2: _xor[
+        lambda p1, p2: _xor_truth_table[
             index_from_state(p1) * GateStateNumber + index_from_state(p2)
         ],
         (arg1, arg2, *args),
