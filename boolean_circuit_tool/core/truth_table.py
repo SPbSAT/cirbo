@@ -1,5 +1,5 @@
 import itertools
-
+import typing as tp
 from boolean_function import BooleanFunction
 
 
