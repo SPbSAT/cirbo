@@ -1,6 +1,7 @@
 import itertools
 import typing as tp
-from boolean_function import BooleanFunction
+import math
+from boolean_circuit_tool.core.boolean_function import BooleanFunction
 
 
 __all__ = ['TruthTable']
@@ -10,7 +11,7 @@ class TruthTable(BooleanFunction):
     def __init__(self, values: list[list[bool]]):
         self.__values = values
         self.__output_size = len(values)
-        self.__input_size = len(values[0])
+        self.__input_size = int(math.log2(len(values[0])))
 
     def input_size(self) -> int:
         return self.__input_size
@@ -79,16 +80,16 @@ class TruthTable(BooleanFunction):
         return result
 
     def is_out_symmetric(self, out_index: int) -> bool:
-        return self.get_out_symmetric_and_negations(out_index) is not None
+        return self.get_out_symmetric_and_negations([out_index]) is not None
 
     def is_symmetric(self) -> bool:
-        return all([self.is_out_symmetric(i) for i in range(self.output_size())])
+        return self.get_out_symmetric_and_negations(list(range(self.output_size()))) is not None
 
     def get_out_symmetric_and_negations(
-        self, out_index: int
+        self, out_indexes: list[int]
     ) -> tp.Optional[list[bool]]:
         for negations in itertools.product((0, 1), repeat=self.input_size()):
-            values = {}
+            saved_values = [{}] * len(out_indexes)
             symmetric = True
             for x in itertools.product((0, 1), repeat=self.input_size()):
                 amount = sum(
@@ -97,11 +98,14 @@ class TruthTable(BooleanFunction):
                         for i in range(self.input_size())
                     ]
                 )
-                value = self.evaluate(x)[out_index]
-                if amount not in values:
-                    values[amount] = value
-                elif values[amount] != values:
-                    symmetric = False
+                values = self.evaluate(x)
+                for index in out_indexes:
+                    if amount not in saved_values[index]:
+                        saved_values[index][amount] = values[index]
+                    elif saved_values[index][amount] != values[index]:
+                        symmetric = False
+                        break
+                if not symmetric:
                     break
             if symmetric:
                 return negations
