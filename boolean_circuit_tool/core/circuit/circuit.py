@@ -1,6 +1,7 @@
 """Module contains implementation of Circuit class."""
 
 import logging
+import pathlib
 import typing as tp
 
 import typing_extensions as tp_ext
@@ -30,7 +31,6 @@ class Circuit:
 
     TODO: Circuit also implements BooleanFunction protocol, allowing
     it to be used as boolean function and providing related checks.
-    TODO def save_to_file
     TODO def draw
     TODO def top_sort
 
@@ -53,6 +53,21 @@ class Circuit:
         self.input_gates: set[GateLabel] = set()
         self.output_gates: set[GateLabel] = set()
         self.gates: dict[GateLabel, Gate] = {}
+
+    @property
+    def inputs(self) -> set[GateLabel]:
+        """Return set of inputs."""
+        return self.input_gates
+
+    @property
+    def outputs(self) -> set[GateLabel]:
+        """Return set of outpus."""
+        return self.output_gates
+
+    @property
+    def gates_number(self):
+        """Return number of gates."""
+        return len(self.gates)
 
     def add_gate(self, gate: Gate) -> tp_ext.Self:
         """
@@ -206,24 +221,29 @@ class Circuit:
 
         return and_(True, *[assigment_dict[output] for output in self.output_gates])
 
-    @property
-    def gates_number(self):
-        """Return number of gates."""
-        return len(self.gates)
+    def save_to_file(self, path: str) -> None:
+        """
+        " Save circuit to file.
+
+        :param path: path to file with file's name and file's extention
+
+        """
+        p = pathlib.Path(path)
+        if not p.parent.exists():
+            p.parent.mkdir(parents=True, exist_ok=False)
+        p.write_text(str(self))
 
     def __str__(self):
-        s = ''
+        input_str = '\n'.join(
+            f'INPUT({input_label})' for input_label in self.input_gates
+        )
+        gates_str = '\n'.join(
+            str(gate)
+            for gate in self.gates.values()
+            if gate.gate_type != GateType.INPUT
+        )
+        output_str = '\n'.join(
+            f'OUTPUT({output_label})' for output_label in self.output_gates
+        )
 
-        for input_label in self.input_gates:
-            s += f'INPUT({input_label})\n'
-        s += '\n'
-
-        for gate in self.gates:
-            if gate.gate_type != GateType.INPUT:
-                s += f'{gate}\n'
-        s += '\n'
-
-        for output_label in self.output_gates:
-            s += f'OUTPUT({output_label})\n'
-
-        return s
+        return f"{input_str}\n\n{gates_str}\n\n{output_str}"
