@@ -222,8 +222,8 @@ class Circuit:
         return and_(True, *[assigment_dict[output] for output in self.output_gates])
 
     def save_to_file(self, path: str) -> None:
-        """
-        Save circuit to file.
+        """ 
+        " Save circuit to file.
 
         :param path: path to file with file's name and file's extention
 

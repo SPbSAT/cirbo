@@ -1,8 +1,0 @@
-INPUT(D)
-INPUT(A)
-INPUT(E)
-
-B = NOT(A)
-C = AND(A, B)
-
-OUTPUT(C)
