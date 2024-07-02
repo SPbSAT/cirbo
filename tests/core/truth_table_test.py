@@ -29,28 +29,54 @@ def check_evaluate_by_size(input_size: int, output_size: int):
 
 
 def test_is_out_constant():
-    check_is_out_constant_by_size(3, 3)
-    check_is_out_constant_by_size(5, 1)
-    check_is_out_constant_by_size(6, 2)
-    check_is_out_constant_by_size(7, 2)
+    check_is_out_constant_by_size(3)
+    check_is_out_constant_by_size(4)
+    check_is_out_constant_by_size(5)
+    check_is_out_constant_by_size(6)
+    check_is_out_constant_by_size(7)
 
 
-def check_is_out_constant_by_size(input_size: int, output_size: int):
+def check_is_out_constant_by_size(input_size: int):
     constant_out = [False] * (2 ** input_size)
-    outs = generate_random_truth_table(input_size, output_size - 1)
-    outs.append(constant_out)
-    truth_table = TruthTable(outs)
-    for i in range(output_size - 1):
-        assert not truth_table.is_out_constant(i)
-    assert truth_table.is_out_constant(output_size - 1)
+    truth_table = TruthTable([constant_out])
+    assert truth_table.is_out_constant(0)
+    assert truth_table.is_constant()
 
 
-def check_is_out_monotonic_by_size(input_size: int, output_size: int):
+def test_is_out_monotonic():
+    check_is_out_monotonic_by_size(3)
+    check_is_out_monotonic_by_size(4)
+    check_is_out_monotonic_by_size(5)
+    check_is_out_monotonic_by_size(6)
+    check_is_out_monotonic_by_size(7)
+
+
+def check_is_out_monotonic_by_size(input_size: int):
     false_count = random.randint(0, 2**input_size)
     monotonic_out = [False] * false_count + [True] * (2**input_size - false_count)
-    outs = generate_random_truth_table(input_size, output_size - 1)
-    outs.append(monotonic_out)
-    truth_table = TruthTable(outs)
-    for i in range(output_size - 1):
-        assert not truth_table.is_out_monotonic(i)
-    assert truth_table.is_out_monotonic(output_size - 1)
+    truth_table = TruthTable([monotonic_out])
+    assert truth_table.is_out_monotonic(0)
+    assert truth_table.is_monotonic()
+
+
+def generate_sum(input_size: int) -> list[bool]:
+    return [bin(i)[2:].count('1') > input_size / 2 for i in range(2**input_size)]
+
+
+def generate_out_by_mask(input_size: int, mask: list[int]) -> list[bool]:
+    s = generate_sum(len(mask))
+    out = []
+    for i in range(2**input_size):
+        st = bin(i)[2:]
+        st = '0' * (input_size - len(st)) + st
+        idx = int(''.join([st[j] for j in mask]), 2)
+        out.append(s[idx])
+    return out
+
+
+def test_get_significant_inputs():
+    input_size = 6
+    mask = [0, 1, 4]
+    out = generate_out_by_mask(input_size, mask)
+    truth_table = TruthTable([out])
+    assert truth_table.get_out_significant_inputs(0) == mask

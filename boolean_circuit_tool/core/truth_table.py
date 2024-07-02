@@ -50,6 +50,7 @@ class TruthTable(BooleanFunction):
 
     def is_out_dependent_from_input(self, output_index: int, input_index: int) -> bool:
         for x in itertools.product((0, 1), repeat=self.input_size()):
+            x = list(x)
             value1 = self.evaluate(x)[output_index]
             x[input_index] = not x[input_index]
             value2 = self.evaluate(x)[output_index]
