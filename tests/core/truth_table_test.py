@@ -59,8 +59,17 @@ def check_is_out_monotonic_by_size(input_size: int):
     assert truth_table.is_monotonic()
 
 
-def generate_sum(input_size: int) -> list[bool]:
-    return [bin(i)[2:].count('1') > input_size / 2 for i in range(2**input_size)]
+def generate_sum(input_size: int, negations: list[bool] = None) -> list[bool]:
+    lst = []
+    for i in range(2**input_size):
+        b = bin(i)[2:]
+        b = '0' * (input_size - len(b)) + b
+        b = [int(v) for v in b]
+        if negations is not None:
+            b = [b[i] ^ negations[i] for i in range(len(b))]
+        s = b.count(1)
+        lst.append(s > input_size / 2)
+    return lst
 
 
 def generate_out_by_mask(input_size: int, mask: list[int]) -> list[bool]:
@@ -80,3 +89,29 @@ def test_get_significant_inputs():
     out = generate_out_by_mask(input_size, mask)
     truth_table = TruthTable([out])
     assert truth_table.get_out_significant_inputs(0) == mask
+
+
+def test_is_out_dependent_from_input():
+    input_size = 6
+    mask = [0, 1, 4]
+    out = generate_out_by_mask(input_size, mask)
+    truth_table = TruthTable([out])
+    for i in range(input_size):
+        assert truth_table.is_out_dependent_from_input(0, i) == (i in mask)
+
+
+def test_get_out_is_input_negation():
+    input_size = 3
+    mask = [1]
+    out = generate_out_by_mask(input_size, mask)
+    truth_table = TruthTable([out])
+    assert truth_table.get_out_is_input_negation(0, 1) == 0
+
+
+def test_is_out_symmetric():
+    negations = [False, True, True, False, True]
+    out = generate_sum(5, negations)
+    truth_table = TruthTable([out])
+    neg = truth_table.get_out_symmetric_and_negations([0])
+    assert neg is not None
+    assert neg == negations

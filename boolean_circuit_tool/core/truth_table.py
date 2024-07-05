@@ -109,5 +109,5 @@ class TruthTable(BooleanFunction):
                 if not symmetric:
                     break
             if symmetric:
-                return negations
+                return [bool(v) for v in negations]
         return None
