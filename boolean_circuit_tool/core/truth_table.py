@@ -1,6 +1,7 @@
 import itertools
-import typing as tp
 import math
+import typing as tp
+
 from boolean_circuit_tool.core.boolean_function import BooleanFunction
 
 
@@ -84,7 +85,10 @@ class TruthTable(BooleanFunction):
         return self.get_out_symmetric_and_negations([out_index]) is not None
 
     def is_symmetric(self) -> bool:
-        return self.get_out_symmetric_and_negations(list(range(self.output_size()))) is not None
+        return (
+            self.get_out_symmetric_and_negations(list(range(self.output_size())))
+            is not None
+        )
 
     def get_out_symmetric_and_negations(
         self, out_indexes: list[int]

@@ -1,7 +1,8 @@
 import random
 
-import pytest
 import numpy as np
+
+import pytest
 from boolean_circuit_tool.core.truth_table import TruthTable
 
 
@@ -21,7 +22,7 @@ def check_evaluate_by_size(input_size: int, output_size: int):
     values = generate_random_truth_table(input_size, output_size)
     truth_table = TruthTable(values)
     values = np.array(values).T.tolist()
-    for i in range(2 ** input_size):
+    for i in range(2**input_size):
         input_str = bin(i)[2:]
         input_str = '0' * (input_size - len(input_str)) + input_str
         input_values = list(map(lambda x: bool(int(x)), list(input_str)))
@@ -37,7 +38,7 @@ def test_is_out_constant():
 
 
 def check_is_out_constant_by_size(input_size: int):
-    constant_out = [False] * (2 ** input_size)
+    constant_out = [False] * (2**input_size)
     truth_table = TruthTable([constant_out])
     assert truth_table.is_out_constant(0)
     assert truth_table.is_constant()
