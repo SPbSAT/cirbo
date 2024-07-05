@@ -1,22 +1,24 @@
-from abc import ABC
 from enum import Enum
 from itertools import combinations, product
 from threading import Timer
-from typing import Iterable, List
+from typing import Iterable, List, Union
 from pysat.formula import IDPool, CNFPlus, CNF
 from pysat.solvers import Solver
 
 
-class BooleanFunction:
+class Function:
+    """
+    Temporary class
+    """
     def __init__(self):
         self.number_of_outputs = 2
         self.number_of_input_gates = 2
 
     def get_truth_table(self):
-        return ["01*1", "00*1"]
+        return ["1001", "00*1"]
 
 
-class BooleanOperation(Enum):
+class Operation(Enum):
     """ Possible types of operator gate. """
     NOT = "1100"
     OR = "0111"
@@ -27,23 +29,26 @@ class BooleanOperation(Enum):
     NXOR = "1001"
 
 
-class BooleanBasis(Enum):
+class Basis(Enum):
+    """
+    Several types of bases.
+    """
     AIG = [
-        BooleanOperation.NOT,
-        BooleanOperation.AND,
-        BooleanOperation.OR,
-        BooleanOperation.NAND,
-        BooleanOperation.NOR
+        Operation.NOT,
+        Operation.AND,
+        Operation.OR,
+        Operation.NAND,
+        Operation.NOR
     ]
     # XIAG is a full binary basis
     XAIG = [
-        BooleanOperation.NOT,
-        BooleanOperation.AND,
-        BooleanOperation.OR,
-        BooleanOperation.NAND,
-        BooleanOperation.NOR,
-        BooleanOperation.XOR,
-        BooleanOperation.NXOR
+        Operation.NOT,
+        Operation.AND,
+        Operation.OR,
+        Operation.NAND,
+        Operation.NOR,
+        Operation.XOR,
+        Operation.NXOR
     ]
 
 
@@ -69,132 +74,246 @@ class PySATSolverNames(Enum):
 
 
 class CircuitFinder:
-    def __init__(self, boolean_function: BooleanFunction, number_of_gates: int,
-                 basis: BooleanBasis = BooleanBasis.XAIG):
-        self.boolean_function = boolean_function
-        self.output_truth_tables = boolean_function.get_truth_table()
-        self.forbidden_operations = list(set(BooleanBasis.XAIG.value) - set(basis.value))
+    """
+    A class for finding Boolean circuits using SAT-solvers.
 
-        self.input_gates = list(range(boolean_function.number_of_input_gates))
-        self.internal_gates = list(
+    The CircuitFinder class encodes the problem of finding a Boolean circuit into a Conjunctive Normal Form (CNF) and
+    uses a SAT-solver to find a solution.
+
+    Methods:
+        get_cnf() -> List[List[int]]:
+            Returns the CNF clauses representing the encoding of the circuit.
+
+        solve_cnf(solver_name: PySATSolverNames = PySATSolverNames.CADICAL193, verbose: bool = 1, time_limit: int = None):
+            Solves the CNF using a specified SAT-solver and returns the circuit if it exists.
+    """
+
+    def __init__(self, boolean_function: Function, number_of_gates: int,
+                 basis: Union[Basis, List[Operation]] = Basis.XAIG):
+        """
+        Initializes the CircuitFinder instance.
+
+        Args:
+            boolean_function (Function): The function for which the circuit is needed.
+            number_of_gates (int): The number of gates in the circuit we are finding.
+            basis (Union[Basis, List[Operation]]): The basis of gates in the circuit. Could be an arbitrary List of Operation
+            or any of the default bases defined in Basis. Defaults to Basis.XAIG.
+        """
+
+        self._boolean_function = boolean_function
+        self._output_truth_tables = boolean_function.get_truth_table()
+        basis_list = basis.value if isinstance(basis, Basis) else basis
+        self._forbidden_operations = list(set(Basis.XAIG.value) - set(basis_list))
+
+        self._input_gates = list(range(boolean_function.number_of_input_gates))
+        self._internal_gates = list(
             range(boolean_function.number_of_input_gates, boolean_function.number_of_input_gates + number_of_gates))
-        self.gates = list(range(boolean_function.number_of_input_gates + number_of_gates))
-        self.outputs = list(range(boolean_function.number_of_outputs))
+        self._gates = list(range(boolean_function.number_of_input_gates + number_of_gates))
+        self._outputs = list(range(boolean_function.number_of_outputs))
 
-        self.vpool = IDPool()
-        self.cnf = CNF()
-        self.init_default_cnf_formula()
+        self._vpool = IDPool()
+        self._cnf = CNF()
+        self._init_default_cnf_formula()
 
-    def init_default_cnf_formula(self) -> None:
+    def _init_default_cnf_formula(self) -> None:
+        """
+        Creating a CNF formula for finding a fixed-size circuit.
+        """
+
         # gate operates on two gates predecessors
-        for gate in self.internal_gates:
-            self.add_exactly_one_of([self.predecessors_variable(gate, a, b) for (a, b) in combinations(range(gate), 2)])
+        for gate in self._internal_gates:
+            self._add_exactly_one_of([self._predecessors_variable(gate, a, b) for (a, b) in combinations(range(gate), 2)])
 
         # each output is computed somewhere
-        for h in range(len(self.outputs)):
-            self.add_exactly_one_of([self.output_gate_variable(h, gate) for gate in self.internal_gates])
+        for h in range(len(self._outputs)):
+            self._add_exactly_one_of([self._output_gate_variable(h, gate) for gate in self._internal_gates])
 
         # truth values for inputs
-        for input_gate in self.input_gates:
-            for t in range(1 << self.boolean_function.number_of_input_gates):
-                if self.is_dont_cares_input(t):
+        for input_gate in self._input_gates:
+            for t in range(1 << self._boolean_function.number_of_input_gates):
+                if self._is_dont_cares_input(t):
                     continue
-                if (t >> (self.boolean_function.number_of_input_gates - 1 - input_gate)) & 1:
-                    self.cnf.append([self.gate_value_variable(input_gate, t)])
+                if (t >> (self._boolean_function.number_of_input_gates - 1 - input_gate)) & 1:
+                    self._cnf.append([self._gate_value_variable(input_gate, t)])
                 else:
-                    self.cnf.append([-self.gate_value_variable(input_gate, t)])
+                    self._cnf.append([-self._gate_value_variable(input_gate, t)])
 
         # gate computes the right value
-        for gate in self.internal_gates:
+        for gate in self._internal_gates:
             for first_pred, second_pred in combinations(range(gate), 2):
                 for a, b, c in product(range(2), repeat=3):
-                    for t in range(1 << self.boolean_function.number_of_input_gates):
-                        if self.is_dont_cares_input(t):
+                    for t in range(1 << self._boolean_function.number_of_input_gates):
+                        if self._is_dont_cares_input(t):
                             continue
-                        self.cnf.extend([[
-                            -self.predecessors_variable(gate, first_pred, second_pred),
-                            (-1 if a else 1) * self.gate_value_variable(gate, t),
-                            (-1 if b else 1) * self.gate_value_variable(first_pred, t),
-                            (-1 if c else 1) * self.gate_value_variable(second_pred, t),
-                            (1 if a else -1) * self.gate_type_variable(gate, b, c)
+                        self._cnf.extend([[
+                            -self._predecessors_variable(gate, first_pred, second_pred),
+                            (-1 if a else 1) * self._gate_value_variable(gate, t),
+                            (-1 if b else 1) * self._gate_value_variable(first_pred, t),
+                            (-1 if c else 1) * self._gate_value_variable(second_pred, t),
+                            (1 if a else -1) * self._gate_type_variable(gate, b, c)
                         ]])
 
-        for h in self.outputs:
-            for t in range(1 << self.boolean_function.number_of_input_gates):
-                if self.output_truth_tables[h][t] == '*':
+        for h in self._outputs:
+            for t in range(1 << self._boolean_function.number_of_input_gates):
+                if self._output_truth_tables[h][t] == '*':
                     continue
-                for gate in self.internal_gates:
-                    self.cnf.extend([[
-                        -self.output_gate_variable(h, gate),
-                        (1 if self.output_truth_tables[h][t] == '1' else -1) * self.gate_value_variable(gate, t)
+                for gate in self._internal_gates:
+                    self._cnf.extend([[
+                        -self._output_gate_variable(h, gate),
+                        (1 if self._output_truth_tables[h][t] == '1' else -1) * self._gate_value_variable(gate, t)
                     ]])
 
         # each gate computes a non-degenerate function (0, 1, x, -x, y, -y)
-        for gate in self.internal_gates:
-            self.cnf.extend([[self.gate_type_variable(gate, 0, 0), self.gate_type_variable(gate, 0, 1),
-                              self.gate_type_variable(gate, 1, 0), self.gate_type_variable(gate, 1, 1)]])
-            self.cnf.extend([[-self.gate_type_variable(gate, 0, 0), -self.gate_type_variable(gate, 0, 1),
-                              -self.gate_type_variable(gate, 1, 0), -self.gate_type_variable(gate, 1, 1)]])
+        for gate in self._internal_gates:
+            self._cnf.extend([[self._gate_type_variable(gate, 0, 0), self._gate_type_variable(gate, 0, 1),
+                               self._gate_type_variable(gate, 1, 0), self._gate_type_variable(gate, 1, 1)]])
+            self._cnf.extend([[-self._gate_type_variable(gate, 0, 0), -self._gate_type_variable(gate, 0, 1),
+                               -self._gate_type_variable(gate, 1, 0), -self._gate_type_variable(gate, 1, 1)]])
 
-            self.cnf.extend([[self.gate_type_variable(gate, 0, 0), self.gate_type_variable(gate, 0, 1),
-                              -self.gate_type_variable(gate, 1, 0), -self.gate_type_variable(gate, 1, 1)]])
-            self.cnf.extend([[-self.gate_type_variable(gate, 0, 0), -self.gate_type_variable(gate, 0, 1),
-                              self.gate_type_variable(gate, 1, 0), self.gate_type_variable(gate, 1, 1)]])
+            self._cnf.extend([[self._gate_type_variable(gate, 0, 0), self._gate_type_variable(gate, 0, 1),
+                               -self._gate_type_variable(gate, 1, 0), -self._gate_type_variable(gate, 1, 1)]])
+            self._cnf.extend([[-self._gate_type_variable(gate, 0, 0), -self._gate_type_variable(gate, 0, 1),
+                               self._gate_type_variable(gate, 1, 0), self._gate_type_variable(gate, 1, 1)]])
 
-            self.cnf.extend([[self.gate_type_variable(gate, 0, 0), -self.gate_type_variable(gate, 0, 1),
-                              self.gate_type_variable(gate, 1, 0), -self.gate_type_variable(gate, 1, 1)]])
-            self.cnf.extend([[-self.gate_type_variable(gate, 0, 0), self.gate_type_variable(gate, 0, 1),
-                              -self.gate_type_variable(gate, 1, 0), self.gate_type_variable(gate, 1, 1)]])
+            self._cnf.extend([[self._gate_type_variable(gate, 0, 0), -self._gate_type_variable(gate, 0, 1),
+                               self._gate_type_variable(gate, 1, 0), -self._gate_type_variable(gate, 1, 1)]])
+            self._cnf.extend([[-self._gate_type_variable(gate, 0, 0), self._gate_type_variable(gate, 0, 1),
+                               -self._gate_type_variable(gate, 1, 0), self._gate_type_variable(gate, 1, 1)]])
 
         # each gate computes an allowed operation
-        for gate in self.internal_gates:
-            for op in self.forbidden_operations:
+        for gate in self._internal_gates:
+            for op in self._forbidden_operations:
                 assert len(op.value) == 4 and all(int(b) in (0, 1) for b in op.value)
                 clause = []
                 for i in range(4):
-                    clause.append((-1 if int(op.value[i]) == 1 else 1) * self.gate_type_variable(gate, i // 2, i % 2))
-                self.cnf.append(clause)
+                    clause.append((-1 if int(op.value[i]) == 1 else 1) * self._gate_type_variable(gate, i // 2, i % 2))
+                self._cnf.append(clause)
 
-    def add_exactly_one_of(self, literals):
+    def _add_exactly_one_of(self, literals: List[int]):
+        """
+        Adds the clauses to the CNF encoding the constraint that exactly one of the given literals is true.
+
+        Args:
+            literals (List[int]): A list of literals.
+    """
         # self.cnf.append([list(literals), 1], is_atmost=True)
         # self.cnf.append([[-a for a in literals], len(literals) - 1], is_atmost=True)
-        self.cnf.append(list(literals))
-        self.cnf.extend([[-a, -b] for (a, b) in combinations(literals, 2)])
+        self._cnf.append(literals)
+        self._cnf.extend([[-a, -b] for (a, b) in combinations(literals, 2)])
 
-    def predecessors_variable(self, gate: int, first_pred: int, second_pred: int) -> int:
-        # gate operates on gates first_pred and second_pred
-        assert gate in self.internal_gates
-        assert first_pred in self.gates and second_pred in self.gates
+    def _is_dont_cares_input(self, t: int):
+        """
+        Checks if the input corresponding to the binary representation of the number `t` has no influence on the
+        outputs.
+
+        This is determined by verifying that all corresponding output bits are '*', indicating "don't care" conditions.
+
+        Args:
+            t (int): The integer representing the input in binary form.
+
+        Returns:
+            bool: True if all corresponding output bits are '*', otherwise False.
+        """
+        output_col = [self._output_truth_tables[g][t] for g in
+                      range(self._boolean_function.number_of_outputs)]
+        return output_col.count('*') == self._boolean_function.number_of_outputs
+
+    def _predecessors_variable(self, gate: int, first_pred: int, second_pred: int) -> int:
+        """
+        Returns the variable representing that 'gate' operates on gates 'first_pred' and 'second_pred'.
+
+        Args:
+            gate (int): The gate index.
+            first_pred (int): The index of the first predecessor gate.
+            second_pred (int): The index of the second predecessor gate.
+
+        Returns:
+            int: Variable representing the relationship where 'gate' operates on 'first_pred' and 'second_pred'.
+        """
+        # TODO: delete all asserts, here and in the following methods.
+
+        assert gate in self._internal_gates
+        assert first_pred in self._gates and second_pred in self._gates
         assert first_pred < second_pred < gate
-        return self.vpool.id(f's_{gate}_{first_pred}_{second_pred}')
+        return self._vpool.id(f's_{gate}_{first_pred}_{second_pred}')
 
-    def output_gate_variable(self, h: int, gate: int) -> int:
-        # h-th output is computed at gate
-        assert h in self.outputs
-        assert gate in self.gates
-        return self.vpool.id(f'g_{h}_{gate}')
+    def _output_gate_variable(self, h: int, gate: int) -> int:
+        """
+        Returns the variable representing that the h-th output is computed at the gate.
 
-    def gate_value_variable(self, gate, t):
-        # t-th bit of the truth table of gate
-        assert gate in self.gates
-        assert 0 <= t < 1 << self.boolean_function.number_of_input_gates
-        return self.vpool.id(f'x_{gate}_{t}')
+        Args:
+            h (int): Index of the output.
+            gate (int): Index of the gate.
 
-    # output of gate on inputs (p, q)
-    def gate_type_variable(self, gate, p, q):
+        Returns:
+            int: Variable representing the computation of the h-th output at the gate.
+        """
+        assert h in self._outputs
+        assert gate in self._gates
+        return self._vpool.id(f'g_{h}_{gate}')
+
+    def _gate_value_variable(self, gate: int, t: int) -> int:
+        """
+        Returns the variable representing the t-th bit of the truth table of the gate.
+
+        Args:
+            gate (int): Index of the gate.
+            t (int): Index of the truth table bit.
+
+        Returns:
+            int: Variable representing the t-th bit of the truth table of the gate.
+        """
+        assert gate in self._gates
+        assert 0 <= t < 1 << self._boolean_function.number_of_input_gates
+        return self._vpool.id(f'x_{gate}_{t}')
+
+    def _gate_type_variable(self, gate: int, p: int, q: int) -> int:
+        """
+        Returns the variable representing the output of the gate on inputs (p, q).
+
+        Args:
+            gate (int): Index of the gate.
+            p (int): First input value (0 or 1).
+            q (int): Second input value (0 or 1).
+
+        Returns:
+            int: Variable representing the output of the gate on inputs (p, q).
+        """
         assert 0 <= p <= 1 and 0 <= q <= 1
-        assert gate in self.gates
-        return self.vpool.id(f'f_{gate}_{p}_{q}')
+        assert gate in self._gates
+        return self._vpool.id(f'f_{gate}_{p}_{q}')
 
     def get_cnf(self) -> List[List[int]]:
-        return self.cnf.clauses
+        """
+        Returns the list of clauses in Conjunctive Normal Form (CNF) representing the encoding of the circuit.
+
+        Returns:
+            List[List[int]]: List of CNF clauses where each clause is a list of integers representing literals.
+        """
+        return self._cnf.clauses
 
     def solve_cnf(self,
                   solver_name: PySATSolverNames = PySATSolverNames.CADICAL193,
-                  verbose: bool = 1,
+                  verbose: bool = True,
                   time_limit: int = None):
+        # TODO: return the instance of Circuit
+        """
+        Solves the Conjunctive Normal Form (CNF) using a specified SAT-solver and returns the circuit if it exists.
 
-        s = Solver(name=solver_name.value, bootstrap_with=self.cnf.clauses)
+        Args:
+            solver_name (PySATSolverNames, optional): The name of the SAT-solver to use (default is
+        PySATSolverNames.CADICAL193).
+            verbose (bool, optional): If True, prints solver information during solving (
+        default is True).
+            time_limit (int, optional): Maximum time in seconds allowed for solving (default is None,
+        meaning no time limit).
+
+        Returns:
+            Circuit or None: If a solution is found within the time limit (if specified), returns the found circuit.
+            If no solution is found or the solver times out, returns None.
+        """
+
+        s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
         if time_limit:
             def interrupt(s):
                 s.interrupt()
@@ -208,15 +327,39 @@ class CircuitFinder:
         model = s.get_model()
         s.delete()
 
-        return model
+        if model is None:
+            return None
 
-    def is_dont_cares_input(self, t):
-        output_col = [self.output_truth_tables[g][t] for g in
-                      range(self.boolean_function.number_of_outputs)]
-        return output_col.count('*') == self.boolean_function.number_of_outputs
+        gate_descriptions = {}
+        for gate in self._internal_gates:
+            first_predecessor, second_predecessor = None, None
+            for f, s in combinations(range(gate), 2):
+                if self._predecessors_variable(gate, f, s) in model:
+                    first_predecessor, second_predecessor = f, s
+                else:
+                    assert -self._predecessors_variable(gate, f, s) in model
+
+            gate_type = []
+            for p, q in product(range(2), repeat=2):
+                if self._gate_type_variable(gate, p, q) in model:
+                    gate_type.append(1)
+                else:
+                    assert -self._gate_type_variable(gate, p, q) in model
+                    gate_type.append(0)
+
+            first_predecessor = first_predecessor if first_predecessor in self._input_gates else 's' + str(first_predecessor)
+            second_predecessor = second_predecessor if second_predecessor in self._input_gates else 's' + str(second_predecessor)
+            gate_descriptions['s' + str(gate)] = (first_predecessor, second_predecessor, ''.join(map(str, gate_type)))
+
+        output_gates = []
+        for h in self._outputs:
+            for gate in self._gates:
+                if self._output_gate_variable(h, gate) in model:
+                    output_gates.append('s' + str(gate))
+
+        return gate_descriptions, output_gates
 
 
-# circ = CircuitFinder(BooleanFunction(), 2, BooleanBasis.AIG)
+# circ = CircuitFinder(Function(), 3, Basis.AIG)
 # print(circ.solve_cnf())
-# my_cnf = CNFPlus()
-# my_cnf.append([[1], 1], is_atmost=True)
+
