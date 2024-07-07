@@ -1,3 +1,6 @@
+import math
+import logging
+from datetime import datetime
 from enum import Enum
 from itertools import combinations, product
 from threading import Timer
@@ -5,28 +8,44 @@ from typing import Iterable, List, Union
 from pysat.formula import IDPool, CNFPlus, CNF
 from pysat.solvers import Solver
 
+from boolean_circuit_tool.core.circuit import Circuit, Gate, GateType
+
+
+logger = logging.getLogger(__name__)
+
 
 class Function:
     """
     Temporary class
     """
-    def __init__(self):
-        self.number_of_outputs = 2
-        self.number_of_input_gates = 2
+
+    def __init__(self, tt):
+        self.number_of_outputs = len(tt)
+        self.number_of_input_gates = int(math.log2(len(tt[0])))
+        self.tt = tt
 
     def get_truth_table(self):
-        return ["1001", "00*1"]
+        return self.tt
 
 
 class Operation(Enum):
     """ Possible types of operator gate. """
+    ZERO = "0000"
+    ONE = "1111"
     NOT = "1100"
+    IFF = "0011"
+    NOT2 = "1010"
+    IFF2 = "0101"
     OR = "0111"
     NOR = "1000"
     AND = "0001"
     NAND = "1110"
     XOR = "0110"
     NXOR = "1001"
+    GREATER = "0010"
+    LESS = "0100"
+    GREATERORE = "1011"
+    LESSORE = "1101"
 
 
 class Basis(Enum):
@@ -38,15 +57,40 @@ class Basis(Enum):
         Operation.AND,
         Operation.OR,
         Operation.NAND,
-        Operation.NOR
+        Operation.NOR,
+        Operation.GREATER,
+        Operation.LESS,
+        Operation.GREATERORE,
+        Operation.LESSORE
     ]
-    # XIAG is a full binary basis
     XAIG = [
         Operation.NOT,
         Operation.AND,
         Operation.OR,
         Operation.NAND,
         Operation.NOR,
+        Operation.GREATER,
+        Operation.LESS,
+        Operation.GREATERORE,
+        Operation.LESSORE,
+        Operation.XOR,
+        Operation.NXOR
+    ]
+    FULL = [
+        Operation.ZERO,
+        Operation.ONE,
+        Operation.NOT2,
+        Operation.IFF2,
+        Operation.IFF,
+        Operation.NOT,
+        Operation.AND,
+        Operation.OR,
+        Operation.NAND,
+        Operation.NOR,
+        Operation.GREATER,
+        Operation.LESS,
+        Operation.GREATERORE,
+        Operation.LESSORE,
         Operation.XOR,
         Operation.NXOR
     ]
@@ -71,6 +115,33 @@ class PySATSolverNames(Enum):
     MINICARD = 'minicard'
     MINISAT22 = 'minisat22'
     MINISATGH = 'minisat-gh'
+
+
+def get_GateType_by_tt(gate_tt: List[bool]) -> GateType:
+    if gate_tt == [0, 1, 1, 1]:
+        return GateType.OR
+    elif gate_tt == [1, 0, 0, 0]:
+        return GateType.NOR
+    elif gate_tt == [0, 0, 0, 1]:
+        return GateType.AND
+    elif gate_tt == [1, 1, 1, 0]:
+        return GateType.NAND
+    elif gate_tt == [0, 1, 1, 0]:
+        return GateType.XOR
+    elif gate_tt == [1, 0, 0, 1]:
+        return GateType.NXOR
+    elif gate_tt == [1, 1, 0, 0] or gate_tt == [1, 0, 1, 0]:
+        return GateType.NOT
+    elif gate_tt == [0, 0, 1, 0]:
+        return GateType.G
+    elif gate_tt == [0, 1, 0, 0]:
+        return GateType.L
+    elif gate_tt == [1, 0, 1, 1]:
+        return GateType.GE
+    elif gate_tt == [1, 1, 0, 1]:
+        return GateType.LE
+    else:
+        raise ValueError(f"Unknown truth table {gate_tt}")
 
 
 class CircuitFinder:
@@ -102,8 +173,8 @@ class CircuitFinder:
 
         self._boolean_function = boolean_function
         self._output_truth_tables = boolean_function.get_truth_table()
-        basis_list = basis.value if isinstance(basis, Basis) else basis
-        self._forbidden_operations = list(set(Basis.XAIG.value) - set(basis_list))
+        self._basis_list = basis.value if isinstance(basis, Basis) else basis
+        self._forbidden_operations = list(set(Basis.FULL.value) - set(self._basis_list))
 
         self._input_gates = list(range(boolean_function.number_of_input_gates))
         self._internal_gates = list(
@@ -122,7 +193,8 @@ class CircuitFinder:
 
         # gate operates on two gates predecessors
         for gate in self._internal_gates:
-            self._add_exactly_one_of([self._predecessors_variable(gate, a, b) for (a, b) in combinations(range(gate), 2)])
+            self._add_exactly_one_of(
+                [self._predecessors_variable(gate, a, b) for (a, b) in combinations(range(gate), 2)])
 
         # each output is computed somewhere
         for h in range(len(self._outputs)):
@@ -163,23 +235,6 @@ class CircuitFinder:
                         (1 if self._output_truth_tables[h][t] == '1' else -1) * self._gate_value_variable(gate, t)
                     ]])
 
-        # each gate computes a non-degenerate function (0, 1, x, -x, y, -y)
-        for gate in self._internal_gates:
-            self._cnf.extend([[self._gate_type_variable(gate, 0, 0), self._gate_type_variable(gate, 0, 1),
-                               self._gate_type_variable(gate, 1, 0), self._gate_type_variable(gate, 1, 1)]])
-            self._cnf.extend([[-self._gate_type_variable(gate, 0, 0), -self._gate_type_variable(gate, 0, 1),
-                               -self._gate_type_variable(gate, 1, 0), -self._gate_type_variable(gate, 1, 1)]])
-
-            self._cnf.extend([[self._gate_type_variable(gate, 0, 0), self._gate_type_variable(gate, 0, 1),
-                               -self._gate_type_variable(gate, 1, 0), -self._gate_type_variable(gate, 1, 1)]])
-            self._cnf.extend([[-self._gate_type_variable(gate, 0, 0), -self._gate_type_variable(gate, 0, 1),
-                               self._gate_type_variable(gate, 1, 0), self._gate_type_variable(gate, 1, 1)]])
-
-            self._cnf.extend([[self._gate_type_variable(gate, 0, 0), -self._gate_type_variable(gate, 0, 1),
-                               self._gate_type_variable(gate, 1, 0), -self._gate_type_variable(gate, 1, 1)]])
-            self._cnf.extend([[-self._gate_type_variable(gate, 0, 0), self._gate_type_variable(gate, 0, 1),
-                               -self._gate_type_variable(gate, 1, 0), self._gate_type_variable(gate, 1, 1)]])
-
         # each gate computes an allowed operation
         for gate in self._internal_gates:
             for op in self._forbidden_operations:
@@ -196,8 +251,6 @@ class CircuitFinder:
         Args:
             literals (List[int]): A list of literals.
     """
-        # self.cnf.append([list(literals), 1], is_atmost=True)
-        # self.cnf.append([[-a for a in literals], len(literals) - 1], is_atmost=True)
         self._cnf.append(literals)
         self._cnf.extend([[-a, -b] for (a, b) in combinations(literals, 2)])
 
@@ -295,8 +348,7 @@ class CircuitFinder:
     def solve_cnf(self,
                   solver_name: PySATSolverNames = PySATSolverNames.CADICAL193,
                   verbose: bool = True,
-                  time_limit: int = None):
-        # TODO: return the instance of Circuit
+                  time_limit: int = None) -> Union[Circuit, bool]:
         """
         Solves the Conjunctive Normal Form (CNF) using a specified SAT-solver and returns the circuit if it exists.
 
@@ -309,10 +361,16 @@ class CircuitFinder:
         meaning no time limit).
 
         Returns:
-            Circuit or None: If a solution is found within the time limit (if specified), returns the found circuit.
-            If no solution is found or the solver times out, returns None.
+            Circuit or False: If a solution is found within the time limit (if specified), returns the found circuit.
+            If no solution is found or the solver times out, returns False.
         """
+        if verbose:
+            logger.info(f"Solving a CNF formula, solver: {solver_name.value}, time_limit: {time_limit}, current time: {datetime.now()}")
+        if [] in self._cnf.clauses:
+            return False
 
+        if verbose:
+            logger.info(f"Running {solver_name.value}")
         s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
         if time_limit:
             def interrupt(s):
@@ -328,9 +386,23 @@ class CircuitFinder:
         s.delete()
 
         if model is None:
-            return None
+            return False
 
-        gate_descriptions = {}
+        return self._get_circuit_by_model(model)
+
+    def _get_circuit_by_model(self, model: List[int]) -> Circuit:
+        """
+        Create the Circuit by the truth assignment of cnf.
+
+        Args:
+            model: List of integers
+        Returns:
+            Circuit
+        """
+        initial_circuit = Circuit()
+        for gate in self._input_gates:
+            initial_circuit.add_gate(Gate(str(gate), GateType.INPUT))
+
         for gate in self._internal_gates:
             first_predecessor, second_predecessor = None, None
             for f, s in combinations(range(gate), 2):
@@ -339,27 +411,29 @@ class CircuitFinder:
                 else:
                     assert -self._predecessors_variable(gate, f, s) in model
 
-            gate_type = []
+            gate_tt = []
             for p, q in product(range(2), repeat=2):
                 if self._gate_type_variable(gate, p, q) in model:
-                    gate_type.append(1)
+                    gate_tt.append(True)
                 else:
                     assert -self._gate_type_variable(gate, p, q) in model
-                    gate_type.append(0)
+                    gate_tt.append(False)
 
-            first_predecessor = first_predecessor if first_predecessor in self._input_gates else 's' + str(first_predecessor)
-            second_predecessor = second_predecessor if second_predecessor in self._input_gates else 's' + str(second_predecessor)
-            gate_descriptions['s' + str(gate)] = (first_predecessor, second_predecessor, ''.join(map(str, gate_type)))
+            first_predecessor = first_predecessor if first_predecessor in self._input_gates else 's' + str(
+                first_predecessor)
+            second_predecessor = second_predecessor if second_predecessor in self._input_gates else 's' + str(
+                second_predecessor)
 
-        output_gates = []
+            if gate_tt == [1, 1, 0, 0] or gate == [1, 0, 1, 0]:
+                initial_circuit.add_gate(Gate('s' + str(gate), get_GateType_by_tt(gate_tt),
+                                              (str(first_predecessor),)))
+            else:
+                initial_circuit.add_gate(Gate('s' + str(gate), get_GateType_by_tt(gate_tt),
+                                              (str(first_predecessor), str(second_predecessor))))
+
         for h in self._outputs:
             for gate in self._gates:
                 if self._output_gate_variable(h, gate) in model:
-                    output_gates.append('s' + str(gate))
+                    initial_circuit.mark_as_output('s' + str(gate))
 
-        return gate_descriptions, output_gates
-
-
-# circ = CircuitFinder(Function(), 3, Basis.AIG)
-# print(circ.solve_cnf())
-
+        return initial_circuit
