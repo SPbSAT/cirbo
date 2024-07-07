@@ -1,5 +1,6 @@
 from itertools import product
 from typing import List
+
 from boolean_circuit_tool.core.circuit import Circuit, GateState
 from boolean_circuit_tool.core.synthesis.circuit_search import (
     CircuitFinder,
