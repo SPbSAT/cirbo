@@ -37,14 +37,15 @@ class GateType(enum.Enum):
     LE = "LESSOREQUAL"
     GE = "GREATEROREQUAL"
 
+
 class Gate:
     """Structure to carry one Gate of a Circuit."""
 
     def __init__(
-        self,
-        label: GateLabel,
-        gate_type: GateType,
-        operands: tuple[GateLabel, ...] = (),
+            self,
+            label: GateLabel,
+            gate_type: GateType,
+            operands: tuple[GateLabel, ...] = (),
     ):
         self._label = label
         self._gate_type = gate_type
