@@ -90,3 +90,4 @@ pre-summary-newline = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
+module = "pysat.*"
