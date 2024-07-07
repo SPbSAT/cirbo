@@ -1,7 +1,11 @@
 from itertools import product
 from typing import List
 from boolean_circuit_tool.core.circuit import Circuit, GateState
-from boolean_circuit_tool.core.synthesis.circuit_search import CircuitFinder, Function, Basis, Operation
+from boolean_circuit_tool.core.synthesis.circuit_search import (
+    CircuitFinder,
+    Function,
+    Operation,
+)
 
 
 def get_tt(circuit: Circuit) -> List[GateState]:
@@ -14,14 +18,14 @@ def get_tt(circuit: Circuit) -> List[GateState]:
 
 
 my_basis = [
-        Operation.NOT,
-        Operation.AND,
-        Operation.OR,
-        Operation.NAND,
-        Operation.NOR,
-        Operation.XOR,
-        Operation.NXOR
-    ]
+    Operation.NOT,
+    Operation.AND,
+    Operation.OR,
+    Operation.NAND,
+    Operation.NOR,
+    Operation.XOR,
+    Operation.NXOR,
+]
 
 
 def check_exact_circuit_size(n, size, truth_tables, basis):
@@ -42,14 +46,24 @@ def test_small_xors():
 def test_and_ors():
     for n in range(2, 5):
         tt = [
-            ''.join(('1' if all(x[i] == 1 for i in range(n)) else '0') for x in product(range(2), repeat=n)),
-            ''.join(('1' if any(x[i] == 1 for i in range(n)) else '0') for x in product(range(2), repeat=n))
+            ''.join(
+                ('1' if all(x[i] == 1 for i in range(n)) else '0')
+                for x in product(range(2), repeat=n)
+            ),
+            ''.join(
+                ('1' if any(x[i] == 1 for i in range(n)) else '0')
+                for x in product(range(2), repeat=n)
+            ),
         ]
         check_exact_circuit_size(n, 2 * n - 2, tt, my_basis)
 
 
 def test_all_equal():
     for n in range(2, 5):
-        tt = [''.join('1' if all(x[i] == x[i + 1] for i in range(n - 1))
-                      else '0' for x in product(range(2), repeat=n))]
+        tt = [
+            ''.join(
+                '1' if all(x[i] == x[i + 1] for i in range(n - 1)) else '0'
+                for x in product(range(2), repeat=n)
+            )
+        ]
         check_exact_circuit_size(n, 2 * n - 3, tt, my_basis)
