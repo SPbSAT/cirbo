@@ -32,7 +32,10 @@ class GateType(enum.Enum):
     NXOR = "NXOR"
     IFF = "IFF"
     BUFF = "BUFF"
-
+    L = "LESS"
+    G = "GREATER"
+    LE = "LESSOREQUAL"
+    GE = "GREATEROREQUAL"
 
 class Gate:
     """Structure to carry one Gate of a Circuit."""
