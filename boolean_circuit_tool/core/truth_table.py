@@ -8,50 +8,60 @@ from boolean_circuit_tool.core.boolean_function import BooleanFunction
 __all__ = ['TruthTable']
 
 
+def values_to_index(inputs: list[bool]) -> int:
+    return int(''.join(str(int(v)) for v in inputs), 2)
+
+
 class TruthTable(BooleanFunction):
     def __init__(self, values: list[list[bool]]):
-        self.__values = values
-        self.__output_size = len(values)
-        self.__input_size = int(math.log2(len(values[0])))
+        self._values = [list(i) for i in zip(*values)]
+        self._output_size = len(values)
+        log = math.log2(len(values[0]))
+        assert log.is_integer()
+        self._input_size = int(log)
 
     def input_size(self) -> int:
-        return self.__input_size
+        return self._input_size
 
     def output_size(self) -> int:
-        return self.__output_size
+        return self._output_size
 
     def evaluate(self, inputs: list[bool]) -> list[bool]:
-        idx = int(''.join([str(int(v)) for v in inputs]), 2)
-        return [self.__values[i][idx] for i in range(self.__output_size)]
+        idx = values_to_index(inputs)
+        return self.evaluate_at(idx)
 
-    def is_out_constant(self, index: int) -> bool:
+    def evaluate_at(self, index: int) -> list[bool]:
+        return self._values[index]
+
+    def is_constant(self) -> bool:
+        return all(self.is_constant_at(i) for i in range(self.output_size()))
+
+    def is_constant_at(self, index: int) -> bool:
         value_set = set()
-        for x in itertools.product((0, 1), repeat=self.input_size()):
-            value = self.evaluate(list(x))[index]
+        for idx in range(2 ** self.input_size()):
+            value = self.evaluate_at(idx)[index]
             value_set.add(value)
             if len(value_set) > 1:
                 return False
         return True
 
-    def is_constant(self) -> bool:
-        return all([self.is_out_constant(i) for i in range(self.output_size())])
+    def is_monotonic(self, inverse: bool) -> bool:
+        return all(self.is_monotonic_at(i, inverse) for i in range(self.output_size()))
 
-    def is_out_monotonic(self, index: int) -> bool:
+    def is_monotonic_at(self, index: int, inverse: bool) -> bool:
         ones_started = False
-        for x in itertools.product((0, 1), repeat=self.input_size()):
-            value = self.evaluate(list(x))[index]
-            if not ones_started and value:
+        for idx in range(2 ** self.input_size()):
+            value = self.evaluate_at(idx)[index]
+            if not ones_started and (value != inverse):
                 ones_started = True
-            elif ones_started and not value:
+            elif ones_started and (value == inverse):
                 return False
         return True
 
-    def is_monotonic(self) -> bool:
-        return all(self.is_out_monotonic(i) for i in range(self.output_size()))
-
     def is_out_dependent_from_input(self, output_index: int, input_index: int) -> bool:
-        for x in itertools.product((0, 1), repeat=self.input_size()):
+        for x in itertools.product((0, 1), repeat=self.input_size() - 1):
             x = list(x)
+            x.insert(input_index, 0)
             value1 = self.evaluate(x)[output_index]
             x[input_index] = not x[input_index]
             value2 = self.evaluate(x)[output_index]
@@ -74,34 +84,31 @@ class TruthTable(BooleanFunction):
                 return negation
         return None
 
-    def get_out_significant_inputs(self, out_index) -> list[int]:
+    def get_significant_inputs_of(self, out_index) -> list[int]:
         result = []
         for i in range(self.input_size()):
             if self.is_out_dependent_from_input(out_index, i):
                 result.append(i)
         return result
 
-    def is_out_symmetric(self, out_index: int) -> bool:
-        return self.get_out_symmetric_and_negations([out_index]) is not None
-
     def is_symmetric(self) -> bool:
         return (
-            self.get_out_symmetric_and_negations(list(range(self.output_size())))
+            self.get_symmetric_and_negations_of(list(range(self.output_size())))
             is not None
         )
 
-    def get_out_symmetric_and_negations(
+    def is_symmetric_at(self, out_index: int) -> bool:
+        return self.get_symmetric_and_negations_of([out_index]) is not None
+
+    def get_symmetric_and_negations_of(
         self, out_indexes: list[int]
     ) -> tp.Optional[list[bool]]:
         for negations in itertools.product((0, 1), repeat=self.input_size()):
-            saved_values = [{}] * len(out_indexes)
+            saved_values = [{} for _ in range(len(out_indexes))]
             symmetric = True
             for x in itertools.product((0, 1), repeat=self.input_size()):
                 amount = sum(
-                    [
-                        x[i] * (1 if negations[i] else -1)
-                        for i in range(self.input_size())
-                    ]
+                    x[i] * (1 if negations[i] else -1) for i in range(self.input_size())
                 )
                 values = self.evaluate(x)
                 for index in out_indexes:
@@ -115,3 +122,6 @@ class TruthTable(BooleanFunction):
             if symmetric:
                 return [bool(v) for v in negations]
         return None
+
+    def get_truth_table(self) -> 'TruthTable':
+        return self

@@ -1,27 +1,22 @@
 import random
 
-import numpy as np
-
 import pytest
+
 from boolean_circuit_tool.core.truth_table import TruthTable
 
 
 def generate_random_truth_table(input_size: int, output_size: int) -> list[list[bool]]:
-    values = np.random.choice(a=[False, True], size=(output_size, 2**input_size))
-    return [list(v) for v in values]
+    return [
+        [random.choice([True, False]) for _ in range(2**input_size)]
+        for _ in range(output_size)
+    ]
 
 
-def test_evaluate():
-    check_evaluate_by_size(3, 3)
-    check_evaluate_by_size(5, 2)
-    check_evaluate_by_size(6, 1)
-    check_evaluate_by_size(7, 1)
-
-
-def check_evaluate_by_size(input_size: int, output_size: int):
+@pytest.mark.parametrize("input_size, output_size", [(3, 3), (5, 2), (6, 1), (7, 1)])
+def test_evaluate(input_size: int, output_size: int):
     values = generate_random_truth_table(input_size, output_size)
     truth_table = TruthTable(values)
-    values = np.array(values).T.tolist()
+    values = [list(i) for i in zip(*values)]
     for i in range(2**input_size):
         input_str = bin(i)[2:]
         input_str = '0' * (input_size - len(input_str)) + input_str
@@ -29,35 +24,21 @@ def check_evaluate_by_size(input_size: int, output_size: int):
         assert values[i] == truth_table.evaluate(input_values)
 
 
-def test_is_out_constant():
-    check_is_out_constant_by_size(3)
-    check_is_out_constant_by_size(4)
-    check_is_out_constant_by_size(5)
-    check_is_out_constant_by_size(6)
-    check_is_out_constant_by_size(7)
-
-
-def check_is_out_constant_by_size(input_size: int):
+@pytest.mark.parametrize("input_size", [3, 4, 5, 6, 7])
+def test_is_out_constant(input_size: int):
     constant_out = [False] * (2**input_size)
     truth_table = TruthTable([constant_out])
-    assert truth_table.is_out_constant(0)
+    assert truth_table.is_constant_at(0)
     assert truth_table.is_constant()
 
 
-def test_is_out_monotonic():
-    check_is_out_monotonic_by_size(3)
-    check_is_out_monotonic_by_size(4)
-    check_is_out_monotonic_by_size(5)
-    check_is_out_monotonic_by_size(6)
-    check_is_out_monotonic_by_size(7)
-
-
-def check_is_out_monotonic_by_size(input_size: int):
+@pytest.mark.parametrize("input_size", [3, 4, 5, 6, 7])
+def test_is_out_monotonic(input_size: int):
     false_count = random.randint(0, 2**input_size)
     monotonic_out = [False] * false_count + [True] * (2**input_size - false_count)
     truth_table = TruthTable([monotonic_out])
-    assert truth_table.is_out_monotonic(0)
-    assert truth_table.is_monotonic()
+    assert truth_table.is_monotonic_at(0, False)
+    assert truth_table.is_monotonic(False)
 
 
 def generate_sum(input_size: int, negations: list[bool] = None) -> list[bool]:
@@ -89,7 +70,7 @@ def test_get_significant_inputs():
     mask = [0, 1, 4]
     out = generate_out_by_mask(input_size, mask)
     truth_table = TruthTable([out])
-    assert truth_table.get_out_significant_inputs(0) == mask
+    assert truth_table.get_significant_inputs_of(0) == mask
 
 
 def test_is_out_dependent_from_input():
@@ -113,6 +94,6 @@ def test_is_out_symmetric():
     negations = [False, True, True, False, True]
     out = generate_sum(5, negations)
     truth_table = TruthTable([out])
-    neg = truth_table.get_out_symmetric_and_negations([0])
+    neg = truth_table.get_symmetric_and_negations_of([0])
     assert neg is not None
     assert neg == negations
