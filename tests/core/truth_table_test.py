@@ -79,7 +79,7 @@ def test_is_out_dependent_from_input():
     out = generate_out_by_mask(input_size, mask)
     truth_table = TruthTable([out])
     for i in range(input_size):
-        assert truth_table.is_out_dependent_from_input(0, i) == (i in mask)
+        assert truth_table.is_dependent_from_input_of(0, i) == (i in mask)
 
 
 def test_get_out_is_input_negation():
@@ -87,7 +87,7 @@ def test_get_out_is_input_negation():
     mask = [1]
     out = generate_out_by_mask(input_size, mask)
     truth_table = TruthTable([out])
-    assert truth_table.get_out_is_input_negation(0, 1) == 0
+    assert truth_table.get_out_as_input_negation(0, 1) == 0
 
 
 def test_is_out_symmetric():

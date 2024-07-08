@@ -9,6 +9,12 @@ __all__ = ['TruthTable']
 
 
 def values_to_index(inputs: list[bool]) -> int:
+    """
+    Get index by input value set.
+
+    :param inputs: input value set
+
+    """
     return int(''.join(str(int(v)) for v in inputs), 2)
 
 
@@ -58,7 +64,7 @@ class TruthTable(BooleanFunction):
                 return False
         return True
 
-    def is_out_dependent_from_input(self, output_index: int, input_index: int) -> bool:
+    def is_dependent_from_input_of(self, output_index: int, input_index: int) -> bool:
         for x in itertools.product((0, 1), repeat=self.input_size() - 1):
             x = list(x)
             x.insert(input_index, 0)
@@ -69,7 +75,7 @@ class TruthTable(BooleanFunction):
                 return True
         return False
 
-    def get_out_is_input_negation(
+    def get_out_as_input_negation(
         self, out_index: int, in_index: int
     ) -> tp.Optional[int]:
         for negation in (0, 1):
@@ -87,7 +93,7 @@ class TruthTable(BooleanFunction):
     def get_significant_inputs_of(self, out_index) -> list[int]:
         result = []
         for i in range(self.input_size()):
-            if self.is_out_dependent_from_input(out_index, i):
+            if self.is_dependent_from_input_of(out_index, i):
                 result.append(i)
         return result
 
