@@ -1,3 +1,4 @@
+import abc
 import typing as tp
 
 __all__ = ['BooleanFunction']
@@ -8,104 +9,170 @@ class BooleanFunction(tp.Protocol):
     """Protocol for any object that behaves like boolean function, e.g. Circuit,
     TruthTable or PythonFunction."""
 
+    @property
+    @abc.abstractmethod
     def input_size(self) -> int:
-        """Get input count."""
+        """
+        :return: number of inputs.
+        """
 
+    @property
+    @abc.abstractmethod
     def output_size(self) -> int:
-        """Get output count."""
+        """
+        :return: number of outputs.
+        """
 
     def evaluate(self, inputs: list[bool]) -> list[bool]:
         """
-        Get value by input value set.
+        Get output values that correspond to provided `inputs`.
 
-        :param inputs: input value set.
+        :param inputs: values of input gates.
+        :return: value of outputs evaluated for input values `inputs`.
 
         """
 
-    def evaluate_at(self, index: int) -> list[bool]:
+    def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
         """
-        Get value by index.
+        Get value of `output_index`th output that corresponds to provided `inputs`.
 
-        :param index: index.
+        :param inputs: values of input gates.
+        :param output_index: index of desired output.
+        :return: value of `output_index` evaluated for input values `inputs`.
 
         """
 
     def is_constant(self) -> bool:
-        """Check if all outs are constant True or False."""
-
-    def is_constant_at(self, index: int) -> bool:
         """
-        Check if out is constant.
+        Check if all outputs are constant (input independent).
 
-        :param index: out index
+        :return: True iff this function is constant.
 
         """
 
-    def is_monotonic(self, inverse: bool) -> bool:
+    def is_constant_at(self, output_index: int) -> bool:
         """
-        Check if all outs are monotonic.
+        Check if output `output_index` is constant (input independent).
 
-        :param inverse: is monotonic inverse
-
-        """
-
-    def is_monotonic_at(self, index: int, inverse: bool) -> bool:
-        """
-        Check if out is monotonic.
-
-        :param index: out index
-        :param inverse: is monotonic inverse
+        :param output_index: index of desired output.
+        :return: True iff output `output_index` is constant.
 
         """
 
-    def is_dependent_from_input_of(self, output_index: int, input_index: int) -> bool:
+    def is_monotonic(self, *, inverse: bool) -> bool:
         """
-        Check if out is dependent from input.
+        Check if all outputs are monotonic (output value doesn't decrease when
+        inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
 
-        :param output_index: out index
-        :param input_index: input index
-
-        """
-
-    def get_out_as_input_negation(
-        self, out_index: int, in_index: int
-    ) -> tp.Optional[int]:
-        """
-        Check if out is input or its negation and return this negation.
-
-        :param out_index: out index
-        :param in_index: input index
+        :param inverse: if True, will check that output values doesn't
+        increase when inputs are enumerated in classic order.
+        :return: True iff this function is monotonic.
 
         """
 
-    def get_significant_inputs_of(self, out_index) -> list[int]:
+    def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
         """
-        Get all inputs which out depends on.
+        Check if output `output_index` is monotonic (output value doesn't
+        decrease when inputs are enumerated in a classic order: 0000, 0001,
+        0010, 0011 ...).
 
-        :param out_index: out index
-
-        """
-
-    def get_symmetric_and_negations_of(
-        self, out_indexes: list[int]
-    ) -> tp.Optional[list[bool]]:
-        """
-        Check if function is symmetric on some out set and returns inputs negations.
-
-        :param out_indexes: out index set
+        :param output_index: index of desired output.
+        :param inverse: if True, will check that output value doesn't
+        increase when inputs are enumerated in classic order.
+        :return: True iff output `output_index` is monotonic.
 
         """
 
     def is_symmetric(self) -> bool:
-        """Check if all outs are symmetric."""
-
-    def is_symmetric_at(self, out_index: int) -> bool:
         """
-        Check if out is symmetric.
+        Check if all outputs are symmetric.
 
-        :param out_index: out index
+        :return: True iff this function.
 
         """
 
-    def get_truth_table(self) -> 'BooleanFunction':
-        """Get truth table."""
+    def is_symmetric_at(self, output_index: int) -> bool:
+        """
+        Check that output `output_index` is symmetric.
+
+        :param output_index: index of desired output.
+        :return: True iff output `output_index` is symmetric.
+
+        """
+
+    def is_dependent_on_input_at(
+        self,
+        output_index: int,
+        input_index: int,
+    ) -> bool:
+        """
+        Check if output `output_index` depends on input `input_index` (there exist two
+        input sets that differ only at `input_index`, but result in different value for
+        `output_index`).
+
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` depends on input `input_index`.
+
+        """
+
+    def is_output_equal_to_input(
+        self,
+        output_index: int,
+        input_index: int,
+    ) -> bool:
+        """
+        Check if output `output_index` equals to input `input_index`.
+
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` equals to the input
+        `input_index`.
+
+        """
+
+    def is_output_equal_to_input_negation(
+        self,
+        output_index: int,
+        input_index: int,
+    ) -> bool:
+        """
+        Check if output `output_index` equals to negation of input `input_index`.
+
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` equals to negation of input
+        `input_index`.
+
+        """
+
+    def get_significant_inputs_of(self, output_index: int) -> list[int]:
+        """
+        Get indexes of all inputs on which output `output_index` depends on.
+
+        :param output_index: index of desired output.
+        :return: list of input indices.
+
+        """
+
+    def get_symmetric_and_negations_of(
+        self,
+        output_index: list[int],
+    ) -> tp.Optional[list[bool]]:
+        """
+        Check if function is symmetric on some output set and returns inputs negations.
+
+        :param output_index: output index set
+
+        """
+
+    def get_truth_table(self) -> list[list[bool]]:
+        """
+        Get truth table of a boolean function, which is a matrix, `i`th row of which
+        contains values of `i`th output, and `j`th column corresponds to the input which
+        is a binary encoding of a number `j` (for example j=9 corresponds to [..., 1, 0,
+        0, 1])
+
+        :return: truth table describing this function.
+
+        """

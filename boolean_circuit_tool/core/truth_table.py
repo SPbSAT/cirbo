@@ -18,105 +18,244 @@ def values_to_index(inputs: list[bool]) -> int:
     return int(''.join(str(int(v)) for v in inputs), 2)
 
 
-class TruthTable(BooleanFunction):
-    def __init__(self, values: list[list[bool]]):
-        self._values = [list(i) for i in zip(*values)]
-        self._output_size = len(values)
-        log = math.log2(len(values[0]))
-        assert log.is_integer()
-        self._input_size = int(log)
+def get_bit_value(value: int, bit_idx: int) -> bool:
+    """
+    :param value: some integer value.
+    :param bit_idx: big-endian index of bit.
+    :return: `bit_idx`th index of number `value`.
+    """
+    return bool((value & (1 << bit_idx)) >> bit_idx)
 
+
+class TruthTable(BooleanFunction):
+    """Boolean function given as a truth table."""
+
+    def __init__(self, table: list[list[bool]]):
+        """
+        :param table: truth table given as a list of lists of bools. `i`th list
+        is a truth table for output number `i`, trimmed to contain only output
+        values. Element `j` of list `i` is value for output `i` for input which
+        is a binary encoding of a number `j` (e.g. 9 -> [..., 1, 0, 0, 1]).
+
+        """
+        self._output_size = len(table)
+        log = math.log2(len(table[0]))
+        if not log.is_integer():
+            raise ValueError(
+                "TruthTable got truth table with number "
+                "of rows not equal to a power of two."
+            )
+        self._input_size = int(log)
+        self._table = table
+        # Transposed truth table, element (i, j) of which is a value
+        # of the output `j` when evaluated at input number `i`.
+        self._table_t = [list(i) for i in zip(*table)]
+
+    @property
     def input_size(self) -> int:
+        """
+        :return: number of inputs.
+        """
         return self._input_size
 
+    @property
     def output_size(self) -> int:
+        """
+        :return: number of outputs.
+        """
         return self._output_size
 
     def evaluate(self, inputs: list[bool]) -> list[bool]:
-        idx = values_to_index(inputs)
-        return self.evaluate_at(idx)
+        """
+        Get output values that correspond to provided `inputs`.
 
-    def evaluate_at(self, index: int) -> list[bool]:
-        return self._values[index]
+        :param inputs: values of input gates.
+        :return: value of outputs evaluated for input values `inputs`.
+
+        """
+        idx = values_to_index(inputs)
+        return self._table_t[idx]
+
+    def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
+        """
+        Get value of `output_index`th output that corresponds to provided `inputs`.
+
+        :param inputs: values of input gates.
+        :param output_index: index of desired output.
+        :return: value of `output_index` evaluated for input values `inputs`.
+
+        """
+        idx = values_to_index(inputs)
+        return self._table_t[idx][output_index]
 
     def is_constant(self) -> bool:
-        return all(self.is_constant_at(i) for i in range(self.output_size()))
+        """
+        Check if all outputs are constant (input independent).
 
-    def is_constant_at(self, index: int) -> bool:
-        value_set = set()
-        for idx in range(2 ** self.input_size()):
-            value = self.evaluate_at(idx)[index]
-            value_set.add(value)
-            if len(value_set) > 1:
+        :return: True iff this function is constant.
+
+        """
+        return all(self.is_constant_at(i) for i in range(self.output_size))
+
+    def is_constant_at(self, output_index: int) -> bool:
+        """
+        Check if output `output_index` is constant (input independent).
+
+        :param output_index: index of desired output.
+        :return: True iff output `output_index` is constant.
+
+        """
+
+        first_value = self._table[output_index][0]
+        for value in self._table[output_index]:
+            if value != first_value:
                 return False
         return True
 
-    def is_monotonic(self, inverse: bool) -> bool:
-        return all(self.is_monotonic_at(i, inverse) for i in range(self.output_size()))
+    def is_monotonic(self, *, inverse: bool) -> bool:
+        """
+        Check if all outputs are monotonic (output value doesn't decrease when
+        inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
 
-    def is_monotonic_at(self, index: int, inverse: bool) -> bool:
+        :param inverse: if True, will check that output values doesn't
+        increase when inputs are enumerated in classic order.
+        :return: True iff this function is monotonic.
+
+        """
+
+        return all(
+            self.is_monotonic_at(i, inverse=inverse) for i in range(self.output_size)
+        )
+
+    def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
+        """
+        Check if output `output_index` is monotonic (output value doesn't
+        decrease when inputs are enumerated in a classic order: 0000, 0001,
+        0010, 0011 ...).
+
+        :param output_index: index of desired output.
+        :param inverse: if True, will check that output value doesn't
+        increase when inputs are enumerated in classic order.
+        :return: True iff output `output_index` is monotonic.
+
+        """
         ones_started = False
-        for idx in range(2 ** self.input_size()):
-            value = self.evaluate_at(idx)[index]
+        for value in self._table[output_index]:
             if not ones_started and (value != inverse):
                 ones_started = True
             elif ones_started and (value == inverse):
                 return False
         return True
 
-    def is_dependent_from_input_of(self, output_index: int, input_index: int) -> bool:
-        for x in itertools.product((0, 1), repeat=self.input_size() - 1):
-            x = list(x)
-            x.insert(input_index, 0)
-            value1 = self.evaluate(x)[output_index]
+    def is_symmetric(self) -> bool:
+        """
+        Check if all outputs are symmetric.
+
+        :return: True iff this function.
+
+        """
+        return (
+            self.get_symmetric_and_negations_of(list(range(self.output_size)))
+            is not None
+        )
+
+    def is_symmetric_at(self, output_index: int) -> bool:
+        """
+        Check that output `output_index` is symmetric.
+
+        :param output_index: index of desired output.
+        :return: True iff output `output_index` is symmetric.
+
+        """
+        return self.get_symmetric_and_negations_of([output_index]) is not None
+
+    def is_dependent_on_input_at(self, output_index: int, input_index: int) -> bool:
+        """
+        Check if output `output_index` depends on input `input_index` (there exist two
+        input sets that differ only at `input_index`, but result in different value for
+        `output_index`).
+
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` depends on input `input_index`.
+
+        """
+        for _x in itertools.product((False, True), repeat=self.input_size - 1):
+            x = list(_x)
+            x.insert(input_index, False)
+            value1 = self.evaluate_at(x, output_index)
             x[input_index] = not x[input_index]
-            value2 = self.evaluate(x)[output_index]
+            value2 = self.evaluate_at(x, output_index)
             if value1 != value2:
                 return True
         return False
 
-    def get_out_as_input_negation(
-        self, out_index: int, in_index: int
-    ) -> tp.Optional[int]:
-        for negation in (0, 1):
-            eq = True
-            for x in itertools.product((0, 1), repeat=self.input_size()):
-                value = self.evaluate(list(x))[out_index]
-                var = x[in_index]
-                if value != (not var if negation else var):
-                    eq = False
-                    break
-            if eq:
-                return negation
-        return None
+    def is_output_equal_to_input(
+        self,
+        output_index: int,
+        input_index: int,
+    ) -> bool:
+        """
+        Check if output `output_index` equals to input `input_index`.
 
-    def get_significant_inputs_of(self, out_index) -> list[int]:
-        result = []
-        for i in range(self.input_size()):
-            if self.is_dependent_from_input_of(out_index, i):
-                result.append(i)
-        return result
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` equals to the input
+        `input_index`.
 
-    def is_symmetric(self) -> bool:
-        return (
-            self.get_symmetric_and_negations_of(list(range(self.output_size())))
-            is not None
-        )
+        """
+        for idx, output_value in enumerate(self._table[output_index]):
+            input_value = get_bit_value(idx, input_index)
+            if output_value != input_value:
+                return False
+        return True
 
-    def is_symmetric_at(self, out_index: int) -> bool:
-        return self.get_symmetric_and_negations_of([out_index]) is not None
+    def is_output_equal_to_input_negation(
+        self,
+        output_index: int,
+        input_index: int,
+    ) -> bool:
+        """
+        Check if output `output_index` equals to negation of input `input_index`.
+
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` equals to negation of input
+        `input_index`.
+
+        """
+        for idx, output_value in enumerate(self._table[output_index]):
+            input_value = not get_bit_value(idx, input_index)
+            if output_value != input_value:
+                return False
+        return True
+
+    def get_significant_inputs_of(self, output_index: int) -> list[int]:
+        """
+        Get indexes of all inputs on which output `output_index` depends on.
+
+        :param output_index: index of desired output.
+        :return: list of input indices.
+
+        """
+        return [
+            input_index
+            for input_index in range(self.input_size)
+            if self.is_dependent_on_input_at(output_index, input_index)
+        ]
 
     def get_symmetric_and_negations_of(
-        self, out_indexes: list[int]
+        self,
+        out_indexes: list[int],
     ) -> tp.Optional[list[bool]]:
-        for negations in itertools.product((0, 1), repeat=self.input_size()):
-            saved_values = [{} for _ in range(len(out_indexes))]
+        for negations in itertools.product((False, True), repeat=self.input_size):
+            saved_values = [{} for _ in range(len(out_indexes))]  # type: ignore
             symmetric = True
-            for x in itertools.product((0, 1), repeat=self.input_size()):
+            for x in itertools.product((False, True), repeat=self.input_size):
                 amount = sum(
-                    x[i] * (1 if negations[i] else -1) for i in range(self.input_size())
+                    x[i] * (1 if negations[i] else -1) for i in range(self.input_size)
                 )
-                values = self.evaluate(x)
+                values = self.evaluate(list(x))
                 for index in out_indexes:
                     if amount not in saved_values[index]:
                         saved_values[index][amount] = values[index]
@@ -129,5 +268,14 @@ class TruthTable(BooleanFunction):
                 return [bool(v) for v in negations]
         return None
 
-    def get_truth_table(self) -> 'TruthTable':
-        return self
+    def get_truth_table(self) -> list[list[bool]]:
+        """
+        Get truth table of a boolean function, which is a matrix, `i`th row of which
+        contains values of `i`th output, and `j`th column corresponds to the input which
+        is a binary encoding of a number `j` (for example j=9 corresponds to [..., 1, 0,
+        0, 1])
+
+        :return: truth table describing this function.
+
+        """
+        return self._table

@@ -1,4 +1,5 @@
 import random
+import typing as tp
 
 import pytest
 
@@ -37,19 +38,19 @@ def test_is_out_monotonic(input_size: int):
     false_count = random.randint(0, 2**input_size)
     monotonic_out = [False] * false_count + [True] * (2**input_size - false_count)
     truth_table = TruthTable([monotonic_out])
-    assert truth_table.is_monotonic_at(0, False)
-    assert truth_table.is_monotonic(False)
+    assert truth_table.is_monotonic_at(0, inverse=False)
+    assert truth_table.is_monotonic(inverse=False)
 
 
-def generate_sum(input_size: int, negations: list[bool] = None) -> list[bool]:
+def generate_sum(input_size: int, negations: tp.Optional[list[bool]] = None) -> list[bool]:
     lst = []
     for i in range(2**input_size):
-        b = bin(i)[2:]
-        b = '0' * (input_size - len(b)) + b
-        b = [int(v) for v in b]
+        b = bin(i)[2:]  # type: ignore
+        b = '0' * (input_size - len(b)) + b  # type: ignore
+        b = [int(v) for v in b]  # type: ignore
         if negations is not None:
-            b = [b[i] ^ negations[i] for i in range(len(b))]
-        s = b.count(1)
+            b = [b[i] ^ negations[i] for i in range(len(b))]  # type: ignore
+        s = b.count(1)  # type: ignore
         lst.append(s > input_size / 2)
     return lst
 
@@ -79,7 +80,7 @@ def test_is_out_dependent_from_input():
     out = generate_out_by_mask(input_size, mask)
     truth_table = TruthTable([out])
     for i in range(input_size):
-        assert truth_table.is_dependent_from_input_of(0, i) == (i in mask)
+        assert truth_table.is_dependent_on_input_at(0, i) == (i in mask)
 
 
 def test_get_out_is_input_negation():
@@ -87,7 +88,8 @@ def test_get_out_is_input_negation():
     mask = [1]
     out = generate_out_by_mask(input_size, mask)
     truth_table = TruthTable([out])
-    assert truth_table.get_out_as_input_negation(0, 1) == 0
+    assert truth_table.is_output_equal_to_input(0, 1)
+    assert not truth_table.is_output_equal_to_input_negation(0, 1)
 
 
 def test_is_out_symmetric():
