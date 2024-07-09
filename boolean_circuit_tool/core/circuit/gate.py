@@ -1,7 +1,7 @@
 """Module defines Gate and related objects."""
 
-import enum
 import typing as tp
+from dataclasses import dataclass
 
 from boolean_circuit_tool.core.circuit.operators import (
     and_,
@@ -14,24 +14,59 @@ from boolean_circuit_tool.core.circuit.operators import (
     xor_,
 )
 
-__all__ = ['Gate', 'GateLabel', 'GateType']
+__all__ = [
+    'Gate',
+    'GateLabel',
+    'GateType',
+    'INPUT',
+    'NOT',
+    'OR',
+    'NOR',
+    'AND',
+    'NAND',
+    'XOR',
+    'NXOR',
+    'IFF',
+    'BUFF',
+]
 
 GateLabel = str
 
 
-class GateType(enum.Enum):
-    """Possible types of operator gate."""
+@dataclass
+class GateType:
+    """Class possible types of operator gate."""
 
-    INPUT = "INPUT"
-    NOT = "NOT"
-    OR = "OR"
-    NOR = "NOR"
-    AND = "AND"
-    NAND = "NAND"
-    XOR = "XOR"
-    NXOR = "NXOR"
-    IFF = "IFF"
-    BUFF = "BUFF"
+    _name: str
+    _operator: tp.Callable
+    _is_symmetric: bool
+
+    @property
+    def operator(self) -> tp.Callable:
+        return self._operator
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def is_symmetric(self) -> bool:
+        return self._is_symmetric
+
+    def __eq__(self, rhs):
+        return isinstance(rhs, GateType) and self._name == rhs._name
+
+
+INPUT = GateType("INPUT", lambda: None, True)
+NOT = GateType("NOT", not_, True)
+OR = GateType("OR", or_, True)
+NOR = GateType("NOR", nor_, True)
+AND = GateType("AND", and_, True)
+NAND = GateType("NAND", nand_, True)
+XOR = GateType("XOR", xor_, False)
+NXOR = GateType("NXOR", nxor_, False)
+IFF = GateType("IFF", iff_, True)
+BUFF = GateType("BUFF", iff_, True)
 
 
 class Gate:
@@ -43,9 +78,10 @@ class Gate:
         gate_type: GateType,
         operands: tuple[GateLabel, ...] = (),
     ):
-        self._label = label
-        self._gate_type = gate_type
-        self._operands = operands
+        self._label: GateLabel = label
+        self._gate_type: GateType = gate_type
+        self._operands: tuple[GateLabel, ...] = operands
+        self._users: list[GateLabel] = list()
 
     @property
     def label(self) -> GateLabel:
@@ -60,28 +96,29 @@ class Gate:
     @property
     def operands(self) -> tp.Iterable[GateLabel]:
         """Return gate's operands in iterable object."""
-        for oper in self._operands:
-            yield oper
+        for operand in self._operands:
+            yield operand
 
     @property
-    def operator(self):
-        return {
-            GateType.NOT: not_,
-            GateType.AND: and_,
-            GateType.NAND: nand_,
-            GateType.OR: or_,
-            GateType.NOR: nor_,
-            GateType.XOR: xor_,
-            GateType.NXOR: nxor_,
-            GateType.IFF: iff_,
-            GateType.BUFF: iff_,
-        }[self._gate_type]
+    def users(self) -> tp.Iterable[GateLabel]:
+        """Return gate's users in iterable object."""
+        for user in self._users:
+            yield user
+
+    @property
+    def operator(self) -> tp.Callable:
+        return self._gate_type.operator
+
+    def _add_users(self, *users: GateLabel) -> None:
+        for user in users:
+            if user not in self._users:
+                self._users.append(user)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._label}, {self._gate_type}, {self._operands})"
 
     def __str__(self):
-        if self.gate_type == GateType.INPUT:
+        if self.gate_type == INPUT:
             return f"INPUT({self._label})"
         else:
             return (

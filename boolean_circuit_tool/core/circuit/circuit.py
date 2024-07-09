@@ -2,12 +2,13 @@
 
 import logging
 import pathlib
+import textwrap
 import typing as tp
 
 import typing_extensions as tp_ext
 
-from boolean_circuit_tool.core.circuit.gate import Gate, GateLabel, GateType
-from boolean_circuit_tool.core.circuit.operators import and_, GateState, Undefined
+from boolean_circuit_tool.core.circuit.gate import Gate, GateLabel, GateType, INPUT
+from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
 from boolean_circuit_tool.core.circuit.validation import (
     check_gate_lable_doesnt_exist,
     check_gates_exist,
@@ -31,7 +32,6 @@ class Circuit:
 
     TODO: Circuit also implements BooleanFunction protocol, allowing
     it to be used as boolean function and providing related checks.
-    TODO def draw
     TODO def top_sort
 
     """
@@ -49,29 +49,34 @@ class Circuit:
         _parser = BenchToCircuit()
         return _parser.convert_to_circuit(stream)
 
-    def __init__(self):
-        self.input_gates: set[GateLabel] = set()
-        self.output_gates: set[GateLabel] = set()
-        self.gates: dict[GateLabel, Gate] = {}
+    def __init__(self, name: str = 'Circuit'):
+        self.name = name
+        self._input_gates: list[GateLabel] = list()
+        self._output_gates: list[GateLabel] = list()
+        self._gates: dict[GateLabel, Gate] = {}
 
     @property
-    def inputs(self) -> set[GateLabel]:
+    def inputs(self) -> list[GateLabel]:
         """Return set of inputs."""
-        return self.input_gates
+        return self._input_gates
 
     @property
-    def outputs(self) -> set[GateLabel]:
+    def outputs(self) -> list[GateLabel]:
         """Return set of outpus."""
-        return self.output_gates
+        return self._output_gates
 
     @property
-    def gates_number(self):
+    def gates_number(self) -> int:
         """Return number of gates."""
-        return len(self.gates)
+        return len(self._gates)
+
+    def get_gate(self, label: GateLabel) -> Gate:
+        assert label in self._gates
+        return self._gates[label]
 
     def add_gate(self, gate: Gate) -> tp_ext.Self:
         """
-        Add gate in the ciurcuit.
+        Add gate in the circuit.
 
         :param: gate
         :return: circuit with new gate
@@ -79,11 +84,11 @@ class Circuit:
         """
         check_gate_lable_doesnt_exist(gate.label, self)
         check_gates_exist(tuple(gate.operands), self)
-        self.gates[gate.label] = gate
-        if gate.gate_type == GateType.INPUT:
-            self.input_gates.add(gate.label)
 
-        return self
+        for operand in gate.operands:
+            self.get_gate(operand)._add_users(gate.label)
+
+        return self._add_gate(gate)
 
     def emplace_gate(
         self,
@@ -95,55 +100,20 @@ class Circuit:
         """
         Add gate in the ciurcuit.
 
-        :mandatory param label: new gate's label :mandatory param gate_type: new gate's
-        type of operator :mandatory param operands: new gate's operands :optional params
-        **kwargs: others parameters for conctructing new gate
+        :param label: new gate's label
+        :param gate_type: new gate's type of operator
+        :param operands: new gate's operands
+        :param kwargs: others parameters for conctructing new gate
         :return: circuit with new gate
 
         """
         check_gate_lable_doesnt_exist(label, self)
         check_gates_exist(operands, self)
-        self.gates[label] = Gate(label, gate_type, operands, **kwargs)
-        if gate_type == GateType.INPUT:
-            self.input_gates.add(label)
 
-        return self
+        for operand in operands:
+            self.get_gate(operand)._add_users(label)
 
-    def _add_gate(self, gate: Gate) -> tp_ext.Self:
-        """
-        Add gate in the ciurcuit without any checkings.
-
-        :param: gate
-        :return: circuit with new gate
-
-        """
-        self.gates[gate.label] = gate
-        if gate.gate_type == GateType.INPUT:
-            self.input_gates.add(gate.label)
-
-        return self
-
-    def _emplace_gate(
-        self,
-        label: GateLabel,
-        gate_type: GateType,
-        operands: tuple[GateLabel, ...] = (),
-        **kwargs,
-    ) -> tp_ext.Self:
-        """
-        Add gate in the ciurcuit without any checkings.
-
-        :mandatory param label: new gate's label :mandatory param gate_type: new gate's
-        type of operator :mandatory param operands: new gate's operands :optional params
-        **kwargs: others parameters for conctructing new gate
-        :return: circuit with new gate
-
-        """
-        self.gates[label] = Gate(label, gate_type, operands, **kwargs)
-        if gate_type == GateType.INPUT:
-            self.input_gates.add(label)
-
-        return self
+        return self._emplace_gate(label, gate_type, operands, **kwargs)
 
     def rename_gate(self, old_label: GateLabel, new_label: GateLabel) -> tp_ext.Self:
         """
@@ -154,72 +124,101 @@ class Circuit:
         :return: modified circuit
 
         """
-        if old_label in self.input_gates:
-            self.input_gates.remove(old_label)
-            self.input_gates.add(new_label)
+        if old_label not in self._gates:
+            return self
 
-        new_gates = {}
-        for gate_label, gate in self.gates.items():
-            if gate_label == old_label:
-                new_gates[new_label] = Gate(
-                    new_label, gate.gate_type, tuple(gate.operands)
-                )
-            elif old_label in list(gate.operands):
-                new_gates[gate_label] = Gate(
-                    gate.label,
-                    gate.gate_type,
-                    tuple(
-                        new_label if oper == old_label else oper
-                        for oper in gate.operands
-                    ),
-                )
-            else:
-                new_gates[gate_label] = self.gates[gate_label]
-        self.gates = new_gates
+        if old_label in self._input_gates:
+            self._input_gates.remove(old_label)
+            self._input_gates.append(new_label)
 
-        if old_label in self.output_gates:
-            self.output_gates.remove(old_label)
-            self.output_gates.add(new_label)
+        self._gates[new_label] = Gate(
+            new_label,
+            self._gates[old_label].gate_type,
+            tuple(self._gates[old_label].operands),
+        )
 
+        for user_label in self._gates[old_label].users:
+            self._gates[user_label] = Gate(
+                user_label,
+                self._gates[user_label].gate_type,
+                tuple(
+                    new_label if oper == old_label else oper
+                    for oper in self._gates[user_label].operands
+                ),
+            )
+            self._gates[new_label]._add_users(user_label)
+
+        if old_label in self._output_gates:
+            self._output_gates.remove(old_label)
+            self._output_gates.append(new_label)
+
+        del self._gates[old_label]
         return self
 
     def mark_as_output(self, label: GateLabel) -> None:
-        check_gates_exist((label,), self)
-        self.output_gates.add(label)
+        """Mark as output a gate."""
+        if label not in self._output_gates:
+            check_gates_exist((label,), self)
+            self._output_gates.append(label)
 
-    def evaluate_circuit(
+    def sort_inputs(self, inputs: list[GateLabel]) -> tp_ext.Self:
+        """
+        Sort input gates.
+
+        :param inputs: sorted (maybe partially) list of inputs
+        :return: circuit with sorted inputs
+
+        """
+        self._input_gates = _sort_gates(inputs, self._input_gates)
+        return self
+
+    def sort_outputs(self, outputs: list[GateLabel]) -> tp_ext.Self:
+        """
+        Sort output gates.
+
+        :param outputs: sorted (maybe partially) list of outputs
+        :return: circuit with sorted outputs
+
+        """
+        self._output_gates = _sort_gates(outputs, self._output_gates)
+        return self
+
+    def evaluate(
         self,
         assigment: dict[str, GateState],
-    ) -> GateState:  # или мы хотим вектор значений выходов схемы
+    ) -> dict[str, GateState]:
         """
         Evaluate the circuit with the given input values.
 
         :param assigment: assigment for inputs
+        :return: outputs dictionary with the obtained values
 
         """
 
-        assigment_dict = dict()
-        for input in self.input_gates:
-            assigment_dict[input] = (
-                assigment[input] if input in assigment else Undefined
-            )
+        assigment_dict: dict[str, GateState] = dict()
+        for input in self._input_gates:
+            assigment_dict[input] = assigment.get(input, Undefined)
 
-        queue_ = list()
+        queue_: list[Gate] = list()
 
-        for output in self.output_gates:
-            queue_.append(self.gates[output])
+        for output in self._output_gates:
+            if output not in self._input_gates:
+                queue_.append(self._gates[output])
 
-        for gate in queue_:
+        while queue_:
+            gate = queue_[-1]
+
             for operand in gate.operands:
-                queue_.append(self.gates[operand])
+                if operand not in assigment_dict:
+                    queue_.append(self._gates[operand])
 
-        for gate in reversed(queue_):
-            if gate.label not in assigment_dict:
+            if gate == queue_[-1]:
                 assigment_dict[gate.label] = gate.operator(
-                    *[assigment_dict[op] for op in gate.operands]
+                    *(assigment_dict[op] for op in gate.operands)
                 )
+                queue_.pop()
 
-        return and_(True, *[assigment_dict[output] for output in self.output_gates])
+        return {output: assigment_dict[output] for output in self._output_gates}
 
     def save_to_file(self, path: str) -> None:
         """
@@ -231,19 +230,85 @@ class Circuit:
         p = pathlib.Path(path)
         if not p.parent.exists():
             p.parent.mkdir(parents=True, exist_ok=False)
-        p.write_text(str(self))
+        p.write_text(self.print_circuit())
 
-    def __str__(self):
+    def print_circuit(self) -> str:
         input_str = '\n'.join(
-            f'INPUT({input_label})' for input_label in self.input_gates
+            f'INPUT({input_label})' for input_label in self._input_gates
         )
         gates_str = '\n'.join(
-            str(gate)
-            for gate in self.gates.values()
-            if gate.gate_type != GateType.INPUT
+            str(gate) for gate in self._gates.values() if gate.gate_type != INPUT
         )
         output_str = '\n'.join(
-            f'OUTPUT({output_label})' for output_label in self.output_gates
+            f'OUTPUT({output_label})' for output_label in self._output_gates
         )
-
         return f"{input_str}\n\n{gates_str}\n\n{output_str}"
+
+    def _add_gate(self, gate: Gate) -> tp_ext.Self:
+        """
+        Add gate in the ciurcuit without any checkings (!!!) and without filling users.
+
+        :param: gate
+        :return: circuit with new gate
+
+        """
+        self._gates[gate.label] = gate
+        if gate.gate_type == INPUT:
+            self._input_gates.append(gate.label)
+
+        return self
+
+    def _emplace_gate(
+        self,
+        label: GateLabel,
+        gate_type: GateType,
+        operands: tuple[GateLabel, ...] = (),
+        **kwargs,
+    ) -> tp_ext.Self:
+        """
+        Add gate in the ciurcuit without any checkings (!!!) and without filling users.
+
+        :param label: new gate's label
+        :param gate_type: new gate's type of operator
+        :param operands: new gate's operands
+        :params kwargs: others parameters for conctructing new gate
+        :return: circuit with new gate
+
+        """
+        self._gates[label] = Gate(label, gate_type, operands, **kwargs)
+        if gate_type == INPUT:
+            self._input_gates.append(label)
+
+        return self
+
+    def __str__(self):
+        input_str = textwrap.shorten(
+            'INPUTS: '
+            + '; '.join(f'{input_label}' for input_label in self._input_gates),
+            wigth=100,
+        )
+        output_str = textwrap.shorten(
+            'OUTPUTS: '
+            + '; '.join(f'{output_label}' for output_label in self._output_gates),
+            wigth=100,
+        )
+        return f"{self.name}\n{input_str}\n{output_str}"
+
+
+def _sort_gates(
+    sorted_gates_list: list[GateLabel],
+    old_gates_list: list[GateLabel],
+) -> list[GateLabel]:
+    """Sort old gates list with full or partially sorted gates list."""
+
+    new_gates_list = list()
+    for gate in sorted_gates_list:
+        assert gate in old_gates_list
+        new_gates_list.append(gate)
+
+    if len(new_gates_list) != len(old_gates_list):
+        for input in old_gates_list:
+            if input not in new_gates_list:
+                new_gates_list.append(input)
+
+    return new_gates_list

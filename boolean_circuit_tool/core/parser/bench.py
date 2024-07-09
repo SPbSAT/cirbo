@@ -5,7 +5,19 @@ import logging
 import typing as tp
 
 from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import GateType
+from boolean_circuit_tool.core.circuit.gate import (
+    AND,
+    BUFF,
+    GateType,
+    IFF,
+    INPUT,
+    NAND,
+    NOR,
+    NOT,
+    NXOR,
+    OR,
+    XOR,
+)
 from boolean_circuit_tool.core.circuit.validation import check_gates_exist
 from boolean_circuit_tool.core.parser.abstract import AbstractParser
 
@@ -42,15 +54,15 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
         super(AbstractBenchParser, self).__init__(*args, **kwargs)
         # Dict of specific processing methods for gates
         self._processings: dict[str, tp.Callable] = {
-            GateType.NOT.value: self._process_not,
-            GateType.AND.value: self._process_and,
-            GateType.NAND.value: self._process_nand,
-            GateType.OR.value: self._process_or,
-            GateType.NOR.value: self._process_nor,
-            GateType.XOR.value: self._process_xor,
-            GateType.NXOR.value: self._process_nxor,
-            GateType.IFF.value: self._process_iff,
-            GateType.BUFF.value: self._process_iff,
+            NOT.name: self._process_not,
+            AND.name: self._process_and,
+            NAND.name: self._process_nand,
+            OR.name: self._process_or,
+            NOR.name: self._process_nor,
+            XOR.name: self._process_xor,
+            NXOR.name: self._process_nxor,
+            IFF.name: self._process_iff,
+            BUFF.name: self._process_iff,
         }
 
     def _process_line(self, line: str) -> tp.Iterable:
@@ -163,9 +175,12 @@ class BenchToCircuit(AbstractBenchParser):
         return self._circuit
 
     def _eof(self) -> tp.Iterable:
-        """Check initializations all operands into the circuit."""
-        for _, gate in self._circuit.gates.items():
-            check_gates_exist(tuple(gate.operands), self._circuit)
+        """Check initializations all operands into the circuit and filling gates
+        users."""
+        for _, gate in self._circuit._gates.items():
+            for operand in gate.operands:
+                check_gates_exist((operand,), self._circuit)
+                self._circuit.get_gate(operand)._add_users(gate.label)
         return []
 
     def _add_gate(self, out: str, gate_type: GateType, arg1: str, *args: str):
@@ -181,36 +196,36 @@ class BenchToCircuit(AbstractBenchParser):
         """Parses line with input gate."""
         _gate = line[6:].strip(') \n')
         logger.debug(f'\tAdding input gate: {_gate}')
-        self._circuit._emplace_gate(_gate, GateType.INPUT)
+        self._circuit._emplace_gate(_gate, INPUT)
         return []
 
     def _process_output_gate(self, line: str) -> list:
         """Parses line with output gate."""
         _gate = line[7:].strip(') \n')
         logger.debug(f'\tAdding output gate: {_gate}')
-        self._circuit.output_gates.add(_gate)
+        self._circuit._output_gates.append(_gate)
         return []
 
     def _process_not(self, out: str, arg: str):
-        return self._add_gate(out, GateType.NOT, arg)
+        return self._add_gate(out, NOT, arg)
 
     def _process_xor(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, GateType.XOR, arg1, arg2, *args)
+        return self._add_gate(out, XOR, arg1, arg2, *args)
 
     def _process_nxor(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, GateType.NXOR, arg1, arg2, *args)
+        return self._add_gate(out, NXOR, arg1, arg2, *args)
 
     def _process_or(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, GateType.OR, arg1, arg2, *args)
+        return self._add_gate(out, OR, arg1, arg2, *args)
 
     def _process_nor(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, GateType.NOR, arg1, arg2, *args)
+        return self._add_gate(out, NOR, arg1, arg2, *args)
 
     def _process_and(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, GateType.AND, arg1, arg2, *args)
+        return self._add_gate(out, AND, arg1, arg2, *args)
 
     def _process_nand(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, GateType.NAND, arg1, arg2, *args)
+        return self._add_gate(out, NAND, arg1, arg2, *args)
 
     def _process_iff(self, out: str, arg: str):
-        return self._add_gate(out, GateType.IFF, arg)
+        return self._add_gate(out, IFF, arg)
