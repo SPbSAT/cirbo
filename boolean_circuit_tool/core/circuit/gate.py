@@ -16,7 +16,7 @@ from boolean_circuit_tool.core.circuit.operators import (
 
 __all__ = [
     'Gate',
-    'GateLabel',
+    'Label',
     'GateType',
     'INPUT',
     'NOT',
@@ -30,7 +30,7 @@ __all__ = [
     'BUFF',
 ]
 
-GateLabel = str
+Label = str
 
 
 @dataclass
@@ -74,17 +74,17 @@ class Gate:
 
     def __init__(
         self,
-        label: GateLabel,
+        label: Label,
         gate_type: GateType,
-        operands: tuple[GateLabel, ...] = (),
+        operands: tuple[Label, ...] = (),
     ):
-        self._label: GateLabel = label
+        self._label: Label = label
         self._gate_type: GateType = gate_type
-        self._operands: tuple[GateLabel, ...] = operands
-        self._users: list[GateLabel] = list()
+        self._operands: tuple[Label, ...] = operands
+        self._users: list[Label] = list()
 
     @property
-    def label(self) -> GateLabel:
+    def label(self) -> Label:
         """Return gate's name."""
         return self._label
 
@@ -94,13 +94,13 @@ class Gate:
         return self._gate_type
 
     @property
-    def operands(self) -> tp.Iterable[GateLabel]:
+    def operands(self) -> tp.Iterable[Label]:
         """Return gate's operands in iterable object."""
         for operand in self._operands:
             yield operand
 
     @property
-    def users(self) -> tp.Iterable[GateLabel]:
+    def users(self) -> tp.Iterable[Label]:
         """Return gate's users in iterable object."""
         for user in self._users:
             yield user
@@ -109,7 +109,7 @@ class Gate:
     def operator(self) -> tp.Callable:
         return self._gate_type.operator
 
-    def _add_users(self, *users: GateLabel) -> None:
+    def _add_users(self, *users: Label) -> None:
         for user in users:
             if user not in self._users:
                 self._users.append(user)

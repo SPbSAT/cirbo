@@ -20,30 +20,30 @@ INPUT(E)\n
 """
     instance = Circuit().from_bench(file_input.split("\n"))
 
-    assert instance.gates_number == 5
-    assert instance._input_gates == ['A', 'D', 'E']
-    assert instance._output_gates == ['C']
+    assert instance.elements_number == 5
+    assert instance._inputs == ['A', 'D', 'E']
+    assert instance._outputs == ['C']
 
-    assert instance._gates.keys() == {'A', 'D', 'B', 'C', 'E'}
-    assert instance._gates['A'].label == 'A'
-    assert instance._gates['A'].gate_type == INPUT
-    assert tuple(instance._gates['A'].operands) == ()
+    assert instance._elements.keys() == {'A', 'D', 'B', 'C', 'E'}
+    assert instance._elements['A'].label == 'A'
+    assert instance._elements['A'].gate_type == INPUT
+    assert tuple(instance._elements['A'].operands) == ()
 
-    assert instance._gates['D'].label == 'D'
-    assert instance._gates['D'].gate_type == INPUT
-    assert tuple(instance._gates['D'].operands) == ()
+    assert instance._elements['D'].label == 'D'
+    assert instance._elements['D'].gate_type == INPUT
+    assert tuple(instance._elements['D'].operands) == ()
 
-    assert instance._gates['E'].label == 'E'
-    assert instance._gates['E'].gate_type == INPUT
-    assert tuple(instance._gates['E'].operands) == ()
+    assert instance._elements['E'].label == 'E'
+    assert instance._elements['E'].gate_type == INPUT
+    assert tuple(instance._elements['E'].operands) == ()
 
-    assert instance._gates['B'].label == 'B'
-    assert instance._gates['B'].gate_type == NOT
-    assert tuple(instance._gates['B'].operands) == ('A',)
+    assert instance._elements['B'].label == 'B'
+    assert instance._elements['B'].gate_type == NOT
+    assert tuple(instance._elements['B'].operands) == ('A',)
 
-    assert instance._gates['C'].label == 'C'
-    assert instance._gates['C'].gate_type == AND
-    assert tuple(instance._gates['C'].operands) == ('A', 'B')
+    assert instance._elements['C'].label == 'C'
+    assert instance._elements['C'].gate_type == AND
+    assert tuple(instance._elements['C'].operands) == ('A', 'B')
 
 
 def test_spaces():
@@ -58,31 +58,31 @@ INPUT(E   )\n
 """
     instance = Circuit().from_bench(file_input.split("\n"))
 
-    assert instance.gates_number == 5
-    assert instance._input_gates == ['AAAAA', 'DDDD', 'E']
-    assert instance._output_gates == ['C']
+    assert instance.elements_number == 5
+    assert instance._inputs == ['AAAAA', 'DDDD', 'E']
+    assert instance._outputs == ['C']
 
-    assert instance._gates.keys() == {'AAAAA', 'DDDD', 'B', 'C', 'E'}
+    assert instance._elements.keys() == {'AAAAA', 'DDDD', 'B', 'C', 'E'}
 
-    assert instance._gates['AAAAA'].label == 'AAAAA'
-    assert instance._gates['AAAAA'].gate_type == INPUT
-    assert tuple(instance._gates['AAAAA'].operands) == ()
+    assert instance._elements['AAAAA'].label == 'AAAAA'
+    assert instance._elements['AAAAA'].gate_type == INPUT
+    assert tuple(instance._elements['AAAAA'].operands) == ()
 
-    assert instance._gates['DDDD'].label == 'DDDD'
-    assert instance._gates['DDDD'].gate_type == INPUT
-    assert tuple(instance._gates['DDDD'].operands) == ()
+    assert instance._elements['DDDD'].label == 'DDDD'
+    assert instance._elements['DDDD'].gate_type == INPUT
+    assert tuple(instance._elements['DDDD'].operands) == ()
 
-    assert instance._gates['E'].label == 'E'
-    assert instance._gates['E'].gate_type == INPUT
-    assert tuple(instance._gates['E'].operands) == ()
+    assert instance._elements['E'].label == 'E'
+    assert instance._elements['E'].gate_type == INPUT
+    assert tuple(instance._elements['E'].operands) == ()
 
-    assert instance._gates['B'].label == 'B'
-    assert instance._gates['B'].gate_type == NOT
-    assert tuple(instance._gates['B'].operands) == ('AAAAA',)
+    assert instance._elements['B'].label == 'B'
+    assert instance._elements['B'].gate_type == NOT
+    assert tuple(instance._elements['B'].operands) == ('AAAAA',)
 
-    assert instance._gates['C'].label == 'C'
-    assert instance._gates['C'].gate_type == AND
-    assert tuple(instance._gates['C'].operands) == ('AAAAA', 'B')
+    assert instance._elements['C'].label == 'C'
+    assert instance._elements['C'].gate_type == AND
+    assert tuple(instance._elements['C'].operands) == ('AAAAA', 'B')
 
 
 def test_not_init_operands():
@@ -106,22 +106,22 @@ D = NOT(A)
 """
     instance = Circuit().from_bench(file_input.split("\n"))
 
-    assert instance.gates_number == 3
-    assert instance._input_gates == ['A']
-    assert instance._output_gates == ['B']
+    assert instance.elements_number == 3
+    assert instance._inputs == ['A']
+    assert instance._outputs == ['B']
 
-    assert instance._gates.keys() == {'A', 'B', 'D'}
-    assert instance._gates['A'].label == 'A'
-    assert instance._gates['A'].gate_type == INPUT
-    assert tuple(instance._gates['A'].operands) == ()
+    assert instance._elements.keys() == {'A', 'B', 'D'}
+    assert instance._elements['A'].label == 'A'
+    assert instance._elements['A'].gate_type == INPUT
+    assert tuple(instance._elements['A'].operands) == ()
 
-    assert instance._gates['B'].label == 'B'
-    assert instance._gates['B'].gate_type == OR
-    assert tuple(instance._gates['B'].operands) == ('A', 'D')
+    assert instance._elements['B'].label == 'B'
+    assert instance._elements['B'].gate_type == OR
+    assert tuple(instance._elements['B'].operands) == ('A', 'D')
 
-    assert instance._gates['D'].label == 'D'
-    assert instance._gates['D'].gate_type == NOT
-    assert tuple(instance._gates['D'].operands) == ('A',)
+    assert instance._elements['D'].label == 'D'
+    assert instance._elements['D'].gate_type == NOT
+    assert tuple(instance._elements['D'].operands) == ('A',)
 
 
 def test_sorting():
@@ -140,12 +140,12 @@ OUTPUT(A)\n
 """
     instance = Circuit().from_bench(file_input.split("\n"))
 
-    assert instance.gates_number == 5
-    assert instance._input_gates == ['A', 'D', 'E']
-    assert instance._output_gates == ['C', 'A']
+    assert instance.elements_number == 5
+    assert instance._inputs == ['A', 'D', 'E']
+    assert instance._outputs == ['C', 'A']
 
     instance.sort_inputs(['E', 'A'])
-    assert instance._input_gates == ['E', 'A', 'D']
+    assert instance._inputs == ['E', 'A', 'D']
 
     instance.sort_outputs(['A', 'C'])
-    assert instance._output_gates == ['A', 'C']
+    assert instance._outputs == ['A', 'C']
