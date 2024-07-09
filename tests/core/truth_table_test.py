@@ -42,7 +42,9 @@ def test_is_out_monotonic(input_size: int):
     assert truth_table.is_monotonic(inverse=False)
 
 
-def generate_sum(input_size: int, negations: tp.Optional[list[bool]] = None) -> list[bool]:
+def generate_sum(
+    input_size: int, negations: tp.Optional[list[bool]] = None
+) -> list[bool]:
     lst = []
     for i in range(2**input_size):
         b = bin(i)[2:]  # type: ignore
