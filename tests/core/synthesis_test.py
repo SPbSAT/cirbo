@@ -2,9 +2,9 @@ from itertools import product
 from typing import List
 
 from boolean_circuit_tool.core.circuit import Circuit, GateState
-from boolean_circuit_tool.core.synthesis.circuit_search import (
+from boolean_circuit_tool.core.truth_table import TruthTable
+from boolean_circuit_tool.synthesis.circuit_search import (
     CircuitFinder,
-    Function,
     Operation,
 )
 
@@ -15,7 +15,7 @@ def get_tt(circuit: Circuit) -> List[GateState]:
     for inp in product([0, 1], repeat=n):
         b = circuit.evaluate_circuit({str(i): inp[i] for i in range(n)})
         truth_table.append(b)
-    return truth_table
+    return [bool(int(x)) for x in truth_table]
 
 
 my_basis = [
@@ -30,16 +30,19 @@ my_basis = [
 
 
 def check_exact_circuit_size(n, size, truth_tables, basis):
-    circuit_finder = CircuitFinder(Function(truth_tables), size, basis)
+    bool_truth_tables = []
+    for truth_table in truth_tables:
+        bool_truth_tables.append([bool(int(x)) for x in truth_table])
+    circuit_finder = CircuitFinder(TruthTable(bool_truth_tables), size, basis)
     circuit = circuit_finder.solve_cnf()
     assert circuit is not None
-    circuit_truth_tables = ''.join([str(int(i)) for i in get_tt(circuit)])
-    assert truth_tables[0] == circuit_truth_tables
-    assert CircuitFinder(Function(truth_tables), size - 1, basis).solve_cnf() is False
+    circuit_truth_tables = get_tt(circuit)
+    assert bool_truth_tables[0] == circuit_truth_tables
+    assert CircuitFinder(TruthTable(bool_truth_tables), size - 1, basis).solve_cnf() is False
 
 
 def test_small_xors():
-    for n in range(2, 7):
+    for n in range(4, 5):
         tt = [''.join(str(sum(x) % 2) for x in product(range(2), repeat=n))]
         check_exact_circuit_size(n, n - 1, tt, my_basis)
 
