@@ -7,7 +7,6 @@ import typing as tp
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import (
     AND,
-    BUFF,
     GateType,
     IFF,
     INPUT,
@@ -62,7 +61,6 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             XOR.name: self._process_xor,
             NXOR.name: self._process_nxor,
             IFF.name: self._process_iff,
-            BUFF.name: self._process_iff,
         }
 
     def _process_line(self, line: str) -> tp.Iterable:
@@ -178,9 +176,7 @@ class BenchToCircuit(AbstractBenchParser):
         """Check initializations all operands into the circuit and filling gates
         users."""
         for _, gate in self._circuit._elements.items():
-            for operand in gate.operands:
-                check_elements_exist((operand,), self._circuit)
-                self._circuit.get_element(operand)._add_users(gate.label)
+            check_elements_exist(gate.operands, self._circuit)
         return []
 
     def _add_gate(self, out: str, gate_type: GateType, arg1: str, *args: str):

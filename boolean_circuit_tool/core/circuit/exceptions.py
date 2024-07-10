@@ -5,6 +5,9 @@ from boolean_circuit_tool.exceptions import BooleanCircuitToolError
 __all__ = [
     'CircuitError',
     'CircuitValidationError',
+    'CircuitElementIsAbsentError',
+    'CircuitElementAlreadyExistsError',
+    'GateTypeNoOperatorError',
     'GateStateError',
 ]
 
@@ -22,7 +25,25 @@ class CircuitValidationError(CircuitError):
     pass
 
 
-class GateStateError(BooleanCircuitToolError):
+class CircuitElementIsAbsentError(CircuitError):
+    """Error on try to access absent element."""
+
+    pass
+
+
+class CircuitElementAlreadyExistsError(CircuitError):
+    """Error on creation of element that already exists."""
+
+    pass
+
+
+class GateTypeNoOperatorError(CircuitError):
+    """Represents error in operator getter, when operator is None."""
+
+    pass
+
+
+class GateStateError(CircuitError):
     """Represents error of gate state."""
 
     pass

@@ -1,8 +1,9 @@
 """Module defines Gate and related objects."""
 
+import dataclasses
 import typing as tp
-from dataclasses import dataclass
 
+from boolean_circuit_tool.core.circuit.exceptions import GateTypeNoOperatorError
 from boolean_circuit_tool.core.circuit.operators import (
     and_,
     iff_,
@@ -27,46 +28,60 @@ __all__ = [
     'XOR',
     'NXOR',
     'IFF',
-    'BUFF',
 ]
 
 Label = str
 
 
-@dataclass
+@dataclasses.dataclass(eq=False, unsafe_hash=False, frozen=True)
 class GateType:
     """Class possible types of operator gate."""
 
     _name: str
-    _operator: tp.Callable
+    _operator: tp.Optional[tp.Callable]
     _is_symmetric: bool
 
     @property
     def operator(self) -> tp.Callable:
+        """Returns callable that can evaluate gate of this type."""
+        if self._operator is None:
+            raise GateTypeNoOperatorError()
         return self._operator
 
     @property
     def name(self) -> str:
+        """Returns name of this type."""
         return self._name
 
     @property
     def is_symmetric(self) -> bool:
+        """Returns True iff gate of this type does not depend on order of operands."""
         return self._is_symmetric
 
     def __eq__(self, rhs):
-        return isinstance(rhs, GateType) and self._name == rhs._name
+        if not isinstance(rhs, GateType):
+            return NotImplemented
+
+        return (
+            True
+            and self._name == rhs._name
+            and self._operator == rhs._operator
+            and self._is_symmetric == rhs._is_symmetric
+        )
+
+    def __hash__(self) -> int:
+        return hash(self.name)
 
 
-INPUT = GateType("INPUT", lambda: None, True)
+INPUT = GateType("INPUT", None, True)
 NOT = GateType("NOT", not_, True)
 OR = GateType("OR", or_, True)
 NOR = GateType("NOR", nor_, True)
 AND = GateType("AND", and_, True)
 NAND = GateType("NAND", nand_, True)
-XOR = GateType("XOR", xor_, False)
-NXOR = GateType("NXOR", nxor_, False)
+XOR = GateType("XOR", xor_, True)
+NXOR = GateType("NXOR", nxor_, True)
 IFF = GateType("IFF", iff_, True)
-BUFF = GateType("BUFF", iff_, True)
 
 
 class Gate:
@@ -81,7 +96,6 @@ class Gate:
         self._label: Label = label
         self._gate_type: GateType = gate_type
         self._operands: tuple[Label, ...] = operands
-        self._users: list[Label] = list()
 
     @property
     def label(self) -> Label:
@@ -94,33 +108,32 @@ class Gate:
         return self._gate_type
 
     @property
-    def operands(self) -> tp.Iterable[Label]:
+    def operands(self) -> tuple[Label, ...]:
         """Return gate's operands in iterable object."""
-        for operand in self._operands:
-            yield operand
-
-    @property
-    def users(self) -> tp.Iterable[Label]:
-        """Return gate's users in iterable object."""
-        for user in self._users:
-            yield user
+        return self._operands
 
     @property
     def operator(self) -> tp.Callable:
+        """Callable operator that evaluates this gate."""
         return self._gate_type.operator
 
-    def _add_users(self, *users: Label) -> None:
-        for user in users:
-            if user not in self._users:
-                self._users.append(user)
+    def format_gate(self):
+        if self.gate_type == INPUT:
+            return f"INPUT({self._label})"
+        return f"{self._label} = {self.gate_type.value}({', '.join(self._operands)})"
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, Gate):
+            return NotImplemented
+        return (
+            True
+            and self.label == value.label
+            and self.gate_type == value.gate_type
+            and self.operands == value.operands
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.label, self.gate_type, self.operands))
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._label}, {self._gate_type}, {self._operands})"
-
-    def __str__(self):
-        if self.gate_type == INPUT:
-            return f"INPUT({self._label})"
-        else:
-            return (
-                f"{self._label} = {self.gate_type.value}({', '.join(self._operands)})"
-            )

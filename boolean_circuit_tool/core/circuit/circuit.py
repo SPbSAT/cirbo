@@ -1,5 +1,6 @@
 """Module contains implementation of Circuit class."""
 
+import collections
 import logging
 import pathlib
 import textwrap
@@ -7,6 +8,10 @@ import typing as tp
 
 import typing_extensions as tp_ext
 
+from boolean_circuit_tool.core.circuit.exceptions import (
+    CircuitElementAlreadyExistsError,
+    CircuitElementIsAbsentError,
+)
 from boolean_circuit_tool.core.circuit.gate import Gate, GateType, INPUT, Label
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
 from boolean_circuit_tool.core.circuit.validation import (
@@ -50,11 +55,13 @@ class Circuit:
         _parser = BenchToCircuit()
         return _parser.convert_to_circuit(stream)
 
-    def __init__(self, name: str = 'Circuit'):
-        self.name = name
+    def __init__(self):
         self._inputs: list[Label] = list()
         self._outputs: list[Label] = list()
         self._elements: dict[Label, Gate] = {}
+        self._element_to_users: tp.DefaultDict[Label, list[Label]] = (
+            collections.defaultdict(list)
+        )
 
     @property
     def inputs(self) -> list[Label]:
@@ -63,7 +70,7 @@ class Circuit:
 
     @property
     def outputs(self) -> list[Label]:
-        """Return set of outpus."""
+        """Return set of outputs."""
         return self._outputs
 
     @property
@@ -72,8 +79,15 @@ class Circuit:
         return len(self._elements)
 
     def get_element(self, label: Label) -> Gate:
-        assert label in self._elements
         return self._elements[label]
+
+    def get_element_users(self, label: Label) -> list[Label]:
+        """Returns all gates which use given gate as operand."""
+        return self._element_to_users[label]
+
+    def has_element(self, label: Label) -> bool:
+        """Returns True iff this circuit has element `label`."""
+        return label in self._elements
 
     def add_gate(self, gate: Gate) -> tp_ext.Self:
         """
@@ -84,10 +98,7 @@ class Circuit:
 
         """
         check_label_doesnt_exist(gate.label, self)
-        check_elements_exist(tuple(gate.operands), self)
-
-        for operand in gate.operands:
-            self.get_element(operand)._add_users(gate.label)
+        check_elements_exist(gate.operands, self)
 
         return self._add_gate(gate)
 
@@ -111,9 +122,6 @@ class Circuit:
         check_label_doesnt_exist(label, self)
         check_elements_exist(operands, self)
 
-        for operand in operands:
-            self.get_element(operand)._add_users(label)
-
         return self._emplace_gate(label, gate_type, operands, **kwargs)
 
     def rename_element(self, old_label: Label, new_label: Label) -> tp_ext.Self:
@@ -126,19 +134,28 @@ class Circuit:
 
         """
         if old_label not in self._elements:
-            return self  # assert ?
+            raise CircuitElementIsAbsentError()
+
+        if new_label in self._elements:
+            raise CircuitElementAlreadyExistsError()
 
         if old_label in self._inputs:
             self._inputs.remove(old_label)
             self._inputs.append(new_label)
 
+        if old_label in self._outputs:
+            self._outputs.remove(old_label)
+            self._outputs.append(new_label)
+
         self._elements[new_label] = Gate(
             new_label,
             self._elements[old_label].gate_type,
-            tuple(self._elements[old_label].operands),
+            self._elements[old_label].operands,
         )
 
-        for user_label in self._elements[old_label].users:
+        self._element_to_users[new_label] = self._element_to_users[old_label]
+
+        for user_label in self._element_to_users[old_label]:
             self._elements[user_label] = Gate(
                 user_label,
                 self._elements[user_label].gate_type,
@@ -147,11 +164,11 @@ class Circuit:
                     for oper in self._elements[user_label].operands
                 ),
             )
-            self._elements[new_label]._add_users(user_label)
 
-        if old_label in self._outputs:
-            self._outputs.remove(old_label)
-            self._outputs.append(new_label)
+        for operand_label in self._elements[old_label].operands:
+            operand_users = self._element_to_users[operand_label]
+            assert old_label in operand_users
+            operand_users[operand_users.index(old_label)] = new_label
 
         del self._elements[old_label]
         return self
@@ -184,7 +201,7 @@ class Circuit:
         self._outputs = _sort_list(outputs, self._outputs)
         return self
 
-    def evaluate(
+    def evaluate_circuit(
         self,
         assigment: dict[str, GateState],
     ) -> dict[str, GateState]:
@@ -196,24 +213,24 @@ class Circuit:
 
         """
 
-        assigment_dict: dict[str, GateState] = dict()
+        assigment_dict: dict[str, GateState] = dict(assigment)
         for input in self._inputs:
-            assigment_dict[input] = assigment.get(input, Undefined)
+            assigment_dict.setdefault(input, Undefined)
 
-        queue_: list[Gate] = list()
+        queue_: list[Label] = list()
 
         for output in self._outputs:
             if output not in self._inputs:
-                queue_.append(self._elements[output])
+                queue_.append(output)
 
         while queue_:
-            gate = queue_[-1]
+            gate = self.get_element(queue_[-1])
 
             for operand in gate.operands:
                 if operand not in assigment_dict:
-                    queue_.append(self._elements[operand])
+                    queue_.append(operand)
 
-            if gate == queue_[-1]:
+            if gate.label == queue_[-1]:
                 assigment_dict[gate.label] = gate.operator(
                     *(assigment_dict[op] for op in gate.operands)
                 )
@@ -231,12 +248,15 @@ class Circuit:
         p = pathlib.Path(path)
         if not p.parent.exists():
             p.parent.mkdir(parents=True, exist_ok=False)
-        p.write_text(self.print_circuit())
+        p.write_text(self.format_circuit())
 
-    def print_circuit(self) -> str:
+    def format_circuit(self) -> str:
+        """Formats circuit as string in BENCH format."""
         input_str = '\n'.join(f'INPUT({input_label})' for input_label in self._inputs)
         gates_str = '\n'.join(
-            str(gate) for gate in self._elements.values() if gate.gate_type != INPUT
+            gate.format_gate()
+            for gate in self._elements.values()
+            if gate.gate_type != INPUT
         )
         output_str = '\n'.join(
             f'OUTPUT({output_label})' for output_label in self._outputs
@@ -251,6 +271,9 @@ class Circuit:
         :return: circuit with new gate
 
         """
+        for operand in gate.operands:
+            self._add_user(operand, gate.label)
+
         self._elements[gate.label] = gate
         if gate.gate_type == INPUT:
             self._inputs.append(gate.label)
@@ -274,11 +297,18 @@ class Circuit:
         :return: circuit with new gate
 
         """
+        for operand in operands:
+            self._add_user(operand, label)
+
         self._elements[label] = Gate(label, gate_type, operands, **kwargs)
         if gate_type == INPUT:
             self._inputs.append(label)
 
         return self
+
+    def _add_user(self, element: Label, user: Label):
+        """Adds user for `element`."""
+        self._element_to_users[element].append(user)
 
     def __str__(self):
         input_str = textwrap.shorten(
@@ -290,23 +320,33 @@ class Circuit:
             + '; '.join(f'{output_label}' for output_label in self._outputs),
             wigth=100,
         )
-        return f"{self.name}\n{input_str}\n{output_str}"
+        return f"{self.__class__.__name__}\n\t{input_str}\n\t{output_str}"
 
 
 def _sort_list(
     sorted_list: list[Label],
     old_list: list[Label],
 ) -> list[Label]:
-    """Sort old elements list with full or partially sorted elements list."""
+    """
+    Sort old elements list with full or partially sorted elements list.
 
+    Creates new list by copying `sorted_list`, then appends to it elements
+    of `old_list` which are yet absent in resulting list.
+
+    `sorted_list` must be subset of `old_list`.
+
+    """
     new_list = list()
     for elem in sorted_list:
-        assert elem in old_list
+        if elem not in old_list:
+            raise CircuitElementIsAbsentError()
         new_list.append(elem)
 
-    if len(new_list) != len(old_list):
-        for elem in old_list:
-            if elem not in new_list:
-                new_list.append(elem)
+    if len(new_list) == len(old_list):
+        return new_list
+
+    for elem in old_list:
+        if elem not in new_list:
+            new_list.append(elem)
 
     return new_list

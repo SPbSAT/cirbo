@@ -14,7 +14,7 @@ if tp.TYPE_CHECKING:
 def check_elements_exist(elements: tuple['Label', ...], circuit: 'Circuit') -> None:
     """Checks that provided gates are it the circuit."""
     for element in elements:
-        if element not in circuit._elements:
+        if not circuit.has_element(element):
             raise CircuitValidationError(
                 f'Operand {element} are not initialized in the circuit',
             )
@@ -22,7 +22,7 @@ def check_elements_exist(elements: tuple['Label', ...], circuit: 'Circuit') -> N
 
 def check_label_doesnt_exist(label: 'Label', circuit: 'Circuit') -> None:
     """Check initializations operands into the circuit."""
-    if label in circuit._elements:
+    if circuit.has_element(label):
         raise CircuitValidationError(
             f'Gate {label} exists in the circuit',
         )

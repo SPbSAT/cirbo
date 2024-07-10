@@ -27,23 +27,23 @@ INPUT(E)\n
     assert instance._elements.keys() == {'A', 'D', 'B', 'C', 'E'}
     assert instance._elements['A'].label == 'A'
     assert instance._elements['A'].gate_type == INPUT
-    assert tuple(instance._elements['A'].operands) == ()
+    assert instance._elements['A'].operands == ()
 
     assert instance._elements['D'].label == 'D'
     assert instance._elements['D'].gate_type == INPUT
-    assert tuple(instance._elements['D'].operands) == ()
+    assert instance._elements['D'].operands == ()
 
     assert instance._elements['E'].label == 'E'
     assert instance._elements['E'].gate_type == INPUT
-    assert tuple(instance._elements['E'].operands) == ()
+    assert instance._elements['E'].operands == ()
 
     assert instance._elements['B'].label == 'B'
     assert instance._elements['B'].gate_type == NOT
-    assert tuple(instance._elements['B'].operands) == ('A',)
+    assert instance._elements['B'].operands == ('A',)
 
     assert instance._elements['C'].label == 'C'
     assert instance._elements['C'].gate_type == AND
-    assert tuple(instance._elements['C'].operands) == ('A', 'B')
+    assert instance._elements['C'].operands == ('A', 'B')
 
 
 def test_spaces():
@@ -66,23 +66,23 @@ INPUT(E   )\n
 
     assert instance._elements['AAAAA'].label == 'AAAAA'
     assert instance._elements['AAAAA'].gate_type == INPUT
-    assert tuple(instance._elements['AAAAA'].operands) == ()
+    assert instance._elements['AAAAA'].operands == ()
 
     assert instance._elements['DDDD'].label == 'DDDD'
     assert instance._elements['DDDD'].gate_type == INPUT
-    assert tuple(instance._elements['DDDD'].operands) == ()
+    assert instance._elements['DDDD'].operands == ()
 
     assert instance._elements['E'].label == 'E'
     assert instance._elements['E'].gate_type == INPUT
-    assert tuple(instance._elements['E'].operands) == ()
+    assert instance._elements['E'].operands == ()
 
     assert instance._elements['B'].label == 'B'
     assert instance._elements['B'].gate_type == NOT
-    assert tuple(instance._elements['B'].operands) == ('AAAAA',)
+    assert instance._elements['B'].operands == ('AAAAA',)
 
     assert instance._elements['C'].label == 'C'
     assert instance._elements['C'].gate_type == AND
-    assert tuple(instance._elements['C'].operands) == ('AAAAA', 'B')
+    assert instance._elements['C'].operands == ('AAAAA', 'B')
 
 
 def test_not_init_operands():
@@ -113,15 +113,15 @@ D = NOT(A)
     assert instance._elements.keys() == {'A', 'B', 'D'}
     assert instance._elements['A'].label == 'A'
     assert instance._elements['A'].gate_type == INPUT
-    assert tuple(instance._elements['A'].operands) == ()
+    assert instance._elements['A'].operands == ()
 
     assert instance._elements['B'].label == 'B'
     assert instance._elements['B'].gate_type == OR
-    assert tuple(instance._elements['B'].operands) == ('A', 'D')
+    assert instance._elements['B'].operands == ('A', 'D')
 
     assert instance._elements['D'].label == 'D'
     assert instance._elements['D'].gate_type == NOT
-    assert tuple(instance._elements['D'].operands) == ('A',)
+    assert instance._elements['D'].operands == ('A',)
 
 
 def test_sorting():
