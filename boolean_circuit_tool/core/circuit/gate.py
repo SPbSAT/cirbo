@@ -5,29 +5,45 @@ import typing as tp
 
 from boolean_circuit_tool.core.circuit.exceptions import GateTypeNoOperatorError
 from boolean_circuit_tool.core.circuit.operators import (
+    always_false_,
+    always_true_,
     and_,
+    geq_,
+    gt_,
     iff_,
+    leq_,
+    lnot_,
+    lt_,
     nand_,
     nor_,
     not_,
     nxor_,
     or_,
+    rnot_,
     xor_,
 )
 
 __all__ = [
     'Gate',
-    'Label',
     'GateType',
+    'Label',
     'INPUT',
-    'NOT',
-    'OR',
-    'NOR',
+    'ALWAYS_FALSE',
+    'ALWAYS_TRUE',
     'AND',
-    'NAND',
-    'XOR',
-    'NXOR',
+    'GEQ',
+    'GT',
     'IFF',
+    'LEQ',
+    'LNOT',
+    'LT',
+    'NAND',
+    'NOR',
+    'NOT',
+    'NXOR',
+    'OR',
+    'RNOT',
+    'XOR',
 ]
 
 Label = str
@@ -74,14 +90,22 @@ class GateType:
 
 
 INPUT = GateType("INPUT", None, True)
-NOT = GateType("NOT", not_, True)
-OR = GateType("OR", or_, True)
-NOR = GateType("NOR", nor_, True)
+ALWAYS_TRUE = GateType("ALWAYS_TRUE", always_true_, True)
+ALWAYS_FALSE = GateType("ALWAYS_FALSE", always_false_, True)
 AND = GateType("AND", and_, True)
-NAND = GateType("NAND", nand_, True)
-XOR = GateType("XOR", xor_, True)
-NXOR = GateType("NXOR", nxor_, True)
+GEQ = GateType("GEQ", geq_, False)
+GT = GateType("GT", gt_, False)
 IFF = GateType("IFF", iff_, True)
+LEQ = GateType("LEQ", leq_, False)
+LNOT = GateType("LNOT", lnot_, True)
+LT = GateType("LT", lt_, False)
+NAND = GateType("NAND", nand_, True)
+NOR = GateType("NOR", nor_, True)
+NOT = GateType("NOT", not_, True)
+NXOR = GateType("NXOR", nxor_, True)
+OR = GateType("OR", or_, True)
+RNOT = GateType("RNOT", rnot_, True)
+XOR = GateType("XOR", xor_, True)
 
 
 class Gate:
@@ -120,7 +144,7 @@ class Gate:
     def format_gate(self):
         if self.gate_type == INPUT:
             return f"INPUT({self._label})"
-        return f"{self._label} = {self.gate_type.value}({', '.join(self._operands)})"
+        return f"{self._label} = {self.gate_type.name}({', '.join(self._operands)})"
 
     def __eq__(self, value: object) -> bool:
         if not isinstance(value, Gate):
@@ -137,3 +161,9 @@ class Gate:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._label}, {self._gate_type}, {self._operands})"
+
+    def __str__(self):
+        return (
+            f"{self.__class__.__name__}"
+            + f"({self._label}, {self._gate_type.name}, {self._operands})"
+        )

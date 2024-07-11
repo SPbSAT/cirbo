@@ -15,14 +15,22 @@ from boolean_circuit_tool.core.circuit.exceptions import GateStateError
 __all__ = [
     'GateState',
     'Undefined',
-    'iff_',
-    'not_',
+    'always_false_',
+    'always_true_',
     'and_',
+    'geq_',
+    'gt_',
+    'iff_',
+    'leq_',
+    'lnot_',
+    'lt_',
     'nand_',
-    'or_',
     'nor_',
-    'xor_',
+    'not_',
     'nxor_',
+    'or_',
+    'rnot_',
+    'xor_',
 ]
 
 
@@ -32,6 +40,26 @@ class _Undefined:
 
     def __eq__(self, rhs):
         return isinstance(rhs, _Undefined)
+
+    def __lt__(self, rhs):
+        if not isinstance(rhs, (_Undefined, bool)):
+            return NotImplemented
+        return Undefined
+
+    def __le__(self, rhs):
+        if not isinstance(rhs, (_Undefined, bool)):
+            return NotImplemented
+        return Undefined
+
+    def __gt__(self, rhs):
+        if not isinstance(rhs, (_Undefined, bool)):
+            return NotImplemented
+        return Undefined
+
+    def __ge__(self, rhs):
+        if not isinstance(rhs, (_Undefined, bool)):
+            return NotImplemented
+        return Undefined
 
     def __hash__(self):
         return hash('Undefined')
@@ -150,3 +178,35 @@ def xor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
 
 def nxor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
     return not_(xor_(arg1, arg2, *args))
+
+
+def always_true_(*args: GateState) -> GateState:
+    return True
+
+
+def always_false_(*args: GateState) -> GateState:
+    return False
+
+
+def rnot_(arg1: GateState, arg2: GateState) -> GateState:
+    return not arg2 if arg2 != Undefined else Undefined
+
+
+def lnot_(arg1: GateState, arg2: GateState) -> GateState:
+    return not arg1 if arg1 != Undefined else Undefined
+
+
+def gt_(arg1: GateState, arg2: GateState) -> GateState:
+    return arg1 > arg2
+
+
+def lt_(arg1: GateState, arg2: GateState) -> GateState:
+    return arg1 < arg2
+
+
+def geq_(arg1: GateState, arg2: GateState) -> GateState:
+    return arg1 >= arg2
+
+
+def leq_(arg1: GateState, arg2: GateState) -> GateState:
+    return arg1 <= arg2
