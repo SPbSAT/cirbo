@@ -700,6 +700,7 @@ def test_rnot(arg1: GateState, arg2: GateState, result: GateState):
 def test_lnot(arg1: GateState, arg2: GateState, result: GateState):
     assert lnot_(arg1, arg2) == result
 
+
 @pytest.mark.parametrize(
     'arg1, arg2',
     [
@@ -734,6 +735,7 @@ def test_riff(arg1: GateState, arg2: GateState):
 )
 def test_liff(arg1: GateState, arg2: GateState):
     assert liff_(arg1, arg2) == arg1
+
 
 @pytest.mark.parametrize(
     'arg1, arg2, result',

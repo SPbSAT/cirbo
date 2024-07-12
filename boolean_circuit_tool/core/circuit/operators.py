@@ -48,13 +48,13 @@ class _Undefined:
 
     def __le__(self, rhs):
         raise GateStateError("Undefined state haven't order relative to bool")
-    
+
     def __gt__(self, rhs):
         raise GateStateError("Undefined state haven't order relative to bool")
-    
+
     def __ge__(self, rhs):
         raise GateStateError("Undefined state haven't order relative to bool")
-    
+
     def __hash__(self):
         return hash('Undefined')
 
@@ -191,11 +191,12 @@ def lnot_(arg1: GateState, arg2: GateState) -> GateState:
 
 
 def riff_(arg1: GateState, arg2: GateState) -> GateState:
-    return arg2 
+    return arg2
 
 
 def liff_(arg1: GateState, arg2: GateState) -> GateState:
     return arg1
+
 
 def gt_(arg1: GateState, arg2: GateState) -> GateState:
     if arg1 == True:
