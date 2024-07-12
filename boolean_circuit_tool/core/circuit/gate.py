@@ -12,6 +12,7 @@ from boolean_circuit_tool.core.circuit.operators import (
     gt_,
     iff_,
     leq_,
+    liff_,
     lnot_,
     lt_,
     nand_,
@@ -19,6 +20,7 @@ from boolean_circuit_tool.core.circuit.operators import (
     not_,
     nxor_,
     or_,
+    riff_,
     rnot_,
     xor_,
 )
@@ -35,6 +37,7 @@ __all__ = [
     'GT',
     'IFF',
     'LEQ',
+    'LIFF',
     'LNOT',
     'LT',
     'NAND',
@@ -42,6 +45,7 @@ __all__ = [
     'NOT',
     'NXOR',
     'OR',
+    'RIFF',
     'RNOT',
     'XOR',
 ]
@@ -97,6 +101,7 @@ GEQ = GateType("GEQ", geq_, False)
 GT = GateType("GT", gt_, False)
 IFF = GateType("IFF", iff_, True)
 LEQ = GateType("LEQ", leq_, False)
+LIFF = GateType("LIFF", liff_, False)
 LNOT = GateType("LNOT", lnot_, False)
 LT = GateType("LT", lt_, False)
 NAND = GateType("NAND", nand_, True)
@@ -104,6 +109,7 @@ NOR = GateType("NOR", nor_, True)
 NOT = GateType("NOT", not_, True)
 NXOR = GateType("NXOR", nxor_, True)
 OR = GateType("OR", or_, True)
+RIFF = GateType("RIFF", riff_, False)
 RNOT = GateType("RNOT", rnot_, False)
 XOR = GateType("XOR", xor_, True)
 

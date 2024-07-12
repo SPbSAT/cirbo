@@ -9,6 +9,7 @@ from boolean_circuit_tool.core.circuit.operators import (
     gt_,
     iff_,
     leq_,
+    liff_,
     lnot_,
     lt_,
     nand_,
@@ -16,6 +17,7 @@ from boolean_circuit_tool.core.circuit.operators import (
     not_,
     nxor_,
     or_,
+    riff_,
     rnot_,
     Undefined,
     xor_,
@@ -698,6 +700,40 @@ def test_rnot(arg1: GateState, arg2: GateState, result: GateState):
 def test_lnot(arg1: GateState, arg2: GateState, result: GateState):
     assert lnot_(arg1, arg2) == result
 
+@pytest.mark.parametrize(
+    'arg1, arg2',
+    [
+        (True, True),
+        (True, False),
+        (True, Undefined),
+        (False, True),
+        (False, False),
+        (False, Undefined),
+        (Undefined, True),
+        (Undefined, False),
+        (Undefined, Undefined),
+    ],
+)
+def test_riff(arg1: GateState, arg2: GateState):
+    assert riff_(arg1, arg2) == arg2
+
+
+@pytest.mark.parametrize(
+    'arg1, arg2',
+    [
+        (True, True),
+        (True, False),
+        (True, Undefined),
+        (False, True),
+        (False, False),
+        (False, Undefined),
+        (Undefined, True),
+        (Undefined, False),
+        (Undefined, Undefined),
+    ],
+)
+def test_liff(arg1: GateState, arg2: GateState):
+    assert liff_(arg1, arg2) == arg1
 
 @pytest.mark.parametrize(
     'arg1, arg2, result',
@@ -707,7 +743,7 @@ def test_lnot(arg1: GateState, arg2: GateState, result: GateState):
         (True, Undefined, Undefined),
         (False, True, False),
         (False, False, False),
-        (False, Undefined, Undefined),
+        (False, Undefined, False),
         (Undefined, True, Undefined),
         (Undefined, False, Undefined),
         (Undefined, Undefined, Undefined),
@@ -722,7 +758,7 @@ def test_gt_(arg1: GateState, arg2: GateState, result: GateState):
     [
         (True, True, False),
         (True, False, False),
-        (True, Undefined, Undefined),
+        (True, Undefined, False),
         (False, True, True),
         (False, False, False),
         (False, Undefined, Undefined),
@@ -740,7 +776,7 @@ def test_lt_(arg1: GateState, arg2: GateState, result: GateState):
     [
         (True, True, True),
         (True, False, True),
-        (True, Undefined, Undefined),
+        (True, Undefined, True),
         (False, True, False),
         (False, False, True),
         (False, Undefined, Undefined),
@@ -761,7 +797,7 @@ def test_geq_(arg1: GateState, arg2: GateState, result: GateState):
         (True, Undefined, Undefined),
         (False, True, True),
         (False, False, True),
-        (False, Undefined, Undefined),
+        (False, Undefined, True),
         (Undefined, True, Undefined),
         (Undefined, False, Undefined),
         (Undefined, Undefined, Undefined),

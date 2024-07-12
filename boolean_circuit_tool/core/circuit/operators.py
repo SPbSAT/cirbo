@@ -22,6 +22,7 @@ __all__ = [
     'gt_',
     'iff_',
     'leq_',
+    'liff_',
     'lnot_',
     'lt_',
     'nand_',
@@ -29,6 +30,7 @@ __all__ = [
     'not_',
     'nxor_',
     'or_',
+    'riff_',
     'rnot_',
     'xor_',
 ]
@@ -42,25 +44,17 @@ class _Undefined:
         return isinstance(rhs, _Undefined)
 
     def __lt__(self, rhs):
-        if not isinstance(rhs, (_Undefined, bool)):
-            return NotImplemented
-        return Undefined
+        raise GateStateError("Undefined state haven't order relative to bool")
 
     def __le__(self, rhs):
-        if not isinstance(rhs, (_Undefined, bool)):
-            return NotImplemented
-        return Undefined
-
+        raise GateStateError("Undefined state haven't order relative to bool")
+    
     def __gt__(self, rhs):
-        if not isinstance(rhs, (_Undefined, bool)):
-            return NotImplemented
-        return Undefined
-
+        raise GateStateError("Undefined state haven't order relative to bool")
+    
     def __ge__(self, rhs):
-        if not isinstance(rhs, (_Undefined, bool)):
-            return NotImplemented
-        return Undefined
-
+        raise GateStateError("Undefined state haven't order relative to bool")
+    
     def __hash__(self):
         return hash('Undefined')
 
@@ -196,17 +190,32 @@ def lnot_(arg1: GateState, arg2: GateState) -> GateState:
     return not arg1 if arg1 != Undefined else Undefined
 
 
+def riff_(arg1: GateState, arg2: GateState) -> GateState:
+    return arg2 
+
+
+def liff_(arg1: GateState, arg2: GateState) -> GateState:
+    return arg1
+
 def gt_(arg1: GateState, arg2: GateState) -> GateState:
-    return arg1 > arg2
+    if arg1 == True:
+        return not_(arg2)
+    return arg1
 
 
 def lt_(arg1: GateState, arg2: GateState) -> GateState:
-    return arg1 < arg2
+    if arg1 == False:
+        return arg2
+    return not_(arg1)
 
 
 def geq_(arg1: GateState, arg2: GateState) -> GateState:
-    return arg1 >= arg2
+    if arg1 == False:
+        return not_(arg2)
+    return arg1
 
 
 def leq_(arg1: GateState, arg2: GateState) -> GateState:
-    return arg1 <= arg2
+    if arg1 == True:
+        return arg2
+    return not_(arg1)
