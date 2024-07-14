@@ -15,8 +15,10 @@ def test_create_circuit():
 
     instance.add_gate(Gate('A', INPUT))
     assert instance.elements_number == 1
-    assert instance._inputs == ['A']
-    assert instance._outputs == []
+    assert instance.inputs == ['A']
+    assert instance.input_size == 1
+    assert instance.output_size == 0
+    assert instance.outputs == []
     assert instance._elements.keys() == {'A'}
 
     instance.add_gate(Gate('B', NOT, ('A',)))
@@ -24,21 +26,23 @@ def test_create_circuit():
     instance.mark_as_output('C')
 
     assert instance.elements_number == 3
-    assert instance._inputs == ['A']
-    assert instance._outputs == ['C']
+    assert instance.inputs == ['A']
+    assert instance.outputs == ['C']
+    assert instance.input_size == 1
+    assert instance.output_size == 1
 
     assert instance._elements.keys() == {'A', 'B', 'C'}
-    assert instance._elements['A'].label == 'A'
-    assert instance._elements['A'].gate_type == INPUT
-    assert instance._elements['A'].operands == ()
+    assert instance.get_element('A').label == 'A'
+    assert instance.get_element('A').gate_type == INPUT
+    assert instance.get_element('A').operands == ()
 
-    assert instance._elements['B'].label == 'B'
-    assert instance._elements['B'].gate_type == NOT
-    assert instance._elements['B'].operands == ('A',)
+    assert instance.get_element('B').label == 'B'
+    assert instance.get_element('B').gate_type == NOT
+    assert instance.get_element('B').operands == ('A',)
 
-    assert instance._elements['C'].label == 'C'
-    assert instance._elements['C'].gate_type == AND
-    assert instance._elements['C'].operands == ('A', 'B')
+    assert instance.get_element('C').label == 'C'
+    assert instance.get_element('C').gate_type == AND
+    assert instance.get_element('C').operands == ('A', 'B')
 
     with pytest.raises(CircuitValidationError):
         instance.add_gate(Gate('A', OR, ('B', 'C')))
@@ -59,27 +63,29 @@ def test_rename_gate():
     instance.rename_element('A', 'V')
 
     assert instance.elements_number == 3
-    assert instance._inputs == ['V']
-    assert instance._outputs == ['C']
+    assert instance.inputs == ['V']
+    assert instance.outputs == ['C']
+    assert instance.input_size == 1
+    assert instance.output_size == 1
 
     assert instance._elements.keys() == {'V', 'B', 'C'}
-    assert instance._elements['V'].label == 'V'
-    assert instance._elements['V'].gate_type == INPUT
-    assert instance._elements['V'].operands == ()
+    assert instance.get_element('V').label == 'V'
+    assert instance.get_element('V').gate_type == INPUT
+    assert instance.get_element('V').operands == ()
 
-    assert instance._elements['B'].label == 'B'
-    assert instance._elements['B'].gate_type == NOT
-    assert instance._elements['B'].operands == ('V',)
+    assert instance.get_element('B').label == 'B'
+    assert instance.get_element('B').gate_type == NOT
+    assert instance.get_element('B').operands == ('V',)
 
-    assert instance._elements['C'].label == 'C'
-    assert instance._elements['C'].gate_type == AND
-    assert instance._elements['C'].operands == ('V', 'B')
+    assert instance.get_element('C').label == 'C'
+    assert instance.get_element('C').gate_type == AND
+    assert instance.get_element('C').operands == ('V', 'B')
 
     with pytest.raises(CircuitElementIsAbsentError):
         instance.rename_element('D', 'E')
 
 
-def test_evaluate_gate():
+def test_evaluate_circuit():
 
     instance = Circuit()
 
@@ -149,3 +155,131 @@ def test_evaluate_gate():
         'E': Undefined,
         'F': Undefined,
     }
+
+
+def test_evaluate():
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', NOT, ('A',)))
+    instance.add_gate(Gate('D', OR, ('A', 'B')))
+    instance.add_gate(Gate('E', XOR, ('A', 'B')))
+    instance.add_gate(Gate('F', AND, ('B', 'D')))
+    instance.mark_as_output('D')
+    instance.mark_as_output('E')
+    instance.mark_as_output('F')
+
+    assert instance.evaluate([False, False]) == [False, False, False]
+    assert instance.evaluate([False, True]) == [True, True, True]
+    assert instance.evaluate([False, Undefined]) == [Undefined, Undefined, Undefined]
+    assert instance.evaluate([True, False]) == [True, True, False]
+    assert instance.evaluate([True, True]) == [True, False, True]
+    assert instance.evaluate([True, Undefined]) == [True, Undefined, Undefined]
+    assert instance.evaluate([Undefined, False]) == [Undefined, Undefined, False]
+    assert instance.evaluate([Undefined, False]) == [Undefined, Undefined, False]
+    assert instance.evaluate([Undefined, True]) == [True, Undefined, True]
+    assert instance.evaluate([Undefined, Undefined]) == [
+        Undefined,
+        Undefined,
+        Undefined,
+    ]
+
+
+def test_evaluate_at():
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', NOT, ('A',)))
+    instance.add_gate(Gate('D', OR, ('A', 'B')))
+    instance.add_gate(Gate('E', XOR, ('A', 'B')))
+    instance.add_gate(Gate('F', AND, ('B', 'D')))
+    instance.mark_as_output('D')
+    instance.mark_as_output('E')
+    instance.mark_as_output('F')
+
+    assert instance.evaluate_at([False, False], 1) == False
+    assert instance.evaluate_at([False, False], 2) == False
+    assert instance.evaluate_at([False, False], 3) == False
+    assert instance.evaluate_at([False, True], 1) == True
+    assert instance.evaluate_at([False, True], 2) == True
+    assert instance.evaluate_at([False, True], 3) == True
+    assert instance.evaluate_at([False, Undefined], 1) == Undefined
+    assert instance.evaluate_at([False, Undefined], 2) == Undefined
+    assert instance.evaluate_at([False, Undefined], 3) == Undefined
+    assert instance.evaluate_at([True, False], 1) == True
+    assert instance.evaluate_at([True, False], 2) == True
+    assert instance.evaluate_at([True, False], 3) == False
+    assert instance.evaluate_at([True, True], 1) == True
+    assert instance.evaluate_at([True, True], 2) == False
+    assert instance.evaluate_at([True, True], 3) == True
+    assert instance.evaluate_at([True, Undefined], 1) == True
+    assert instance.evaluate_at([True, Undefined], 2) == Undefined
+    assert instance.evaluate_at([True, Undefined], 3) == Undefined
+    assert instance.evaluate_at([Undefined, False], 1) == Undefined
+    assert instance.evaluate_at([Undefined, False], 2) == Undefined
+    assert instance.evaluate_at([Undefined, False], 3) == False
+    assert instance.evaluate_at([Undefined, False], 1) == Undefined
+    assert instance.evaluate_at([Undefined, False], 2) == Undefined
+    assert instance.evaluate_at([Undefined, False], 3) == False
+    assert instance.evaluate_at([Undefined, True], 1) == True
+    assert instance.evaluate_at([Undefined, True], 2) == Undefined
+    assert instance.evaluate_at([Undefined, True], 3) == True
+    assert instance.evaluate_at([Undefined, Undefined], 1) == Undefined
+    assert instance.evaluate_at([Undefined, Undefined], 2) == Undefined
+    assert instance.evaluate_at([Undefined, Undefined], 3) == Undefined
+
+
+def test_is_constant():
+    pass
+
+
+def test_is_constant_at():
+    pass
+
+
+def test_is_monotonic():
+    pass
+
+
+def test_is_monotonic_at():
+    pass
+
+
+def test_is_symmetric():
+    pass
+
+
+def test_is_symmetric_at():
+    pass
+
+
+def test_is_dependent_on_input_at():
+    pass
+
+
+def test_is_output_equal_to_input():
+    pass
+
+
+def test_is_output_equal_to_input_negation():
+    pass
+
+
+def test_get_significant_inputs_of():
+    pass
+
+
+def test_get_symmetric_and_negations_of():
+    pass
+
+
+def test():
+    pass
+
+
+def test_get_truth_table():
+    pass

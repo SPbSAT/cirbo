@@ -1,6 +1,7 @@
 """Module contains implementation of Circuit class."""
 
 import collections
+import itertools
 import logging
 import pathlib
 import textwrap
@@ -8,6 +9,7 @@ import typing as tp
 
 import typing_extensions as tp_ext
 
+from boolean_circuit_tool.core.boolean_function import BooleanFunction
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitElementAlreadyExistsError,
     CircuitElementIsAbsentError,
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 __all__ = ['Circuit']
 
 
-class Circuit:
+class Circuit(BooleanFunction):
     """
     Structure to carry boolean circuit.
 
@@ -65,36 +67,71 @@ class Circuit:
 
     @property
     def inputs(self) -> list[Label]:
-        """Return set of inputs."""
+        """
+        :return: list of inputs.
+
+        """
         return self._inputs
 
     @property
+    def input_size(self) -> int:
+        """
+        :return: number of inputs.
+
+        """
+        return len(self._inputs)
+
+    @property
     def outputs(self) -> list[Label]:
-        """Return set of outputs."""
+        """
+        :return: list of outputs.
+
+        """
         return self._outputs
 
     @property
+    def output_size(self) -> int:
+        """
+        :return: number of outputs.
+
+        """
+        return len(self._outputs)
+
+    @property
     def elements_number(self) -> int:
-        """Return number of elements."""
+        """
+        :return: number of elements into the circuit.
+
+        """
         return len(self._elements)
 
     def get_element(self, label: Label) -> Gate:
+        """
+        :return: a specific element from the schema by `label`.
+
+        """
         return self._elements[label]
 
     def get_element_users(self, label: Label) -> list[Label]:
-        """Returns all gates which use given gate as operand."""
+        """
+        :return: list of gates which use given gate as operand.
+
+        """
         return self._element_to_users[label]
 
     def has_element(self, label: Label) -> bool:
-        """Returns True iff this circuit has element `label`."""
+        """
+        :return: True iff this circuit has element `label`.
+
+        """
         return label in self._elements
 
     def add_gate(self, gate: Gate) -> tp_ext.Self:
         """
         Add gate in the circuit.
 
-        :param: gate
-        :return: circuit with new gate
+        :param gate: new gate.
+        :return: modified circuit.
 
         """
         check_label_doesnt_exist(gate.label, self)
@@ -112,11 +149,11 @@ class Circuit:
         """
         Add gate in the ciurcuit.
 
-        :param label: new gate's label
-        :param gate_type: new gate's type of operator
-        :param operands: new gate's operands
-        :param kwargs: others parameters for conctructing new gate
-        :return: circuit with new gate
+        :param label: new gate's label.
+        :param gate_type: new gate's type of operator.
+        :param operands: new gate's operands.
+        :param kwargs: others parameters for conctructing new gate.
+        :return: modified circuit.
 
         """
         check_label_doesnt_exist(label, self)
@@ -128,9 +165,9 @@ class Circuit:
         """
         Rename gate.
 
-        :param old_label: gate's label to replace
-        :param new_label: gate's new label
-        :return: modified circuit
+        :param old_label: gate's label to replace.
+        :param new_label: gate's new label.
+        :return: modified circuit.
 
         """
         if old_label not in self._elements:
@@ -183,8 +220,12 @@ class Circuit:
         """
         Sort input gates.
 
-        :param inputs: sorted (maybe partially) list of inputs
-        :return: circuit with sorted inputs
+        Create a new list by copying `inputs` and then appending to it the
+        elements of `self._inputs` that are not already in the resulting list.
+        After that replaces `self._inputs` with this new list.
+
+        :param inputs: full or partially sorted list of inputs.
+        :return: modified circuit.
 
         """
         self._inputs = _sort_list(inputs, self._inputs)
@@ -194,8 +235,12 @@ class Circuit:
         """
         Sort output gates.
 
-        :param outputs: sorted (maybe partially) list of outputs
-        :return: circuit with sorted outputs
+        Create a new list by copying `inputs` and then appending to it the
+        elements of `self._inputs` that are not already in the resulting list.
+        After that replaces `self._inputs` with this new list.
+
+        :param outputs: full or partially sorted list of outputs.
+        :return: modified circuit.
 
         """
         self._outputs = _sort_list(outputs, self._outputs)
@@ -208,8 +253,10 @@ class Circuit:
         """
         Evaluate the circuit with the given input values.
 
-        :param assigment: assigment for inputs
-        :return: outputs dictionary with the obtained values
+        :param assigment: full or partually assigment for inputs.
+        :return: outputs dictionary with the obtained values.
+
+        `assignment` can be on any element of the circuit.
 
         """
 
@@ -238,11 +285,209 @@ class Circuit:
 
         return {output: assigment_dict[output] for output in self._outputs}
 
+    def evaluate(self, inputs: list[bool]) -> list[bool]:
+        """
+        Get output values that correspond to provided `inputs`.
+
+        :param inputs: values of input gates.
+        :return: value of outputs evaluated for input values `inputs`.
+
+        """
+        dict_inputs = {}
+        for i, input in enumerate(self._inputs):
+            dict_inputs[input] = inputs[i]
+
+        return list(self.evaluate_circuit(dict_inputs).values())
+
+    def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
+        """
+        Get value of `output_index`th output that corresponds to provided `inputs`.
+
+        :param inputs: values of input gates.
+        :param output_index: index of desired output.
+        :return: value of `output_index` evaluated for input values `inputs`.
+
+        """
+        return self.evaluate(inputs)[output_index]
+
+    def is_constant(self) -> bool:
+        """
+        Check if all outputs are constant (input independent).
+
+        :return: True iff this function is constant.
+
+        """
+        answer: list[GateState] = self.evaluate([0] * self.input_size)
+        for x in itertools.product((0, 1), repeat=self.input_size):
+            if answer != self.evaluate(list(x)):
+                return False
+        return True
+
+    def is_constant_at(self, output_index: int) -> bool:
+        """
+        Check if output `output_index` is constant (input independent).
+
+        :param output_index: index of desired output.
+        :return: True iff output `output_index` is constant.
+
+        """
+        answer: GateState = self.evaluate_at([0] * self.input_size, output_index)
+        for x in itertools.product((0, 1), repeat=self.input_size):
+            if answer != self.evaluate_at(list(x), output_index):
+                return False
+        return True
+
+    def is_monotonic(self, *, inverse: bool) -> bool:
+        """
+        Check if all outputs are monotonic (output value doesn't decrease when
+        inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
+
+        :param inverse: if True, will check that output values doesn't
+        increase when inputs are enumerated in classic order.
+        :return: True iff this function is monotonic.
+
+        """
+        change_value: list[GateState] = [False] * self.output_size
+        current_value: list[bool] = [inverse] * self.output_size
+        for x in itertools.product((0, 1), repeat=self.input_size):
+            for i, v in enumerate(self.evaluate(list(x))):
+                if v != current_value[i]:
+                    if change_value[i]:
+                        return False
+                    change_value[i] = True
+                    current_value[i] = not current_value[i]
+        return True
+
+    def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
+        """
+        Check if output `output_index` is monotonic (output value doesn't
+        decrease when inputs are enumerated in a classic order: 0000, 0001,
+        0010, 0011 ...).
+
+        :param output_index: index of desired output.
+        :param inverse: if True, will check that output value doesn't
+        increase when inputs are enumerated in classic order.
+        :return: True iff output `output_index` is monotonic.
+
+        """
+        change_value: bool = False
+        current_value: bool = inverse
+        for x in itertools.product((0, 1), repeat=self.input_size):
+            if self.evaluate_at(list(x), output_index) != current_value:
+                if change_value:
+                    return False
+                change_value = True
+                current_value = not current_value
+        return True
+
+    def is_symmetric(self) -> bool:
+        """
+        Check if all outputs are symmetric.
+
+        :return: True iff this function.
+
+        """
+
+    def is_symmetric_at(self, output_index: int) -> bool:
+        """
+        Check that output `output_index` is symmetric.
+
+        :param output_index: index of desired output.
+        :return: True iff output `output_index` is symmetric.
+
+        """
+
+    def is_dependent_on_input_at(
+        self,
+        output_index: int,
+        input_index: int,
+    ) -> bool:
+        """
+        Check if output `output_index` depends on input `input_index` (there exist two
+        input sets that differ only at `input_index`, but result in different value for
+        `output_index`).
+
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` depends on input `input_index`.
+
+        """
+
+    def is_output_equal_to_input(
+        self,
+        output_index: int,
+        input_index: int,
+    ) -> bool:
+        """
+        Check if output `output_index` equals to input `input_index`.
+
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` equals to the input
+        `input_index`.
+
+        """
+
+    def is_output_equal_to_input_negation(
+        self,
+        output_index: int,
+        input_index: int,
+    ) -> bool:
+        """
+        Check if output `output_index` equals to negation of input `input_index`.
+
+        :param output_index: index of desired output.
+        :param input_index: index of desired input.
+        :return: True iff output `output_index` equals to negation of input
+        `input_index`.
+
+        """
+
+    def get_significant_inputs_of(self, output_index: int) -> list[int]:
+        """
+        Get indexes of all inputs on which output `output_index` depends on.
+
+        :param output_index: index of desired output.
+        :return: list of input indices.
+
+        """
+
+    def get_symmetric_and_negations_of(
+        self,
+        output_index: list[int],
+    ) -> tp.Optional[list[bool]]:
+        """
+        Check if function is symmetric on some output set and returns inputs negations.
+
+        :param output_index: output index set
+
+        """
+
+    def get_truth_table(self) -> list[list[bool]]:
+        """
+        Get truth table of a boolean function, which is a matrix, `i`th row of which
+        contains values of `i`th output, and `j`th column corresponds to the input which
+        is a binary encoding of a number `j` (for example j=9 corresponds to [..., 1, 0,
+        0, 1])
+
+        :return: truth table describing this function.
+
+        """
+        return [
+            list(i)
+            for i in zip(
+                *[
+                    self.evaluate(list(x))
+                    for x in itertools.product((0, 1), repeat=self.input_size)
+                ]
+            )
+        ]
+
     def save_to_file(self, path: str) -> None:
         """
         Save circuit to file.
 
-        :param path: path to file with file's name and file's extention
+        :param path: path to file with file's name and file's extention.
 
         """
         p = pathlib.Path(path)
@@ -252,6 +497,7 @@ class Circuit:
 
     def format_circuit(self) -> str:
         """Formats circuit as string in BENCH format."""
+
         input_str = '\n'.join(f'INPUT({input_label})' for input_label in self._inputs)
         gates_str = '\n'.join(
             gate.format_gate()
@@ -267,8 +513,8 @@ class Circuit:
         """
         Add gate in the ciurcuit without any checkings (!!!) and without filling users.
 
-        :param: gate
-        :return: circuit with new gate
+        :param: gate.
+        :return: circuit with new gate.
 
         """
         for operand in gate.operands:
@@ -290,11 +536,11 @@ class Circuit:
         """
         Add gate in the ciurcuit without any checkings (!!!) and without filling users.
 
-        :param label: new gate's label
-        :param gate_type: new gate's type of operator
-        :param operands: new gate's operands
-        :params kwargs: others parameters for conctructing new gate
-        :return: circuit with new gate
+        :param label: new gate's label.
+        :param gate_type: new gate's type of operator.
+        :param operands: new gate's operands.
+        :params kwargs: others parameters for conctructing new gate.
+        :return: circuit with new gate.
 
         """
         for operand in operands:
