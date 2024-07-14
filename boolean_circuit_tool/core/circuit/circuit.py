@@ -317,8 +317,8 @@ class Circuit(BooleanFunction):
         :return: True iff this function is constant.
 
         """
-        answer: list[GateState] = self.evaluate([0] * self.input_size)
-        for x in itertools.product((0, 1), repeat=self.input_size):
+        answer: list[GateState] = self.evaluate([False] * self.input_size)
+        for x in itertools.product((False, True), repeat=self.input_size):
             if answer != self.evaluate(list(x)):
                 return False
         return True
@@ -331,8 +331,8 @@ class Circuit(BooleanFunction):
         :return: True iff output `output_index` is constant.
 
         """
-        answer: GateState = self.evaluate_at([0] * self.input_size, output_index)
-        for x in itertools.product((0, 1), repeat=self.input_size):
+        answer: GateState = self.evaluate_at([False] * self.input_size, output_index)
+        for x in itertools.product((False, True), repeat=self.input_size):
             if answer != self.evaluate_at(list(x), output_index):
                 return False
         return True
@@ -349,7 +349,7 @@ class Circuit(BooleanFunction):
         """
         change_value: list[GateState] = [False] * self.output_size
         current_value: list[bool] = [inverse] * self.output_size
-        for x in itertools.product((0, 1), repeat=self.input_size):
+        for x in itertools.product((False, True), repeat=self.input_size):
             for i, v in enumerate(self.evaluate(list(x))):
                 if v != current_value[i]:
                     if change_value[i]:
@@ -372,7 +372,7 @@ class Circuit(BooleanFunction):
         """
         change_value: bool = False
         current_value: bool = inverse
-        for x in itertools.product((0, 1), repeat=self.input_size):
+        for x in itertools.product((False, True), repeat=self.input_size):
             if self.evaluate_at(list(x), output_index) != current_value:
                 if change_value:
                     return False
@@ -387,6 +387,7 @@ class Circuit(BooleanFunction):
         :return: True iff this function.
 
         """
+        pass
 
     def is_symmetric_at(self, output_index: int) -> bool:
         """
@@ -396,6 +397,7 @@ class Circuit(BooleanFunction):
         :return: True iff output `output_index` is symmetric.
 
         """
+        pass
 
     def is_dependent_on_input_at(
         self,
@@ -412,6 +414,15 @@ class Circuit(BooleanFunction):
         :return: True iff output `output_index` depends on input `input_index`.
 
         """
+        for x in itertools.product((False, True), repeat=self.input_size):
+            _x = list(x)
+            _x.insert(input_index, False)
+            value1 = self.evaluate_at(_x, output_index)
+            _x[input_index] = not _x[input_index]
+            value2 = self.evaluate_at(_x, output_index)
+            if value1 != value2:
+                return True
+        return False
 
     def is_output_equal_to_input(
         self,
@@ -427,6 +438,10 @@ class Circuit(BooleanFunction):
         `input_index`.
 
         """
+        for x in itertools.product((False, True), repeat=self.input_size):
+           if self.evaluate_at(list(x), output_index) != x[input_index]: 
+              return False
+        return True 
 
     def is_output_equal_to_input_negation(
         self,
@@ -442,6 +457,10 @@ class Circuit(BooleanFunction):
         `input_index`.
 
         """
+        for x in itertools.product((False, True), repeat=self.input_size):
+           if self.evaluate_at(list(x), output_index) != (not x[input_index]): 
+              return False
+        return True
 
     def get_significant_inputs_of(self, output_index: int) -> list[int]:
         """
@@ -450,7 +469,13 @@ class Circuit(BooleanFunction):
         :param output_index: index of desired output.
         :return: list of input indices.
 
+        TODO make it more efficient when time comes
         """
+        return [
+            input_index
+            for input_index in range(self.input_size)
+            if self.is_dependent_on_input_at(output_index, input_index)
+        ]
 
     def get_symmetric_and_negations_of(
         self,
@@ -462,6 +487,7 @@ class Circuit(BooleanFunction):
         :param output_index: output index set
 
         """
+        pass
 
     def get_truth_table(self) -> list[list[bool]]:
         """
@@ -478,7 +504,7 @@ class Circuit(BooleanFunction):
             for i in zip(
                 *[
                     self.evaluate(list(x))
-                    for x in itertools.product((0, 1), repeat=self.input_size)
+                    for x in itertools.product((False, True), repeat=self.input_size)
                 ]
             )
         ]
