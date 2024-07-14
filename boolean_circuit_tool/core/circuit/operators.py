@@ -43,18 +43,6 @@ class _Undefined:
     def __eq__(self, rhs):
         return isinstance(rhs, _Undefined)
 
-    def __lt__(self, rhs):
-        raise GateStateError("Undefined state haven't order relative to bool")
-
-    def __le__(self, rhs):
-        raise GateStateError("Undefined state haven't order relative to bool")
-
-    def __gt__(self, rhs):
-        raise GateStateError("Undefined state haven't order relative to bool")
-
-    def __ge__(self, rhs):
-        raise GateStateError("Undefined state haven't order relative to bool")
-
     def __hash__(self):
         return hash('Undefined')
 
@@ -183,11 +171,11 @@ def always_false_(*args: GateState) -> GateState:
 
 
 def rnot_(arg1: GateState, arg2: GateState) -> GateState:
-    return not arg2 if arg2 != Undefined else Undefined
+    return not_(arg2)
 
 
 def lnot_(arg1: GateState, arg2: GateState) -> GateState:
-    return not arg1 if arg1 != Undefined else Undefined
+    return not_(arg1)
 
 
 def riff_(arg1: GateState, arg2: GateState) -> GateState:
@@ -198,25 +186,69 @@ def liff_(arg1: GateState, arg2: GateState) -> GateState:
     return arg1
 
 
+_gt: list[GateState] = [
+    False,  # arg1 = False
+    False,
+    False,
+    True,  # arg1 = True
+    False,
+    Undefined,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
+
+
 def gt_(arg1: GateState, arg2: GateState) -> GateState:
-    if arg1 == True:
-        return not_(arg2)
-    return arg1
+    return _gt[index_from_state(arg1) * GateStateNumber + index_from_state(arg2)]
+
+
+_lt: list[GateState] = [
+    False,  # arg1 = False
+    True,
+    Undefined,
+    False,  # arg1 = True
+    False,
+    False,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
 
 
 def lt_(arg1: GateState, arg2: GateState) -> GateState:
-    if arg1 == False:
-        return arg2
-    return not_(arg1)
+    return _lt[index_from_state(arg1) * GateStateNumber + index_from_state(arg2)]
+
+
+_geq: list[GateState] = [
+    True,  # arg1 = False
+    False,
+    Undefined,
+    True,  # arg1 = True
+    True,
+    True,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
 
 
 def geq_(arg1: GateState, arg2: GateState) -> GateState:
-    if arg1 == False:
-        return not_(arg2)
-    return arg1
+    return _geq[index_from_state(arg1) * GateStateNumber + index_from_state(arg2)]
+
+
+_leq: list[GateState] = [
+    True,  # arg1 = False
+    True,
+    True,
+    False,  # arg1 = True
+    True,
+    Undefined,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
 
 
 def leq_(arg1: GateState, arg2: GateState) -> GateState:
-    if arg1 == True:
-        return arg2
-    return not_(arg1)
+    return _leq[index_from_state(arg1) * GateStateNumber + index_from_state(arg2)]

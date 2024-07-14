@@ -604,9 +604,9 @@ def test_always_true0():
 @pytest.mark.parametrize(
     'arg',
     [
-        (True),
-        (False),
-        (Undefined),
+        True,
+        False,
+        Undefined,
     ],
 )
 def test_always_true1(arg: GateState):
@@ -638,9 +638,9 @@ def test_always_false0():
 @pytest.mark.parametrize(
     'arg',
     [
-        (True),
-        (False),
-        (Undefined),
+        True,
+        False,
+        Undefined,
     ],
 )
 def test_always_false1(arg: GateState):
