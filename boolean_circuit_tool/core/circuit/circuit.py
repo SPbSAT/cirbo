@@ -298,11 +298,11 @@ class Circuit(BooleanFunction):
         :return: value of outputs evaluated for input values `inputs`.
 
         """
-        dict_inputs = {}
+        dict_inputs: dict[str, GateState] = {}
         for i, input in enumerate(self._inputs):
             dict_inputs[input] = inputs[i]
 
-        return list(self.evaluate_circuit(dict_inputs).values())
+        return tp.cast(list[bool], list(self.evaluate_circuit(dict_inputs).values()))
 
     def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
         """
@@ -323,7 +323,7 @@ class Circuit(BooleanFunction):
 
         """
         _iter = itertools.product((False, True), repeat=self.input_size)
-        answer: list[GateState] = self.evaluate(list(next(_iter)))
+        answer: list[bool] = self.evaluate(list(next(_iter)))
         for set_of_assign in _iter:
             if answer != self.evaluate(list(set_of_assign)):
                 return False
@@ -397,8 +397,8 @@ class Circuit(BooleanFunction):
         list_input = [False] * self.input_size
         for number_of_true in range(self.input_size + 1):
 
-            _iter = input_iterator(list_input, number_of_true)
-            value: list[GateState] = self.evaluate(next(_iter))
+            _iter = iter(input_iterator(list_input, number_of_true))
+            value: list[bool] = self.evaluate(next(_iter))
 
             for set_of_assign in _iter:
                 if value != self.evaluate(set_of_assign):
@@ -417,7 +417,7 @@ class Circuit(BooleanFunction):
         list_input = [False] * self.input_size
         for number_of_true in range(self.input_size + 1):
 
-            _iter = input_iterator(list_input, number_of_true)
+            _iter = iter(input_iterator(list_input, number_of_true))
             value: GateState = self.evaluate_at(next(_iter), output_index)
 
             for set_of_assign in _iter:
@@ -524,12 +524,14 @@ class Circuit(BooleanFunction):
             symmetric = True
             for number_of_true in range(self.input_size + 1):
 
-                _iter = input_iterator_with_negations(
+                _iter = iter(input_iterator_with_negations(
                     list_input,
                     number_of_true,
-                    negations,
+                    list(negations),
+                ))
+                value: list[GateState] = _filter_required_outputs(
+                    self.evaluate(next(_iter))
                 )
-                value: list[GateState] = _filter_required_outputs(self.evaluate(next(_iter)))
 
                 for set_of_assign in _iter:
                     if value != _filter_required_outputs(self.evaluate(set_of_assign)):

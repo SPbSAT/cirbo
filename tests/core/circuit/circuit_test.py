@@ -447,7 +447,7 @@ def test_get_significant_inputs_of():
 
 
 def test_get_symmetric_and_negations_of():
-    
+
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
     instance.add_gate(Gate('B', INPUT))
