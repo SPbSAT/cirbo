@@ -243,7 +243,6 @@ def test_is_constant():
 
     assert instance.is_constant() == True
 
-
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
     instance.add_gate(Gate('B', INPUT))
@@ -272,7 +271,7 @@ def test_is_constant_at():
 
 
 def test_is_monotonic():
-    
+
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
     instance.add_gate(Gate('B', INPUT))
@@ -312,7 +311,6 @@ def test_is_monotonic_at():
     instance.add_gate(Gate('E', AND, ('A', 'D')))
     instance.mark_as_output('C')
     instance.mark_as_output('E')
-    
 
     assert instance.is_monotonic(inverse=False) == True
     assert instance.is_monotonic(inverse=True) == False
@@ -344,7 +342,7 @@ def test_is_monotonic_at():
 
 
 def test_is_symmetric():
-    
+
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
     instance.add_gate(Gate('B', INPUT))
@@ -354,7 +352,7 @@ def test_is_symmetric():
     instance.mark_as_output('E')
 
     assert instance.is_symmetric() == True
-    
+
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
     instance.add_gate(Gate('B', INPUT))
@@ -365,8 +363,9 @@ def test_is_symmetric():
 
     assert instance.is_symmetric() == False
 
+
 def test_is_symmetric_at():
-    
+
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
     instance.add_gate(Gate('B', INPUT))
@@ -383,19 +382,68 @@ def test_is_symmetric_at():
 
 
 def test_is_dependent_on_input_at():
-    pass
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.mark_as_output('C')
+
+    assert instance.is_dependent_on_input_at(0, 0) == True
+    assert instance.is_dependent_on_input_at(0, 1) == True
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.mark_as_output('C')
+
+    assert instance.is_dependent_on_input_at(0, 0) == False
+    assert instance.is_dependent_on_input_at(0, 1) == False
 
 
 def test_is_output_equal_to_input():
-    pass
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', OR, ('C', 'D')))
+    instance.mark_as_output('E')
+    instance.mark_as_output('B')
+
+    assert instance.is_output_equal_to_input(0, 0) == False
+    assert instance.is_output_equal_to_input(0, 1) == True
+    assert instance.is_output_equal_to_input(1, 0) == False
+    assert instance.is_output_equal_to_input(1, 1) == False
 
 
 def test_is_output_equal_to_input_negation():
-    pass
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', OR, ('C', 'B')))
+    instance.mark_as_output('D')
+    instance.mark_as_output('C')
+
+    assert instance.is_output_equal_to_input_negation(0, 0) == True
+    assert instance.is_output_equal_to_input_negation(1, 0) == False
 
 
 def test_get_significant_inputs_of():
-    pass
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', OR, ('C', 'B')))
+    instance.mark_as_output('D')
+    instance.mark_as_output('C')
+
+    assert instance.get_significant_inputs_of(0) == [0]
+    assert instance.get_significant_inputs_of(1) == []
 
 
 def test_get_symmetric_and_negations_of():
@@ -403,4 +451,15 @@ def test_get_symmetric_and_negations_of():
 
 
 def test_get_truth_table():
-    pass
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', OR, ('C', 'B')))
+    instance.mark_as_output('C')
+    instance.mark_as_output('D')
+
+    assert instance.get_truth_table() == [
+        [False, False, False, True],
+        [False, True, False, True],
+    ]
