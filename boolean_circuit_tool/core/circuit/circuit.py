@@ -524,11 +524,13 @@ class Circuit(BooleanFunction):
             symmetric = True
             for number_of_true in range(self.input_size + 1):
 
-                _iter = iter(input_iterator_with_negations(
-                    list_input,
-                    number_of_true,
-                    list(negations),
-                ))
+                _iter = iter(
+                    input_iterator_with_negations(
+                        list_input,
+                        number_of_true,
+                        list(negations),
+                    )
+                )
                 value: list[GateState] = _filter_required_outputs(
                     self.evaluate(next(_iter))
                 )
