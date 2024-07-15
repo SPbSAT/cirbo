@@ -5,8 +5,23 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitElementIsAbsentError,
     CircuitValidationError,
 )
-from boolean_circuit_tool.core.circuit.gate import AND, Gate, INPUT, NOT, OR, XOR
-from boolean_circuit_tool.core.circuit.operators import Undefined
+from boolean_circuit_tool.core.circuit.gate import (
+    ALWAYS_FALSE,
+    ALWAYS_TRUE,
+    AND,
+    Gate,
+    GEQ,
+    GT,
+    INPUT,
+    LEQ,
+    LNOT,
+    LT,
+    NOT,
+    OR,
+    RNOT,
+    XOR,
+)
+from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
 
 
 def test_create_circuit():
@@ -83,6 +98,44 @@ def test_rename_gate():
 
     with pytest.raises(CircuitElementIsAbsentError):
         instance.rename_element('D', 'E')
+
+
+@pytest.mark.parametrize(
+    'arg1, arg2, result',
+    [
+        (True, True, True),
+        (True, False, False),
+        (True, Undefined, Undefined),
+        (False, True, False),
+        (False, False, True),
+        (False, Undefined, Undefined),
+        (Undefined, True, Undefined),
+        (Undefined, False, Undefined),
+        (Undefined, Undefined, Undefined),
+    ],
+)
+def test_spec_binary_gates(arg1: GateState, arg2: GateState, result: GateState):
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('1', INPUT))
+    instance.add_gate(Gate('2', INPUT))
+    instance.add_gate(Gate('3', NOT, ('1',)))
+    instance.add_gate(Gate('4', AND, ('1', '2')))
+    instance.add_gate(Gate('5', XOR, ('1', '2')))
+    instance.add_gate(Gate('6', AND, ('2', '4')))
+    instance.add_gate(Gate('7', ALWAYS_FALSE))
+    instance.add_gate(Gate('8', ALWAYS_TRUE, ('1',)))
+    instance.add_gate(Gate('9', LNOT, ('7', '3')))
+    instance.add_gate(Gate('10', RNOT, ('4', '8')))
+    instance.add_gate(Gate('11', LEQ, ('2', '4')))
+    instance.add_gate(Gate('12', LT, ('2', '11')))
+    instance.add_gate(Gate('13', GEQ, ('11', '12')))
+    instance.add_gate(Gate('14', GT, ('13', '5')))
+
+    instance.mark_as_output('14')
+
+    assert instance.evaluate_circuit({'1': arg1, '2': arg2}) == {'14': result}
 
 
 def test_evaluate_circuit():
