@@ -513,25 +513,6 @@ class Circuit(BooleanFunction):
         :param output_index: output index set
 
         """
-        # for negations in itertools.product((False, True), repeat=self.input_size):
-
-        #     symmetric = True
-        #     values = {}
-        #     for set_of_assign_with_negation in itertools.product((False, True), repeat=self.input_size):
-
-        #         number_of_true_without_negations = sum((not v if negations[i] else v) for i, v in enumerate(set_of_assign_with_negation))
-        #         value = [v for i, v in enumerate(self.evaluate(list(set_of_assign_with_negation))) if i in output_index]
-
-        #         if number_of_true_without_negations in values and values[number_of_true_without_negations] != value:
-        #             symmetric = False
-        #             break
-
-        #         values[number_of_true_without_negations] = value
-
-        #     if symmetric:
-        #         return negations
-
-        # return None
 
         def _filter_required_outputs(result: list[bool]):
             nonlocal output_index
@@ -559,7 +540,7 @@ class Circuit(BooleanFunction):
                     break
 
             if symmetric:
-                return negations
+                return list(negations)
 
         return None
 

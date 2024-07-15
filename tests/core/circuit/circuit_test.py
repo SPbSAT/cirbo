@@ -447,7 +447,16 @@ def test_get_significant_inputs_of():
 
 
 def test_get_symmetric_and_negations_of():
-    pass
+    
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', NOT, ('B',)))
+    instance.add_gate(Gate('D', OR, ('A', 'C')))
+    instance.mark_as_output('D')
+
+    assert instance.is_symmetric() == False
+    assert instance.get_symmetric_and_negations_of([0]) == [False, True]
 
 
 def test_get_truth_table():
