@@ -1,50 +1,31 @@
 from itertools import product
-from typing import List
+from typing import List, Union
 
 from boolean_circuit_tool.core.circuit import Circuit, GateState
 from boolean_circuit_tool.core.truth_table import TruthTable
 from boolean_circuit_tool.synthesis.circuit_search import (
     CircuitFinder,
-    Operation,
+    Operation, Basis, _tt_to_gate_type,
 )
 
 
-def get_tt(circuit: Circuit) -> List[GateState]:
-    n = len(circuit.inputs)
-    truth_table = []
-    for inp in product([0, 1], repeat=n):
-        b = circuit.evaluate_circuit({str(i): inp[i] for i in range(n)})
-        truth_table.append(b)
-    return [bool(int(x)) for x in truth_table]
-
-
-my_basis = [
-    Operation.NOT,
-    Operation.AND,
-    Operation.OR,
-    Operation.NAND,
-    Operation.NOR,
-    Operation.XOR,
-    Operation.NXOR,
-]
-
-
 def check_exact_circuit_size(n, size, truth_tables, basis):
-    bool_truth_tables = []
-    for truth_table in truth_tables:
-        bool_truth_tables.append([bool(int(x)) for x in truth_table])
-    circuit_finder = CircuitFinder(TruthTable(bool_truth_tables), size, basis)
+    truth_tables_bool = [[bool(int(el)) for el in x] for x in truth_tables]
+    circuit_finder = CircuitFinder(TruthTable(truth_tables_bool), size, basis)
     circuit = circuit_finder.solve_cnf()
-    assert circuit is not None
-    circuit_truth_tables = get_tt(circuit)
-    assert bool_truth_tables[0] == circuit_truth_tables
-    assert CircuitFinder(TruthTable(bool_truth_tables), size - 1, basis).solve_cnf() is False
+    check_correctness(circuit, truth_tables_bool)
+    assert CircuitFinder(TruthTable(truth_tables_bool), size - 1, basis).solve_cnf() is False
+
+
+def check_correctness(circuit: Union[Circuit, bool], truth_table: List[List[bool]]):
+    assert isinstance(circuit, Circuit)
+    assert circuit.get_truth_table() == truth_table
 
 
 def test_small_xors():
-    for n in range(4, 5):
+    for n in range(2, 7):
         tt = [''.join(str(sum(x) % 2) for x in product(range(2), repeat=n))]
-        check_exact_circuit_size(n, n - 1, tt, my_basis)
+        check_exact_circuit_size(n, n - 1, tt, Basis.XAIG)
 
 
 def test_and_ors():
@@ -59,7 +40,7 @@ def test_and_ors():
                 for x in product(range(2), repeat=n)
             ),
         ]
-        check_exact_circuit_size(n, 2 * n - 2, tt, my_basis)
+        check_exact_circuit_size(n, 2 * n - 2, tt, Basis.XAIG)
 
 
 def test_all_equal():
@@ -70,4 +51,36 @@ def test_all_equal():
                 for x in product(range(2), repeat=n)
             )
         ]
-        check_exact_circuit_size(n, 2 * n - 3, tt, my_basis)
+        check_exact_circuit_size(n, 2 * n - 3, tt, Basis.XAIG)
+
+
+def test_sum_circuits():
+    for n, l, size in ((2, 2, 2), (3, 2, 5), (4, 3, 9)):
+        tt = [''.join(str((sum(x) >> i) & 1) for x in product(range(2), repeat=n))
+              for i in range(l)]
+        truth_tables_bool = [[bool(int(el)) for el in x] for x in tt]
+        circuit = CircuitFinder(TruthTable(truth_tables_bool), size, Basis.XAIG).solve_cnf()
+        check_correctness(circuit, truth_tables_bool)
+
+
+def test_sum_with_precomputed_xor():
+    for n, l, size in ((2, 2, 2), (3, 2, 5), (4, 3, 9)):
+        tt = [''.join(str((sum(x) >> i) & 1) for x in product(range(2), repeat=n))
+              for i in range(l)]
+        truth_tables_bool = [[bool(int(el)) for el in x] for x in tt]
+        circuit_finder = CircuitFinder(TruthTable(truth_tables_bool), size, Basis.XAIG)
+        circuit_finder.fix_gate(n, 0, 1, _tt_to_gate_type[(0, 1, 1, 0)])
+        for k in range(n - 2):
+            circuit_finder.fix_gate(n + k + 1, k + 2, n + k, _tt_to_gate_type[(0, 1, 1, 0)])
+        circuit = circuit_finder.solve_cnf()
+        check_correctness(circuit, truth_tables_bool)
+
+
+def test_aig_basis():
+    for n, size in ((3, 6), (4, 9)):
+
+        tt = [''.join(str(sum(x) % 2) for x in product(range(2), repeat=n))]
+
+        truth_tables_bool = [[bool(int(el)) for el in x] for x in tt]
+        circuit = CircuitFinder(TruthTable(truth_tables_bool), size, Basis.AIG).solve_cnf()
+        check_correctness(circuit, truth_tables_bool)

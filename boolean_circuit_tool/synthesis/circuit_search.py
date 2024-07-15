@@ -9,91 +9,119 @@ from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
 from boolean_circuit_tool.core.boolean_function import BooleanFunction
-from boolean_circuit_tool.core.circuit import Circuit, Gate, GateType
+from boolean_circuit_tool.core.circuit import (
+    Circuit,
+    Gate,
+    GateType,
+    ALWAYS_FALSE,
+    AND,
+    GT,
+    LIFF,
+    LT,
+    RIFF,
+    XOR,
+    OR,
+    NOR,
+    NXOR,
+    RNOT,
+    GEQ,
+    LNOT,
+    LEQ,
+    NAND,
+    ALWAYS_TRUE,
+    INPUT
+)
 
 logger = logging.getLogger(__name__)
 
 __all__ = ['Operation', 'Basis', 'PySATSolverNames', 'CircuitFinder']
 
 
-# class Function:
-#     """Temporary class."""
-#
-#     def __init__(self, tt):
-#         self.number_of_outputs = len(tt)
-#         self.number_of_input_gates = int(math.log2(len(tt[0])))
-#         self.tt = tt
-#
-#     def get_truth_table(self):
-#         return self.tt
-
-
 class Operation(enum.Enum):
     """Possible types of operator gate."""
 
-    ZERO = "0000"
-    ONE = "1111"
-    NOT = "1100"
-    IFF = "0011"
-    NOT2 = "1010"
-    IFF2 = "0101"
-    OR = "0111"
-    NOR = "1000"
-    AND = "0001"
-    NAND = "1110"
-    XOR = "0110"
-    NXOR = "1001"
-    GREATER = "0010"
-    LESS = "0100"
-    GREATERORE = "1011"
-    LESSORE = "1101"
+    always_false_ = "0000"
+    always_true_ = "1111"
+    lnot_ = "1100"
+    liff_ = "0011"
+    rnot_ = "1010"
+    riff_ = "0101"
+    or_ = "0111"
+    nor_ = "1000"
+    and_ = "0001"
+    nand_ = "1110"
+    xor_ = "0110"
+    nxor_ = "1001"
+    gt_ = "0010"
+    lt_ = "0100"
+    geq_ = "1011"
+    leq_ = "1101"
 
 
 class Basis(enum.Enum):
     """Several types of bases."""
-
     AIG = [
-        Operation.NOT,
-        Operation.AND,
-        Operation.OR,
-        Operation.NAND,
-        Operation.NOR,
-        Operation.GREATER,
-        Operation.LESS,
-        Operation.GREATERORE,
-        Operation.LESSORE,
+        Operation.lnot_,
+        Operation.and_,
+        Operation.or_,
+        Operation.nand_,
+        Operation.nor_,
+        Operation.gt_,
+        Operation.lt_,
+        Operation.geq_,
+        Operation.leq_,
     ]
     XAIG = [
-        Operation.NOT,
-        Operation.AND,
-        Operation.OR,
-        Operation.NAND,
-        Operation.NOR,
-        Operation.GREATER,
-        Operation.LESS,
-        Operation.GREATERORE,
-        Operation.LESSORE,
-        Operation.XOR,
-        Operation.NXOR,
+        Operation.lnot_,
+        Operation.and_,
+        Operation.or_,
+        Operation.nand_,
+        Operation.nor_,
+        Operation.gt_,
+        Operation.lt_,
+        Operation.geq_,
+        Operation.leq_,
+        Operation.xor_,
+        Operation.nxor_,
     ]
     FULL = [
-        Operation.ZERO,
-        Operation.ONE,
-        Operation.NOT2,
-        Operation.IFF2,
-        Operation.IFF,
-        Operation.NOT,
-        Operation.AND,
-        Operation.OR,
-        Operation.NAND,
-        Operation.NOR,
-        Operation.GREATER,
-        Operation.LESS,
-        Operation.GREATERORE,
-        Operation.LESSORE,
-        Operation.XOR,
-        Operation.NXOR,
+        Operation.always_false_,
+        Operation.always_true_,
+        Operation.lnot_,
+        Operation.rnot_,
+        Operation.riff_,
+        Operation.liff_,
+        Operation.and_,
+        Operation.or_,
+        Operation.nand_,
+        Operation.nor_,
+        Operation.gt_,
+        Operation.lt_,
+        Operation.geq_,
+        Operation.leq_,
+        Operation.xor_,
+        Operation.nxor_,
     ]
+
+
+_tt_to_gate_type = {
+    (0, 0, 0, 0): ALWAYS_FALSE,
+    (0, 0, 0, 1): AND,
+    (0, 0, 1, 0): GT,
+    (0, 0, 1, 1): LIFF,
+    (0, 1, 0, 0): LT,
+    (0, 1, 0, 1): RIFF,
+    (0, 1, 1, 0): XOR,
+    (0, 1, 1, 1): OR,
+    (1, 0, 0, 0): NOR,
+    (1, 0, 0, 1): NXOR,
+    (1, 0, 1, 0): RNOT,
+    (1, 0, 1, 1): GEQ,
+    (1, 1, 0, 0): LNOT,
+    (1, 1, 0, 1): LEQ,
+    (1, 1, 1, 0): NAND,
+    (1, 1, 1, 1): ALWAYS_TRUE
+}
 
 
 class PySATSolverNames(enum.Enum):
@@ -116,22 +144,6 @@ class PySATSolverNames(enum.Enum):
     MINICARD = 'minicard'
     MINISAT22 = 'minisat22'
     MINISATGH = 'minisat-gh'
-
-
-_tt_to_gate_type = {
-    (0, 1, 1, 1): GateType.OR,
-    (1, 0, 0, 0): GateType.NOR,
-    (0, 0, 0, 1): GateType.AND,
-    (1, 1, 1, 0): GateType.NAND,
-    (0, 1, 1, 0): GateType.XOR,
-    (1, 0, 0, 1): GateType.NXOR,
-    (1, 1, 0, 0): GateType.NOT,
-    (1, 0, 1, 0): GateType.NOT,
-    (0, 0, 1, 0): GateType.G,
-    (0, 1, 0, 0): GateType.L,
-    (1, 0, 1, 1): GateType.GE,
-    (1, 1, 0, 1): GateType.LE
-}
 
 
 def get_GateType_by_tt(gate_tt: tp.List[bool]) -> GateType:
@@ -254,6 +266,51 @@ class CircuitFinder:
 
         return self._get_circuit_by_model(model)
 
+    def fix_gate(self, gate: int,
+                 first_predecessor: int = None,
+                 second_predecessor: int = None,
+                 gate_type: GateType = None
+                 ):
+
+        assert gate in self._internal_gates
+
+        if first_predecessor is not None and first_predecessor not in self._gates:
+            raise Exception()
+
+        if second_predecessor is not None and second_predecessor not in self._gates:
+            raise Exception()
+
+        if first_predecessor is None and second_predecessor is None:
+            raise Exception()
+
+        if first_predecessor is not None and second_predecessor is not None:
+            self._cnf.append([self._predecessors_variable(gate, first_predecessor, second_predecessor)])
+        else:
+            if first_predecessor is not None:
+                for a, b in itertools.combinations(range(gate), 2):
+                    if a != first_predecessor and b != first_predecessor:
+                        self._cnf.append([-self._predecessors_variable(gate, a, b)])
+
+        # TODO: maintain gate_type
+        # if gate_type:
+        #     for a, b in itertools.product(range(2), repeat=2):
+        #         bit = int(gate_type[2 * a + b])
+        #         assert bit in range(2)
+        #         self._cnf.append([(1 if bit else -1) * self._gate_type_variable(gate, a, b)])
+
+    def forbid_wire(self, from_gate: int, to_gate: int):
+        if from_gate not in self._gates:
+            raise Exception()
+        if to_gate not in self._internal_gates:
+            raise Exception()
+        if from_gate >= to_gate:
+            raise Exception()
+
+        for other in self._gates:
+            if other < to_gate and other != from_gate:
+                self._cnf.append(
+                    [-self._predecessors_variable(to_gate, min(other, from_gate), max(other, from_gate))])
+
     def _init_default_cnf_formula(self) -> None:
         """Creating a CNF formula for finding a fixed-size circuit."""
 
@@ -311,7 +368,6 @@ class CircuitFinder:
 
         for h in self._outputs:
             for t in range(1 << self._boolean_function.input_size):
-                print(self._output_truth_tables[h][t])
                 if self._output_truth_tables[h][t] == '*':
                     continue
                 for gate in self._internal_gates:
@@ -319,7 +375,7 @@ class CircuitFinder:
                         [
                             [
                                 -self._output_gate_variable(h, gate),
-                                (1 if self._output_truth_tables[h][t] == '1' else -1)
+                                (1 if self._output_truth_tables[h][t] else -1)
                                 * self._gate_value_variable(gate, t),
                             ]
                         ]
@@ -449,7 +505,7 @@ class CircuitFinder:
 
         initial_circuit = Circuit()
         for gate in self._input_gates:
-            initial_circuit.add_gate(Gate(str(gate), GateType.INPUT))
+            initial_circuit.add_gate(Gate(str(gate), INPUT))
 
         for gate in self._internal_gates:
             first_predecessor, second_predecessor = None, None
@@ -478,22 +534,22 @@ class CircuitFinder:
                 else 's' + str(second_predecessor)
             )
 
-            if gate_tt == [1, 1, 0, 0] or gate == [1, 0, 1, 0]:
-                initial_circuit.add_gate(
-                    Gate(
-                        's' + str(gate),
-                        get_GateType_by_tt(gate_tt),
-                        (str(first_predecessor_str),),
-                    )
+            # if gate_tt == [1, 1, 0, 0] or gate == [1, 0, 1, 0]:
+            #     initial_circuit.add_gate(
+            #         Gate(
+            #             's' + str(gate),
+            #             get_GateType_by_tt(gate_tt),
+            #             (str(first_predecessor_str),),
+            #         )
+            #     )
+            # else:
+            initial_circuit.add_gate(
+                Gate(
+                    's' + str(gate),
+                    get_GateType_by_tt(gate_tt),
+                    (str(first_predecessor_str), str(second_predecessor_str)),
                 )
-            else:
-                initial_circuit.add_gate(
-                    Gate(
-                        's' + str(gate),
-                        get_GateType_by_tt(gate_tt),
-                        (str(first_predecessor_str), str(second_predecessor_str)),
-                    )
-                )
+            )
 
         for h in self._outputs:
             for gate in self._gates:
