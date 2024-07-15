@@ -387,7 +387,12 @@ class Circuit(BooleanFunction):
         :return: True iff this function.
 
         """
-        pass
+        for i in range(self.input_size + 1):
+            value = self.evaluate([False] * (self.input_size - i) + [True] * i)
+            for x in set(itertools.permutations([False] * (self.input_size - i) + [True] * i)):
+                if value != self.evaluate(list(x)):
+                    return False
+        return True
 
     def is_symmetric_at(self, output_index: int) -> bool:
         """
@@ -397,7 +402,12 @@ class Circuit(BooleanFunction):
         :return: True iff output `output_index` is symmetric.
 
         """
-        pass
+        for i in range(self.input_size + 1):
+            value = self.evaluate_at([False] * (self.input_size - i) + [True] * i, output_index)
+            for x in set(itertools.permutations([False] * (self.input_size - i) + [True] * i)):
+                if value != self.evaluate_at(list(x), output_index):
+                    return False
+        return True
 
     def is_dependent_on_input_at(
         self,

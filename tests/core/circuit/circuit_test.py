@@ -201,60 +201,185 @@ def test_evaluate_at():
     instance.mark_as_output('E')
     instance.mark_as_output('F')
 
+    assert instance.evaluate_at([False, False], 0) == False
     assert instance.evaluate_at([False, False], 1) == False
     assert instance.evaluate_at([False, False], 2) == False
-    assert instance.evaluate_at([False, False], 3) == False
+    assert instance.evaluate_at([False, True], 0) == True
     assert instance.evaluate_at([False, True], 1) == True
     assert instance.evaluate_at([False, True], 2) == True
-    assert instance.evaluate_at([False, True], 3) == True
+    assert instance.evaluate_at([False, Undefined], 0) == Undefined
     assert instance.evaluate_at([False, Undefined], 1) == Undefined
     assert instance.evaluate_at([False, Undefined], 2) == Undefined
-    assert instance.evaluate_at([False, Undefined], 3) == Undefined
+    assert instance.evaluate_at([True, False], 0) == True
     assert instance.evaluate_at([True, False], 1) == True
-    assert instance.evaluate_at([True, False], 2) == True
-    assert instance.evaluate_at([True, False], 3) == False
-    assert instance.evaluate_at([True, True], 1) == True
-    assert instance.evaluate_at([True, True], 2) == False
-    assert instance.evaluate_at([True, True], 3) == True
-    assert instance.evaluate_at([True, Undefined], 1) == True
+    assert instance.evaluate_at([True, False], 2) == False
+    assert instance.evaluate_at([True, True], 0) == True
+    assert instance.evaluate_at([True, True], 1) == False
+    assert instance.evaluate_at([True, True], 2) == True
+    assert instance.evaluate_at([True, Undefined], 0) == True
+    assert instance.evaluate_at([True, Undefined], 1) == Undefined
     assert instance.evaluate_at([True, Undefined], 2) == Undefined
-    assert instance.evaluate_at([True, Undefined], 3) == Undefined
+    assert instance.evaluate_at([Undefined, False], 0) == Undefined
     assert instance.evaluate_at([Undefined, False], 1) == Undefined
-    assert instance.evaluate_at([Undefined, False], 2) == Undefined
-    assert instance.evaluate_at([Undefined, False], 3) == False
+    assert instance.evaluate_at([Undefined, False], 2) == False
+    assert instance.evaluate_at([Undefined, False], 0) == Undefined
     assert instance.evaluate_at([Undefined, False], 1) == Undefined
-    assert instance.evaluate_at([Undefined, False], 2) == Undefined
-    assert instance.evaluate_at([Undefined, False], 3) == False
-    assert instance.evaluate_at([Undefined, True], 1) == True
-    assert instance.evaluate_at([Undefined, True], 2) == Undefined
-    assert instance.evaluate_at([Undefined, True], 3) == True
+    assert instance.evaluate_at([Undefined, False], 2) == False
+    assert instance.evaluate_at([Undefined, True], 0) == True
+    assert instance.evaluate_at([Undefined, True], 1) == Undefined
+    assert instance.evaluate_at([Undefined, True], 2) == True
+    assert instance.evaluate_at([Undefined, Undefined], 0) == Undefined
     assert instance.evaluate_at([Undefined, Undefined], 1) == Undefined
     assert instance.evaluate_at([Undefined, Undefined], 2) == Undefined
-    assert instance.evaluate_at([Undefined, Undefined], 3) == Undefined
 
 
 def test_is_constant():
-    pass
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.mark_as_output('C')
+
+    assert instance.is_constant() == True
+
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', OR, ('C', 'B')))
+    instance.mark_as_output('D')
+
+    assert instance.is_constant() == False
 
 
 def test_is_constant_at():
-    pass
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', NOT, ('A',)))
+    instance.add_gate(Gate('D', AND, ('A', 'C')))
+    instance.add_gate(Gate('E', AND, ('A', 'B')))
+    instance.add_gate(Gate('F', OR, ('E', 'B')))
+    instance.mark_as_output('D')
+    instance.mark_as_output('F')
+
+    assert instance.is_constant() == False
+    assert instance.is_constant_at(0) == True
+    assert instance.is_constant_at(1) == False
 
 
 def test_is_monotonic():
-    pass
+    
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.mark_as_output('C')
+
+    assert instance.is_monotonic(inverse=False) == True
+    assert instance.is_monotonic(inverse=True) == False
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.mark_as_output('C')
+
+    assert instance.is_monotonic(inverse=False) == True
+    assert instance.is_monotonic(inverse=True) == True
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', OR, ('C', 'B')))
+    instance.mark_as_output('D')
+
+    assert instance.is_monotonic(inverse=False) == False
+    assert instance.is_monotonic(inverse=True) == False
 
 
 def test_is_monotonic_at():
-    pass
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('A', 'D')))
+    instance.mark_as_output('C')
+    instance.mark_as_output('E')
+    
+
+    assert instance.is_monotonic(inverse=False) == True
+    assert instance.is_monotonic(inverse=True) == False
+    assert instance.is_monotonic_at(0, inverse=False) == True
+    assert instance.is_monotonic_at(0, inverse=True) == True
+    assert instance.is_monotonic_at(1, inverse=False) == True
+    assert instance.is_monotonic_at(1, inverse=True) == False
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('A', 'D')))
+    instance.add_gate(Gate('F', AND, ('A', 'D')))
+    instance.add_gate(Gate('G', OR, ('F', 'D')))
+    instance.mark_as_output('C')
+    instance.mark_as_output('E')
+    instance.mark_as_output('G')
+
+    assert instance.is_monotonic(inverse=False) == False
+    assert instance.is_monotonic(inverse=True) == False
+    assert instance.is_monotonic_at(0, inverse=False) == True
+    assert instance.is_monotonic_at(0, inverse=True) == True
+    assert instance.is_monotonic_at(1, inverse=False) == True
+    assert instance.is_monotonic_at(1, inverse=True) == False
+    assert instance.is_monotonic_at(2, inverse=False) == False
+    assert instance.is_monotonic_at(2, inverse=True) == False
 
 
 def test_is_symmetric():
-    pass
+    
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('C', 'D')))
+    instance.mark_as_output('E')
 
+    assert instance.is_symmetric() == True
+    
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', OR, ('C', 'D')))
+    instance.mark_as_output('E')
+
+    assert instance.is_symmetric() == False
 
 def test_is_symmetric_at():
-    pass
+    
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('C', 'D')))
+    instance.add_gate(Gate('F', OR, ('C', 'D')))
+    instance.mark_as_output('E')
+    instance.mark_as_output('F')
+
+    assert instance.is_symmetric() == False
+    assert instance.is_symmetric_at(0) == True
+    assert instance.is_symmetric_at(1) == False
 
 
 def test_is_dependent_on_input_at():
@@ -274,10 +399,6 @@ def test_get_significant_inputs_of():
 
 
 def test_get_symmetric_and_negations_of():
-    pass
-
-
-def test():
     pass
 
 
