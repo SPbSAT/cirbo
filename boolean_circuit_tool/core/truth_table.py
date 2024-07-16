@@ -161,10 +161,10 @@ class TruthTable(BooleanFunction):
         for number_of_true in range(self.input_size + 1):
 
             _iter = iter(input_iterator(list_input, number_of_true))
-            value: list[bool] = self._table_t[values_to_index(next(_iter))]
+            value: list[bool] = self.evaluate(next(_iter))
 
             for set_of_assign in _iter:
-                if value != self._table_t[values_to_index(set_of_assign)]:
+                if value != self.evaluate(set_of_assign):
                     return False
 
         return True
@@ -181,10 +181,10 @@ class TruthTable(BooleanFunction):
         for number_of_true in range(self.input_size + 1):
 
             _iter = iter(input_iterator(list_input, number_of_true))
-            value: bool = self._table_t[values_to_index(next(_iter))][output_index]
+            value: bool = self.evaluate_at(next(_iter), output_index)
 
             for set_of_assign in _iter:
-                if value != self._table_t[values_to_index(set_of_assign)][output_index]:
+                if value != self.evaluate_at(set_of_assign, output_index):
                     return False
 
         return True
@@ -293,12 +293,12 @@ class TruthTable(BooleanFunction):
                     )
                 )
                 value: list[bool] = _filter_required_outputs(
-                    self._table_t[values_to_index(next(_iter))]
+                    self.evaluate(next(_iter))
                 )
 
                 for set_of_assign in _iter:
                     if value != _filter_required_outputs(
-                        self._table_t[values_to_index(set_of_assign)]
+                        self.evaluate(set_of_assign)
                     ):
                         symmetric = False
                         break
