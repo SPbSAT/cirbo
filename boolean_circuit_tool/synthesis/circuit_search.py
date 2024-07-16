@@ -2,8 +2,10 @@ import logging
 import datetime
 import enum
 import itertools
-import threading
 import typing as tp
+
+from concurrent.futures import TimeoutError
+from pebble import concurrent
 
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
@@ -30,6 +32,12 @@ from boolean_circuit_tool.core.circuit import (
     NAND,
     ALWAYS_TRUE,
     INPUT
+)
+from boolean_circuit_tool.synthesis.exception import (
+    TimeOutError,
+    GateIsAbsentError,
+    FixGateError,
+    ForbidWireError
 )
 
 logger = logging.getLogger(__name__)
@@ -164,6 +172,7 @@ class CircuitFinder:
             boolean_function: BooleanFunction,
             number_of_gates: int,
             basis: tp.Union[Basis, tp.List[Operation]] = Basis.XAIG,
+            need_normalized: bool = False
     ):
         """
         Initializes the CircuitFinder instance.
@@ -176,6 +185,9 @@ class CircuitFinder:
         The basis of gates in the circuit. Could be an arbitrary
         List of Operation or any of the default bases defined in Basis.
         Defaults to Basis.FULL.
+        :param need_normalized: search for a normalization circuit, i.e.
+        the circuit in which all gates satisfy the following property:
+        g(0, 0) = 0.
 
         """
 
@@ -195,7 +207,7 @@ class CircuitFinder:
             range(boolean_function.input_size + number_of_gates)
         )
         self._outputs = list(range(boolean_function.output_size))
-
+        self.need_normalized = need_normalized
         self._vpool = IDPool()
         self._cnf = CNF()
         self._init_default_cnf_formula()
@@ -248,18 +260,23 @@ class CircuitFinder:
             logger.info(f"Running {solver_name.value}")
         s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
         if time_limit:
+            @concurrent.process(timeout=time_limit)
+            def cnf_from_bench_wrapper():
+                s.solve()
+                return s.get_model()
 
-            def interrupt(s):
-                s.interrupt()
-
-            solver_timer = threading.Timer(time_limit, interrupt, [s])
-            solver_timer.start()
-            s.solve_limited(expect_interrupt=True)
+            try:
+                future = cnf_from_bench_wrapper()
+                model = future.result()
+            except TimeoutError:
+                if verbose:
+                    logger.info(f"Solver timed out and is being stopped.")
+                s.delete()
+                raise TimeOutError()
         else:
             s.solve()
-
-        model = s.get_model()
-        s.delete()
+            model = s.get_model()
+            s.delete()
 
         if model is None:
             return False
@@ -275,13 +292,13 @@ class CircuitFinder:
         assert gate in self._internal_gates
 
         if first_predecessor is not None and first_predecessor not in self._gates:
-            raise Exception()
+            raise GateIsAbsentError()
 
         if second_predecessor is not None and second_predecessor not in self._gates:
-            raise Exception()
+            raise GateIsAbsentError()
 
         if first_predecessor is None and second_predecessor is None:
-            raise Exception()
+            raise FixGateError()
 
         if first_predecessor is not None and second_predecessor is not None:
             self._cnf.append([self._predecessors_variable(gate, first_predecessor, second_predecessor)])
@@ -300,11 +317,11 @@ class CircuitFinder:
 
     def forbid_wire(self, from_gate: int, to_gate: int):
         if from_gate not in self._gates:
-            raise Exception()
+            raise GateIsAbsentError()
         if to_gate not in self._internal_gates:
-            raise Exception()
+            raise GateIsAbsentError()
         if from_gate >= to_gate:
-            raise Exception()
+            raise ForbidWireError()
 
         for other in self._gates:
             if other < to_gate and other != from_gate:
@@ -393,6 +410,10 @@ class CircuitFinder:
                     )
                 self._cnf.append(clause)
 
+        if self.need_normalized:
+            for gate in self._internal_gates:
+                self._cnf.append([-self._gate_type_variable(gate, 0, 0)])
+
     def _add_exactly_one_of(self, literals: tp.List[int]):
         """
         Adds the clauses to the CNF encoding the constraint that exactly one of the
@@ -441,7 +462,6 @@ class CircuitFinder:
             where 'gate' operates on 'first_pred' and 'second_pred'.
 
         """
-        # TODO: delete all asserts, here and in the following methods.
 
         assert gate in self._internal_gates
         assert first_pred in self._gates and second_pred in self._gates
@@ -533,16 +553,6 @@ class CircuitFinder:
                 if second_predecessor in self._input_gates
                 else 's' + str(second_predecessor)
             )
-
-            # if gate_tt == [1, 1, 0, 0] or gate == [1, 0, 1, 0]:
-            #     initial_circuit.add_gate(
-            #         Gate(
-            #             's' + str(gate),
-            #             get_GateType_by_tt(gate_tt),
-            #             (str(first_predecessor_str),),
-            #         )
-            #     )
-            # else:
             initial_circuit.add_gate(
                 Gate(
                     's' + str(gate),
