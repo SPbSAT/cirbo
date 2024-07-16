@@ -274,6 +274,7 @@ class TruthTable(BooleanFunction):
         :param output_index: output index set
 
         """
+
         def _filter_required_outputs(result: list[bool]):
             nonlocal output_index
             return [result[idx] for idx in output_index]
@@ -296,7 +297,9 @@ class TruthTable(BooleanFunction):
                 )
 
                 for set_of_assign in _iter:
-                    if value != _filter_required_outputs(self._table_t[values_to_index(set_of_assign)]):
+                    if value != _filter_required_outputs(
+                        self._table_t[values_to_index(set_of_assign)]
+                    ):
                         symmetric = False
                         break
 
