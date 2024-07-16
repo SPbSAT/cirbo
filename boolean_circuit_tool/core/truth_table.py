@@ -292,14 +292,10 @@ class TruthTable(BooleanFunction):
                         list(negations),
                     )
                 )
-                value: list[bool] = _filter_required_outputs(
-                    self.evaluate(next(_iter))
-                )
+                value: list[bool] = _filter_required_outputs(self.evaluate(next(_iter)))
 
                 for set_of_assign in _iter:
-                    if value != _filter_required_outputs(
-                        self.evaluate(set_of_assign)
-                    ):
+                    if value != _filter_required_outputs(self.evaluate(set_of_assign)):
                         symmetric = False
                         break
 
