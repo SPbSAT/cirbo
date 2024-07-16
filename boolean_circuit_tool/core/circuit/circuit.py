@@ -313,12 +313,12 @@ class Circuit:
     def __str__(self):
         input_str = textwrap.shorten(
             'INPUTS: ' + '; '.join(f'{input_label}' for input_label in self._inputs),
-            wigth=100,
+            width=100,
         )
         output_str = textwrap.shorten(
             'OUTPUTS: '
             + '; '.join(f'{output_label}' for output_label in self._outputs),
-            wigth=100,
+            width=100,
         )
         return f"{self.__class__.__name__}\n\t{input_str}\n\t{output_str}"
 
