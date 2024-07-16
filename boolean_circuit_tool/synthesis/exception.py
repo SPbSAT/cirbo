@@ -2,6 +2,14 @@
 
 from boolean_circuit_tool.exceptions import BooleanCircuitToolError
 
+__all__ = [
+    'CircuitFinderError',
+    'SolverTimeOutError',
+    'GateIsAbsentError',
+    'FixGateError',
+    'ForbidWireError',
+]
+
 
 class CircuitFinderError(BooleanCircuitToolError):
     """Base for CircuitFinder class exceptions."""
@@ -9,7 +17,7 @@ class CircuitFinderError(BooleanCircuitToolError):
     pass
 
 
-class TimeOutError(CircuitFinderError):
+class SolverTimeOutError(CircuitFinderError):
     """Error is due to the time limit of the solver."""
 
     pass
