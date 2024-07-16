@@ -3,7 +3,10 @@ import math
 import typing as tp
 
 from boolean_circuit_tool.core.boolean_function import BooleanFunction
-
+from boolean_circuit_tool.core.circuit.utils import (
+    input_iterator,
+    input_iterator_with_negations,
+)
 
 __all__ = ['TruthTable']
 
@@ -154,10 +157,17 @@ class TruthTable(BooleanFunction):
         :return: True iff this function.
 
         """
-        return (
-            self.get_symmetric_and_negations_of(list(range(self.output_size)))
-            is not None
-        )
+        list_input = [False] * self.input_size
+        for number_of_true in range(self.input_size + 1):
+
+            _iter = iter(input_iterator(list_input, number_of_true))
+            value: list[bool] = self._table_t[values_to_index(next(_iter))]
+
+            for set_of_assign in _iter:
+                if value != self._table_t[values_to_index(set_of_assign)]:
+                    return False
+
+        return True
 
     def is_symmetric_at(self, output_index: int) -> bool:
         """
@@ -167,7 +177,17 @@ class TruthTable(BooleanFunction):
         :return: True iff output `output_index` is symmetric.
 
         """
-        return self.get_symmetric_and_negations_of([output_index]) is not None
+        list_input = [False] * self.input_size
+        for number_of_true in range(self.input_size + 1):
+
+            _iter = iter(input_iterator(list_input, number_of_true))
+            value: bool = self._table_t[values_to_index(next(_iter))][output_index]
+
+            for set_of_assign in _iter:
+                if value != self._table_t[values_to_index(set_of_assign)][output_index]:
+                    return False
+
+        return True
 
     def is_dependent_on_input_at(self, output_index: int, input_index: int) -> bool:
         """
@@ -246,26 +266,46 @@ class TruthTable(BooleanFunction):
 
     def get_symmetric_and_negations_of(
         self,
-        out_indexes: list[int],
+        output_index: list[int],
     ) -> tp.Optional[list[bool]]:
+        """
+        Check if function is symmetric on some output set and returns inputs negations.
+
+        :param output_index: output index set
+
+        """
+        def _filter_required_outputs(result: list[bool]):
+            nonlocal output_index
+            return [result[idx] for idx in output_index]
+
+        list_input = [False] * self.input_size
         for negations in itertools.product((False, True), repeat=self.input_size):
-            saved_values = [{} for _ in range(len(out_indexes))]  # type: ignore
+
             symmetric = True
-            for x in itertools.product((False, True), repeat=self.input_size):
-                amount = sum(
-                    x[i] * (1 if negations[i] else -1) for i in range(self.input_size)
+            for number_of_true in range(self.input_size + 1):
+
+                _iter = iter(
+                    input_iterator_with_negations(
+                        list_input,
+                        number_of_true,
+                        list(negations),
+                    )
                 )
-                values = self.evaluate(list(x))
-                for index in out_indexes:
-                    if amount not in saved_values[index]:
-                        saved_values[index][amount] = values[index]
-                    elif saved_values[index][amount] != values[index]:
+                value: list[bool] = _filter_required_outputs(
+                    self._table_t[values_to_index(next(_iter))]
+                )
+
+                for set_of_assign in _iter:
+                    if value != _filter_required_outputs(self._table_t[values_to_index(set_of_assign)]):
                         symmetric = False
                         break
+
                 if not symmetric:
                     break
+
             if symmetric:
-                return [bool(v) for v in negations]
+                return list(negations)
+
         return None
 
     def get_truth_table(self) -> list[list[bool]]:
