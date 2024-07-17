@@ -2,7 +2,12 @@ import pytest
 
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.exceptions import CircuitValidationError
-from boolean_circuit_tool.core.circuit.gate import AND, INPUT, NOT, OR
+from boolean_circuit_tool.core.circuit.gate import (
+    AND,
+    INPUT,
+    NOT,
+    OR,
+)
 
 
 def test_trivial_instance():

@@ -3,18 +3,9 @@ import typing as tp
 
 
 __all__ = [
-    'get_bit_value',
     'input_to_canonical_index',
+    'get_bit_value',
 ]
-
-
-def get_bit_value(value: int, bit_idx: int) -> bool:
-    """
-    :param value: some integer value.
-    :param bit_idx: big-endian index of bit.
-    :return: `bit_idx`th index of number `value`.
-    """
-    return bool((value & (1 << bit_idx)) >> bit_idx)
 
 
 def input_to_canonical_index(inputs: tp.Iterable[bool]) -> int:
@@ -31,3 +22,12 @@ def input_to_canonical_index(inputs: tp.Iterable[bool]) -> int:
 
     """
     return int(''.join(str(int(v)) for v in inputs), 2)
+
+
+def get_bit_value(value: int, bit_idx: int) -> bool:
+    """
+    :param value: some integer value.
+    :param bit_idx: big-endian index of bit.
+    :return: `bit_idx`th index of number `value`.
+    """
+    return bool((value & (1 << bit_idx)) >> bit_idx)

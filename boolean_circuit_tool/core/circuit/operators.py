@@ -12,6 +12,7 @@ import typing as tp
 
 from boolean_circuit_tool.core.circuit.exceptions import GateStateError
 
+
 __all__ = [
     'GateState',
     'Undefined',

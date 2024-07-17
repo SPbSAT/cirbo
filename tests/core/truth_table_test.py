@@ -3,9 +3,12 @@ import typing as tp
 
 import pytest
 
-from boolean_circuit_tool.core.logic import DontCare
 from boolean_circuit_tool.core.boolean_function import RawTruthTable
-from boolean_circuit_tool.core.truth_table import TruthTable, TruthTableModel
+from boolean_circuit_tool.core.logic import DontCare
+from boolean_circuit_tool.core.truth_table import (
+    TruthTable,
+    TruthTableModel,
+)
 
 
 def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTable:

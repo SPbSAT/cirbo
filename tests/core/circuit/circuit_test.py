@@ -21,7 +21,10 @@ from boolean_circuit_tool.core.circuit.gate import (
     RNOT,
     XOR,
 )
-from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
+from boolean_circuit_tool.core.circuit.operators import (
+    GateState,
+    Undefined,
+)
 
 
 def test_create_circuit():

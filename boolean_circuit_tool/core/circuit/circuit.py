@@ -12,8 +12,16 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitElementAlreadyExistsError,
     CircuitElementIsAbsentError,
 )
-from boolean_circuit_tool.core.circuit.gate import Gate, GateType, INPUT, Label
-from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
+from boolean_circuit_tool.core.circuit.gate import (
+    Gate,
+    GateType,
+    INPUT,
+    Label,
+)
+from boolean_circuit_tool.core.circuit.operators import (
+    GateState,
+    Undefined,
+)
 from boolean_circuit_tool.core.circuit.validation import (
     check_elements_exist,
     check_label_doesnt_exist,
