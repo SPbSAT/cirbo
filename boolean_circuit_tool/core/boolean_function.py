@@ -4,15 +4,20 @@ import typing as tp
 import typing_extensions as tp_ext
 
 from boolean_circuit_tool.core.exceptions import BadDefinitionError
+from boolean_circuit_tool.core.logic import TriValue
 
 
 __all__ = [
+    'RawTruthTable',
+    'RawTruthTableModel',
     'BooleanFunctionModel',
     'BooleanFunction',
 ]
 
-from boolean_circuit_tool.core.logic import TriValue
-
+# Type that represents bare truth table object.
+RawTruthTable = tp.MutableSequence[tp.MutableSequence[bool]]
+# Raw truth table with don't care outputs.
+RawTruthTableModel = tp.MutableSequence[tp.MutableSequence[TriValue]]
 
 BooleanFunctionT = tp.TypeVar('BooleanFunctionT', covariant=True)
 
@@ -62,7 +67,7 @@ class BooleanFunctionModel(tp.Protocol[BooleanFunctionT]):
 
         """
 
-    def get_model_truth_table(self) -> tp.Sequence[tp.Sequence[TriValue]]:
+    def get_model_truth_table(self) -> RawTruthTableModel:
         """
         Get truth table of a boolean function, which is a matrix, `i`th row of which
         contains values of `i`th output, which may contain bool or DontCare values, and
@@ -97,7 +102,7 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
 
     """
 
-    def evaluate(self, inputs: list[bool]) -> list[bool]:
+    def evaluate(self, inputs: list[bool]) -> tp.Sequence[bool]:
         """
         Get output values that correspond to provided `inputs`.
 
@@ -229,18 +234,20 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
 
         """
 
-    def get_symmetric_and_negations_of(
+    def find_negations_to_make_symmetric(
         self,
         output_index: list[int],
     ) -> tp.Optional[list[bool]]:
         """
-        Check if function is symmetric on some output set and returns inputs negations.
-
+        Check if exist input negations set such that function is symmetric on given
+        output set.
+        
         :param output_index: output index set
+        :return: set of negations if it exists, else `None`.
 
         """
 
-    def get_truth_table(self) -> tp.Sequence[tp.Sequence[bool]]:
+    def get_truth_table(self) -> RawTruthTable:
         """
         Get truth table of a boolean function, which is a matrix, `i`th row of which
         contains values of `i`th output, and `j`th column corresponds to the input which
@@ -273,7 +280,7 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         """
         return self.evaluate_at(inputs=inputs, output_index=output_index)
 
-    def get_model_truth_table(self) -> tp.Sequence[tp.Sequence[TriValue]]:
+    def get_model_truth_table(self) -> RawTruthTableModel:
         """
         Get truth table of a boolean function, which is a matrix, `i`th row of which
         contains values of `i`th output, which may contain bool or DontCare values, and
@@ -283,10 +290,11 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         :return: truth table describing this model.
 
         """
-        return self.get_truth_table()
+        return tp.cast(RawTruthTableModel, self.get_truth_table())
 
     def define(
-        self, definition: tp.Mapping[tuple[tuple[bool, ...], int], bool]
+        self,
+        definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
     ) -> tp_ext.Self:
         """
         Defines this model by defining ambiguous output values.

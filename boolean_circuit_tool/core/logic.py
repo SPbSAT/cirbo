@@ -1,22 +1,20 @@
 import typing as tp
 
-from boolean_circuit_tool.core.exceptions import BooleanModelError
+from boolean_circuit_tool.core.exceptions import DontCareCastError
 
 
 __all__ = [
-    'DontCareCastError',
     'DontCare',
     'TriValue',
 ]
 
 
-class DontCareCastError(BooleanModelError):
-    """Represents error raised when `DontCare` is being cast to bool."""
-
-    pass
-
-
 class _DontCare:
+    """
+    Class of object, which represents "don't care" value,
+    meaning that this value is yet to be determined.
+    
+    """
     def __bool__(self):
         raise DontCareCastError("Bool can't be created from DontCare.")
 

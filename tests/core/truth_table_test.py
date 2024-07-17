@@ -4,10 +4,11 @@ import typing as tp
 import pytest
 
 from boolean_circuit_tool.core.logic import DontCare
+from boolean_circuit_tool.core.boolean_function import RawTruthTable
 from boolean_circuit_tool.core.truth_table import TruthTable, TruthTableModel
 
 
-def generate_random_truth_table(input_size: int, output_size: int) -> list[list[bool]]:
+def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTable:
     return [
         [random.choice([True, False]) for _ in range(2**input_size)]
         for _ in range(output_size)
@@ -99,7 +100,7 @@ def test_is_out_symmetric():
     negations = [False, True, True, False, True]
     out = generate_sum(5, negations)
     truth_table = TruthTable([out])
-    neg = truth_table.get_symmetric_and_negations_of([0])
+    neg = truth_table.find_negations_to_make_symmetric([0])
     assert neg is not None
     assert neg == negations
 
@@ -177,7 +178,7 @@ class TestTruthTableModel:
             ),
         ],
     )
-    def test_model_defines(
+    def test_model_define(
         self, model: TruthTableModel, definition: dict, expected: list
     ):
         tt = model.define(definition=definition)

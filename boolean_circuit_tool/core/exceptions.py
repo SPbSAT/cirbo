@@ -6,6 +6,7 @@ __all__ = [
     'BooleanModelError',
     'BooleanFunctionError',
     'BadDefinitionError',
+    'DontCareCastError',
 ]
 
 
@@ -23,5 +24,11 @@ class BooleanFunctionError(BooleanCircuitToolError):
 
 class BadDefinitionError(BooleanModelError):
     """Represents error raised when boolean model is given a bad definition."""
+
+    pass
+
+
+class DontCareCastError(BooleanModelError):
+    """Represents error raised when `DontCare` is being cast to bool."""
 
     pass
