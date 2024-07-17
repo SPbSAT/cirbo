@@ -3,10 +3,12 @@ import typing as tp
 
 import pytest
 
-from boolean_circuit_tool.core.truth_table import TruthTable
+from boolean_circuit_tool.core.boolean_function import RawTruthTable
+from boolean_circuit_tool.core.logic import DontCare
+from boolean_circuit_tool.core.truth_table import TruthTable, TruthTableModel
 
 
-def generate_random_truth_table(input_size: int, output_size: int) -> list[list[bool]]:
+def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTable:
     return [
         [random.choice([True, False]) for _ in range(2**input_size)]
         for _ in range(output_size)
@@ -98,6 +100,86 @@ def test_is_out_symmetric():
     negations = [False, True, True, False, True]
     out = generate_sum(5, negations)
     truth_table = TruthTable([out])
-    neg = truth_table.get_symmetric_and_negations_of([0])
+    neg = truth_table.find_negations_to_make_symmetric([0])
     assert neg is not None
     assert neg == negations
+
+
+class TestTruthTableModel:
+    simple_model = TruthTableModel(
+        table=[[False, DontCare, True, DontCare]],
+    )
+    two_output_model = TruthTableModel(
+        table=[
+            [True, True, DontCare, DontCare],
+            [DontCare, False, True, False],
+        ],
+    )
+
+    def test_model_shape(self):
+        assert self.simple_model.input_size == 2
+        assert self.simple_model.output_size == 1
+        assert self.two_output_model.input_size == 2
+        assert self.two_output_model.output_size == 2
+
+    def test_model_checks(self):
+        assert self.simple_model.check([True, False]) == [True]
+        assert self.simple_model.check([True, True]) == [DontCare]
+        assert self.simple_model.check_at([True, True], 0) == DontCare
+
+        assert self.two_output_model.check([False, False]) == [True, DontCare]
+        assert self.two_output_model.check_at([False, False], 1) == DontCare
+
+    @pytest.mark.parametrize(
+        'model, expected',
+        [
+            pytest.param(
+                simple_model,
+                [[False, DontCare, True, DontCare]],
+                id='simple model',
+            ),
+            pytest.param(
+                two_output_model,
+                [
+                    [True, True, DontCare, DontCare],
+                    [DontCare, False, True, False],
+                ],
+                id='two output model',
+            ),
+        ],
+    )
+    def test_get_model_truth_table(self, model: TruthTableModel, expected: list):
+        assert model.get_model_truth_table() == expected
+
+    @pytest.mark.parametrize(
+        'model, definition, expected',
+        [
+            pytest.param(
+                simple_model,
+                {
+                    ((False, True), 0): True,
+                    ((True, True), 0): False,
+                },
+                [[False, True, True, False]],
+                id='simple model',
+            ),
+            pytest.param(
+                two_output_model,
+                {
+                    ((True, False), 0): False,
+                    ((True, True), 0): True,
+                    ((False, False), 1): False,
+                },
+                [
+                    [True, True, False, True],
+                    [False, False, True, False],
+                ],
+                id='two output model',
+            ),
+        ],
+    )
+    def test_model_define(
+        self, model: TruthTableModel, definition: dict, expected: list
+    ):
+        tt = model.define(definition=definition)
+        assert tt.get_truth_table() == expected
