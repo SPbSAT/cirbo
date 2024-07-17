@@ -237,6 +237,43 @@ class Circuit:
                 queue_.pop()
 
         return {output: assigment_dict[output] for output in self._outputs}
+    
+    def evaluate_full_circuit(
+        self,
+        assigment: dict[str, GateState],
+    ) -> dict[str, GateState]:
+        """
+        Evaluate the circuit with the given input values.
+
+        :param assigment: assigment for inputs
+        :return: outputs dictionary with the obtained values
+
+        """
+
+        assigment_dict: dict[str, GateState] = dict(assigment)
+        for input in self._inputs:
+            assigment_dict.setdefault(input, Undefined)
+
+        queue_: list[Label] = list()
+
+        for output in self._outputs:
+            if output not in self._inputs:
+                queue_.append(output)
+
+        while queue_:
+            gate = self.get_element(queue_[-1])
+
+            for operand in gate.operands:
+                if operand not in assigment_dict:
+                    queue_.append(operand)
+
+            if gate.label == queue_[-1]:
+                assigment_dict[gate.label] = gate.operator(
+                    *(assigment_dict[op] for op in gate.operands)
+                )
+                queue_.pop()
+
+        return assigment_dict
 
     def save_to_file(self, path: str) -> None:
         """
