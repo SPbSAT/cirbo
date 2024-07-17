@@ -17,7 +17,7 @@ from boolean_circuit_tool.core.utils import get_bit_value, input_to_canonical_in
         ([1, 1, 1, 0, 0, 0], 56),
         ([0, 1, 1, 0, 0, 1], 25),
         ([1, 0, 1, 0, 1, 0, 1, 0], 170),
-    )
+    ),
 )
 def test_input_to_canonical_index(bit_list: list[bool], expected: int):
     assert input_to_canonical_index(bit_list) == expected
@@ -33,7 +33,7 @@ def test_input_to_canonical_index(bit_list: list[bool], expected: int):
         [1, 1, 1, 0, 0, 0],
         [0, 1, 1, 0, 0, 1],
         [1, 0, 1, 0, 1, 0, 1, 0],
-    )
+    ),
 )
 def test_get_bit_value(bit_list: list[bool]):
     value = input_to_canonical_index(bit_list)

@@ -10,10 +10,7 @@ from boolean_circuit_tool.core.boolean_function import (
     RawTruthTableModel,
 )
 from boolean_circuit_tool.core.logic import TriValue
-from boolean_circuit_tool.core.utils import (
-    get_bit_value,
-    input_to_canonical_index,
-)
+from boolean_circuit_tool.core.utils import get_bit_value, input_to_canonical_index
 
 
 __all__ = [
@@ -35,7 +32,7 @@ class TruthTableModel(BooleanFunctionModel):
         """
         self._input_size = resolve_input_size(table)
         self._output_size = len(table)
-        
+
         self._table: RawTruthTableModel = table
         # Transposed truth table, element (i, j) of which is a value
         # of the output `j` when evaluated at input number `i`.
@@ -331,7 +328,7 @@ class TruthTable(BooleanFunction):
         """
         Check if exist input negations set such that function is symmetric on given
         output set.
-        
+
         :param output_index: output index set
         :return: set of negations if it exists, else `None`.
 

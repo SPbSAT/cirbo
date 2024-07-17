@@ -241,7 +241,7 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         """
         Check if exist input negations set such that function is symmetric on given
         output set.
-        
+
         :param output_index: output index set
         :return: set of negations if it exists, else `None`.
 

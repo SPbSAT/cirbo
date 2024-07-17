@@ -1,4 +1,5 @@
 """Module defines common core utilities."""
+
 import typing as tp
 
 
