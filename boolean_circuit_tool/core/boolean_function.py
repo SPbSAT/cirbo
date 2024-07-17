@@ -1,32 +1,13 @@
 import abc
 import typing as tp
 
-import typing_extensions as tp_ext
-
-from boolean_circuit_tool.core.exceptions import BadDefinitionError
-
-
-__all__ = [
-    'BooleanFunctionModel',
-    'BooleanFunction',
-]
-
-from boolean_circuit_tool.core.logic import TriValue
-
-
-BooleanFunctionT = tp.TypeVar('BooleanFunctionT', covariant=True)
+__all__ = ['BooleanFunction']
 
 
 @tp.runtime_checkable
-class BooleanFunctionModel(tp.Protocol[BooleanFunctionT]):
-    """
-    Protocol for any object that describes model of boolean function, meaning that it
-    defines subset of rules which must be satisfied by searched boolean function.
-
-    Outputs of model can be either `bool`, or `DontCare` object, which
-    means that output value is not fixed yet, and should be defined.
-
-    """
+class BooleanFunction(tp.Protocol):
+    """Protocol for any object that behaves like boolean function, e.g. Circuit,
+    TruthTable or PythonFunction."""
 
     @property
     @abc.abstractmethod
@@ -41,61 +22,6 @@ class BooleanFunctionModel(tp.Protocol[BooleanFunctionT]):
         """
         :return: number of outputs.
         """
-
-    def check(self, inputs: list[bool]) -> tp.Sequence[TriValue]:
-        """
-        Get model output values that correspond to provided `inputs`.
-
-        :param inputs: values of input gates.
-        :return: value of outputs evaluated for input values `inputs`.
-
-        """
-
-    def check_at(self, inputs: list[bool], output_index: int) -> TriValue:
-        """
-        Get model value of `output_index`th output that corresponds to provided
-        `inputs`.
-
-        :param inputs: values of input gates.
-        :param output_index: index of desired output.
-        :return: value of `output_index` evaluated for input values `inputs`.
-
-        """
-
-    def get_model_truth_table(self) -> tp.Sequence[tp.Sequence[TriValue]]:
-        """
-        Get truth table of a boolean function, which is a matrix, `i`th row of which
-        contains values of `i`th output, which may contain bool or DontCare values, and
-        `j`th column corresponds to the input which is a binary encoding of a number `j`
-        (for example j=9 corresponds to [..., 1, 0, 0, 1])
-
-        :return: truth table describing this model.
-
-        """
-
-    def define(
-        self,
-        definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
-    ) -> BooleanFunctionT:
-        """
-        Defines this model by defining ambiguous output values.
-
-        :param definition: mapping of pairs (input value set, output index) to
-        output values, required to completely define this boolean function model.
-        :return: new object of `BooleanFunctionT` type.
-
-        """
-
-
-@tp.runtime_checkable
-class BooleanFunction(BooleanFunctionModel, tp.Protocol):
-    """
-    Protocol for any object that behaves like boolean function, e.g. Circuit, TruthTable
-    or PythonFunction.
-
-    Any `BooleanFunction` is also a completely defined `BooleanFunctionModel`.
-
-    """
 
     def evaluate(self, inputs: list[bool]) -> list[bool]:
         """
@@ -240,7 +166,7 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
 
         """
 
-    def get_truth_table(self) -> tp.Sequence[tp.Sequence[bool]]:
+    def get_truth_table(self) -> list[list[bool]]:
         """
         Get truth table of a boolean function, which is a matrix, `i`th row of which
         contains values of `i`th output, and `j`th column corresponds to the input which
@@ -250,52 +176,3 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         :return: truth table describing this function.
 
         """
-
-    def check(self, inputs: list[bool]) -> tp.Sequence[TriValue]:
-        """
-        Get model output values that correspond to provided `inputs`.
-
-        :param inputs: values of input gates.
-        :return: value of outputs evaluated for input values `inputs`.
-
-        """
-        return self.evaluate(inputs=inputs)
-
-    def check_at(self, inputs: list[bool], output_index: int) -> TriValue:
-        """
-        Get model value of `output_index`th output that corresponds to provided
-        `inputs`.
-
-        :param inputs: values of input gates.
-        :param output_index: index of desired output.
-        :return: value of `output_index` evaluated for input values `inputs`.
-
-        """
-        return self.evaluate_at(inputs=inputs, output_index=output_index)
-
-    def get_model_truth_table(self) -> tp.Sequence[tp.Sequence[TriValue]]:
-        """
-        Get truth table of a boolean function, which is a matrix, `i`th row of which
-        contains values of `i`th output, which may contain bool or DontCare values, and
-        `j`th column corresponds to the input which is a binary encoding of a number `j`
-        (for example j=9 corresponds to [..., 1, 0, 0, 1])
-
-        :return: truth table describing this model.
-
-        """
-        return self.get_truth_table()
-
-    def define(
-        self, definition: tp.Mapping[tuple[tuple[bool, ...], int], bool]
-    ) -> tp_ext.Self:
-        """
-        Defines this model by defining ambiguous output values.
-
-        :param definition: mapping of pairs (input value set, output index) to
-        output values, required to completely define this boolean function model.
-        :return: new object of `BooleanFunctionT` type.
-
-        """
-        if definition:
-            raise BadDefinitionError("Boolean function is already defined.")
-        return self

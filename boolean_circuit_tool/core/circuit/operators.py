@@ -44,7 +44,7 @@ class _Undefined:
         return isinstance(rhs, _Undefined)
 
     def __hash__(self):
-        return hash(self.__class__.__name__)
+        return hash('Undefined')
 
 
 # To be similar to False and True.

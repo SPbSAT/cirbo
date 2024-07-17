@@ -37,9 +37,6 @@ For private and protected objects docstrings are encouraged but not obligatory.
 4. All Python modules should include `__all__` definition, to avoid occasional
 export of unwanted objects (e.g. export of imported objects).
 5. Import of "all" objects (`from x import *`) must not be used.
-6. All standard libraries should be imported as packages
-(e.g. `import itertools`).
-7. For package `typing` shortening `tp` should be used (`import typing as tp`).
 
 ## Formatters
 
