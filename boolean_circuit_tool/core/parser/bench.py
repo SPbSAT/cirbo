@@ -52,7 +52,7 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     def __init__(self, *args, **kwargs):
         super(AbstractBenchParser, self).__init__(*args, **kwargs)
         # Dict of specific processing methods for gates
-        self._processings: dict[str, tp.Callable[..., tp.Iterable]] = {
+        self._processings: dict[str, tp.Callable] = {
             NOT.name: self._process_not,
             AND.name: self._process_and,
             NAND.name: self._process_nand,
