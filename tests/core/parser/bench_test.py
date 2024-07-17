@@ -1,3 +1,5 @@
+import pathlib
+
 import pytest
 
 from boolean_circuit_tool.core.circuit.circuit import Circuit
@@ -7,18 +9,11 @@ from boolean_circuit_tool.core.circuit.gate import AND, INPUT, NOT, OR
 
 def test_trivial_instance():
 
-    file_input = """
-# Comment Line\n
-#\n
-\n
-INPUT(A)\n
-INPUT(D)\n
-OUTPUT(C)\n
-B = NOT(A)\n
-C = AND(A, B)\n
-INPUT(E)\n
-"""
-    instance = Circuit().from_bench(file_input.split("\n"))
+    file_path = (
+        str(pathlib.Path.cwd())
+        + '/tests/core/parser/benches/test_trivial_instance.bench'
+    )
+    instance = Circuit().from_bench(file_path)
 
     assert instance.elements_number == 5
     assert instance.inputs == ['A', 'D', 'E']
@@ -50,15 +45,8 @@ INPUT(E)\n
 
 def test_spaces():
 
-    file_input = """
-INPUT(    AAAAA)\n
-INPUT(DDDD    )\n
-OUTPUT(  C  )\n
-B =     NOT(AAAAA)    \n
-C     = AND(AAAAA,     B)\n
-INPUT(E   )\n
-"""
-    instance = Circuit().from_bench(file_input.split("\n"))
+    file_path = str(pathlib.Path.cwd()) + '/tests/core/parser/benches/test_spaces.bench'
+    instance = Circuit().from_bench(file_path)
 
     assert instance.elements_number == 5
     assert instance.inputs == ['AAAAA', 'DDDD', 'E']
@@ -91,24 +79,21 @@ INPUT(E   )\n
 
 def test_not_init_operands():
 
-    file_input = """
-INPUT(A)\n
-OUTPUT(B)\n
-B = OR(A, D)\n
-"""
     with pytest.raises(CircuitValidationError):
-        Circuit().from_bench(file_input.split("\n"))
+        file_path = (
+            str(pathlib.Path.cwd())
+            + '/tests/core/parser/benches/test_not_init_operands.bench'
+        )
+        _ = Circuit().from_bench(file_path)
 
 
 def test_init_operands_after_using():
 
-    file_input = """
-INPUT(A)\n
-OUTPUT(B)\n
-B = OR(A, D)\n
-D = NOT(A)
-"""
-    instance = Circuit().from_bench(file_input.split("\n"))
+    file_path = (
+        str(pathlib.Path.cwd())
+        + '/tests/core/parser/benches/test_init_operands_after_using.bench'
+    )
+    instance = Circuit().from_bench(file_path)
 
     assert instance.elements_number == 3
     assert instance.inputs == ['A']
@@ -132,19 +117,10 @@ D = NOT(A)
 
 def test_sorting():
 
-    file_input = """
-# Comment Line\n
-#\n
-\n
-INPUT(A)\n
-INPUT(D)\n
-OUTPUT(C)\n
-B = NOT(A)\n
-C = AND(A, B)\n
-INPUT(E)\n
-OUTPUT(A)\n
-"""
-    instance = Circuit().from_bench(file_input.split("\n"))
+    file_path = (
+        str(pathlib.Path.cwd()) + '/tests/core/parser/benches/test_sorting.bench'
+    )
+    instance = Circuit().from_bench(file_path)
 
     assert instance.elements_number == 5
     assert instance.inputs == ['A', 'D', 'E']
@@ -152,8 +128,8 @@ OUTPUT(A)\n
     assert instance.input_size == 3
     assert instance.output_size == 2
 
-    instance.sort_inputs(['E', 'A'])
+    instance.order_inputs(['E', 'A'])
     assert instance.inputs == ['E', 'A', 'D']
 
-    instance.sort_outputs(['A', 'C'])
+    instance.order_outputs(['A', 'C'])
     assert instance.outputs == ['A', 'C']

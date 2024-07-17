@@ -135,7 +135,7 @@ def test_spec_binary_gates(arg1: GateState, arg2: GateState, result: GateState):
 
     instance.mark_as_output('14')
 
-    assert instance.evaluate_circuit({'1': arg1, '2': arg2}) == {'14': result}
+    assert instance.evaluate_circuit_outputs({'1': arg1, '2': arg2}) == {'14': result}
 
 
 def test_evaluate_circuit():
@@ -147,9 +147,9 @@ def test_evaluate_circuit():
     instance.add_gate(Gate('C', AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    assert instance.evaluate_circuit({'A': True}) == {'C': False}
-    assert instance.evaluate_circuit({'A': False}) == {'C': False}
-    assert instance.evaluate_circuit({'A': Undefined}) == {'C': Undefined}
+    assert instance.evaluate_circuit_outputs({'A': True}) == {'C': False}
+    assert instance.evaluate_circuit_outputs({'A': False}) == {'C': False}
+    assert instance.evaluate_circuit_outputs({'A': Undefined}) == {'C': Undefined}
 
     instance = Circuit()
 
@@ -163,47 +163,47 @@ def test_evaluate_circuit():
     instance.mark_as_output('E')
     instance.mark_as_output('F')
 
-    assert instance.evaluate_circuit({'A': False, 'B': False}) == {
+    assert instance.evaluate_circuit_outputs({'A': False, 'B': False}) == {
         'D': False,
         'E': False,
         'F': False,
     }
-    assert instance.evaluate_circuit({'A': False, 'B': True}) == {
+    assert instance.evaluate_circuit_outputs({'A': False, 'B': True}) == {
         'D': True,
         'E': True,
         'F': True,
     }
-    assert instance.evaluate_circuit({'A': False, 'B': Undefined}) == {
+    assert instance.evaluate_circuit_outputs({'A': False, 'B': Undefined}) == {
         'D': Undefined,
         'E': Undefined,
         'F': Undefined,
     }
-    assert instance.evaluate_circuit({'A': True, 'B': False}) == {
+    assert instance.evaluate_circuit_outputs({'A': True, 'B': False}) == {
         'D': True,
         'E': True,
         'F': False,
     }
-    assert instance.evaluate_circuit({'A': True, 'B': True}) == {
+    assert instance.evaluate_circuit_outputs({'A': True, 'B': True}) == {
         'D': True,
         'E': False,
         'F': True,
     }
-    assert instance.evaluate_circuit({'A': True, 'B': Undefined}) == {
+    assert instance.evaluate_circuit_outputs({'A': True, 'B': Undefined}) == {
         'D': True,
         'E': Undefined,
         'F': Undefined,
     }
-    assert instance.evaluate_circuit({'A': Undefined, 'B': False}) == {
+    assert instance.evaluate_circuit_outputs({'A': Undefined, 'B': False}) == {
         'D': Undefined,
         'E': Undefined,
         'F': False,
     }
-    assert instance.evaluate_circuit({'A': Undefined, 'B': True}) == {
+    assert instance.evaluate_circuit_outputs({'A': Undefined, 'B': True}) == {
         'D': True,
         'E': Undefined,
         'F': True,
     }
-    assert instance.evaluate_circuit({'A': Undefined, 'B': Undefined}) == {
+    assert instance.evaluate_circuit_outputs({'A': Undefined, 'B': Undefined}) == {
         'D': Undefined,
         'E': Undefined,
         'F': Undefined,
@@ -452,7 +452,6 @@ def test_is_dependent_on_input_at():
     instance.mark_as_output('C')
 
     assert instance.is_dependent_on_input_at(0, 0) == False
-    assert instance.is_dependent_on_input_at(0, 1) == False
 
 
 def test_is_output_equal_to_input():
@@ -525,3 +524,37 @@ def test_get_truth_table():
         [False, False, False, True],
         [False, True, False, True],
     ]
+
+
+def test_circuit_element():
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', NOT, ('A',)))
+    instance.emplace_gate('C', AND, ('A', 'B'))
+    instance.mark_as_output('C')
+
+    assert instance.elements_number == 3
+    assert instance.inputs == ['A']
+    assert instance.outputs == ['C']
+    assert instance.input_size == 1
+    assert instance.output_size == 1
+
+    assert instance._elements.keys() == {'A', 'B', 'C'}
+    assert instance.get_element('A').label == 'A'
+    assert instance.get_element('A').gate_type == INPUT
+    assert instance.get_element('A').operands == ()
+    assert instance.get_element_users('A') == ['B', 'C']
+
+    assert instance.get_element('B').label == 'B'
+    assert instance.get_element('B').gate_type == NOT
+    assert instance.get_element('B').operands == ('A',)
+    assert instance.get_element_users('B') == ['C']
+
+    assert instance.get_element('C').label == 'C'
+    assert instance.get_element('C').gate_type == AND
+    assert instance.get_element('C').operands == ('A', 'B')
+    assert instance.get_element_users('C') == []
+
+    assert instance.has_element('A') == True
+    assert instance.has_element('D') == False

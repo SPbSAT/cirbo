@@ -3,10 +3,7 @@ import math
 import typing as tp
 
 from boolean_circuit_tool.core.boolean_function import BooleanFunction
-from boolean_circuit_tool.core.circuit.utils import (
-    input_iterator,
-    input_iterator_with_negations,
-)
+from boolean_circuit_tool.core.circuit.utils import input_iterator
 
 __all__ = ['TruthTable']
 
@@ -154,17 +151,16 @@ class TruthTable(BooleanFunction):
         """
         Check if all outputs are symmetric.
 
-        :return: True iff this function.
+        :return: True iff this function is symmetric.
 
         """
-        list_input = [False] * self.input_size
         for number_of_true in range(self.input_size + 1):
 
-            _iter = iter(input_iterator(list_input, number_of_true))
+            _iter = iter(input_iterator(self.input_size, number_of_true))
             value: list[bool] = self.evaluate(next(_iter))
 
-            for set_of_assign in _iter:
-                if value != self.evaluate(set_of_assign):
+            for input_assignment in _iter:
+                if value != self.evaluate(input_assignment):
                     return False
 
         return True
@@ -177,14 +173,13 @@ class TruthTable(BooleanFunction):
         :return: True iff output `output_index` is symmetric.
 
         """
-        list_input = [False] * self.input_size
         for number_of_true in range(self.input_size + 1):
 
-            _iter = iter(input_iterator(list_input, number_of_true))
+            _iter = iter(input_iterator(self.input_size, number_of_true))
             value: bool = self.evaluate_at(next(_iter), output_index)
 
-            for set_of_assign in _iter:
-                if value != self.evaluate_at(set_of_assign, output_index):
+            for input_assignment in _iter:
+                if value != self.evaluate_at(input_assignment, output_index):
                     return False
 
         return True
@@ -279,23 +274,24 @@ class TruthTable(BooleanFunction):
             nonlocal output_index
             return [result[idx] for idx in output_index]
 
-        list_input = [False] * self.input_size
         for negations in itertools.product((False, True), repeat=self.input_size):
 
             symmetric = True
             for number_of_true in range(self.input_size + 1):
 
                 _iter = iter(
-                    input_iterator_with_negations(
-                        list_input,
+                    input_iterator(
+                        self.input_size,
                         number_of_true,
-                        list(negations),
+                        negations=list(negations),
                     )
                 )
                 value: list[bool] = _filter_required_outputs(self.evaluate(next(_iter)))
 
-                for set_of_assign in _iter:
-                    if value != _filter_required_outputs(self.evaluate(set_of_assign)):
+                for input_assignment in _iter:
+                    if value != _filter_required_outputs(
+                        self.evaluate(input_assignment)
+                    ):
                         symmetric = False
                         break
 

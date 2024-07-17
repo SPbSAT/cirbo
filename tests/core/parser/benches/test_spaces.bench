@@ -1,0 +1,6 @@
+INPUT(    AAAAA)
+INPUT(DDDD    )
+OUTPUT(  C  )
+B =     NOT(AAAAA)    
+C     = AND(AAAAA,     B)
+INPUT(E   )

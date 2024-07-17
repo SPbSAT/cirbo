@@ -16,11 +16,7 @@ from boolean_circuit_tool.core.circuit.exceptions import (
 )
 from boolean_circuit_tool.core.circuit.gate import Gate, GateType, INPUT, Label
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
-from boolean_circuit_tool.core.circuit.utils import (
-    input_iterator,
-    input_iterator_with_negations,
-    sort_list,
-)
+from boolean_circuit_tool.core.circuit.utils import input_iterator, order_list
 from boolean_circuit_tool.core.circuit.validation import (
     check_elements_exist,
     check_label_doesnt_exist,
@@ -50,7 +46,7 @@ class Circuit(BooleanFunction):
     """
 
     @staticmethod
-    def from_bench(stream: tp.Iterable[str]) -> "Circuit":
+    def from_bench(file_path: str) -> "Circuit":
         """
         Initialization the circuit with given data.
 
@@ -60,7 +56,10 @@ class Circuit(BooleanFunction):
         from boolean_circuit_tool.core.parser.bench import BenchToCircuit
 
         _parser = BenchToCircuit()
-        return _parser.convert_to_circuit(stream)
+
+        path = pathlib.Path(file_path)
+        with path.open() as file:
+            return _parser.convert_to_circuit(file)
 
     def __init__(self):
         self._inputs: list[Label] = list()
@@ -109,6 +108,38 @@ class Circuit(BooleanFunction):
 
         """
         return len(self._elements)
+
+    def input_at_index(self, idx: int) -> Label:
+        """
+        :param idx: input index
+        :return: inputs label which corresponds to the index
+
+        """
+        return self._inputs[idx]
+
+    def index_of_input(self, label: Label) -> int:
+        """
+        :param label: input label
+        :return: inputs index which corresponds to the label
+
+        """
+        return self._inputs.index(label)
+
+    def output_at_index(self, idx: int) -> Label:
+        """
+        :param idx: output index
+        :return: outputs label which corresponds to the index
+
+        """
+        return self._outputs[idx]
+
+    def index_of_output(self, label: Label) -> int:
+        """
+        :param idx: output label
+        :return: outputs index which corresponds to the label
+
+        """
+        return self._outputs.index(label)
 
     def get_element(self, label: Label) -> Gate:
         """
@@ -221,34 +252,34 @@ class Circuit(BooleanFunction):
             check_elements_exist((label,), self)
             self._outputs.append(label)
 
-    def sort_inputs(self, inputs: list[Label]) -> tp_ext.Self:
+    def order_inputs(self, inputs: list[Label]) -> tp_ext.Self:
         """
-        Sort input gates.
+        Order input gates.
 
         Create a new list by copying `inputs` and then appending to it the
         elements of `self._inputs` that are not already in the resulting list.
         After that replaces `self._inputs` with this new list.
 
-        :param inputs: full or partially sorted list of inputs.
+        :param inputs: full or partially ordered list of inputs.
         :return: modified circuit.
 
         """
-        self._inputs = sort_list(inputs, self._inputs)
+        self._inputs = order_list(inputs, self._inputs)
         return self
 
-    def sort_outputs(self, outputs: list[Label]) -> tp_ext.Self:
+    def order_outputs(self, outputs: list[Label]) -> tp_ext.Self:
         """
-        Sort output gates.
+        Order output gates.
 
-        Create a new list by copying `inputs` and then appending to it the
-        elements of `self._inputs` that are not already in the resulting list.
-        After that replaces `self._inputs` with this new list.
+        Create a new list by copying `outputs` and then appending to it the
+        elements of `self._outputs` that are not already in the resulting list.
+        After that replaces `self._outputs` with this new list.
 
-        :param outputs: full or partially sorted list of outputs.
+        :param outputs: full or partially ordered list of outputs.
         :return: modified circuit.
 
         """
-        self._outputs = sort_list(outputs, self._outputs)
+        self._outputs = order_list(outputs, self._outputs)
         return self
 
     def evaluate_circuit(
@@ -256,7 +287,7 @@ class Circuit(BooleanFunction):
         assigment: dict[str, GateState],
     ) -> dict[str, GateState]:
         """
-        Evaluate the circuit with the given input values.
+        Evaluate the circuit with the given input values and return full assigment.
 
         :param assigment: full or partually assigment for inputs.
         :return: outputs dictionary with the obtained values.
@@ -288,6 +319,26 @@ class Circuit(BooleanFunction):
                 )
                 queue_.pop()
 
+        for element in self._elements:
+            assigment_dict.setdefault(element, Undefined)
+
+        return assigment_dict
+
+    def evaluate_circuit_outputs(
+        self,
+        assigment: dict[str, GateState],
+    ) -> dict[str, GateState]:
+        """
+        Evaluate the circuit with the given input values and return outputs assigment.
+
+        :param assigment: full or partually assigment for inputs.
+        :return: outputs dictionary with the obtained values.
+
+        `assignment` can be on any element of the circuit.
+
+        """
+        assigment_dict: dict[str, GateState] = self.evaluate_circuit(assigment)
+
         return {output: assigment_dict[output] for output in self._outputs}
 
     def evaluate(self, inputs: list[bool]) -> list[bool]:
@@ -302,7 +353,10 @@ class Circuit(BooleanFunction):
         for i, input in enumerate(self._inputs):
             dict_inputs[input] = inputs[i]
 
-        return tp.cast(list[bool], list(self.evaluate_circuit(dict_inputs).values()))
+        # because of the complete assignment we know that Undefined will not appear
+        return tp.cast(
+            list[bool], list(self.evaluate_circuit_outputs(dict_inputs).values())
+        )
 
     def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
         """
@@ -313,7 +367,28 @@ class Circuit(BooleanFunction):
         :return: value of `output_index` evaluated for input values `inputs`.
 
         """
-        return self.evaluate(inputs)[output_index]
+        assigment_dict: dict[str, GateState] = {}
+        for i, input in enumerate(self._inputs):
+            assigment_dict[input] = inputs[i]
+
+        label_output = self.output_at_index(output_index)
+        queue_: list[Label] = [label_output]
+
+        while queue_:
+            gate = self.get_element(queue_[-1])
+
+            for operand in gate.operands:
+                if operand not in assigment_dict:
+                    queue_.append(operand)
+
+            if gate.label == queue_[-1]:
+                assigment_dict[gate.label] = gate.operator(
+                    *(assigment_dict[op] for op in gate.operands)
+                )
+                queue_.pop()
+
+        # because of the complete assignment we know that Undefined will not appear
+        return tp.cast(bool, assigment_dict[label_output])
 
     def is_constant(self) -> bool:
         """
@@ -324,8 +399,8 @@ class Circuit(BooleanFunction):
         """
         _iter = itertools.product((False, True), repeat=self.input_size)
         answer: list[bool] = self.evaluate(list(next(_iter)))
-        for set_of_assign in _iter:
-            if answer != self.evaluate(list(set_of_assign)):
+        for input_assignment in _iter:
+            if answer != self.evaluate(list(input_assignment)):
                 return False
         return True
 
@@ -338,9 +413,9 @@ class Circuit(BooleanFunction):
 
         """
         _iter = itertools.product((False, True), repeat=self.input_size)
-        answer: GateState = self.evaluate_at(list(next(_iter)), output_index)
-        for set_of_assign in _iter:
-            if answer != self.evaluate_at(list(set_of_assign), output_index):
+        answer: bool = self.evaluate_at(list(next(_iter)), output_index)
+        for input_assignment in _iter:
+            if answer != self.evaluate_at(list(input_assignment), output_index):
                 return False
         return True
 
@@ -354,15 +429,17 @@ class Circuit(BooleanFunction):
         :return: True iff this function is monotonic.
 
         """
-        change_value: list[GateState] = [False] * self.output_size
+        change_value: list[bool] = [False] * self.output_size
         current_value: list[bool] = [inverse] * self.output_size
-        for set_of_assign in itertools.product((False, True), repeat=self.input_size):
-            for i, v in enumerate(self.evaluate(list(set_of_assign))):
+        for input_assignment in itertools.product(
+            (False, True), repeat=self.input_size
+        ):
+            for i, v in enumerate(self.evaluate(list(input_assignment))):
                 if v != current_value[i]:
                     if change_value[i]:
                         return False
                     change_value[i] = True
-                    current_value[i] = not current_value[i]
+                    current_value[i] = v
         return True
 
     def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
@@ -379,8 +456,10 @@ class Circuit(BooleanFunction):
         """
         change_value: bool = False
         current_value: bool = inverse
-        for set_of_assign in itertools.product((False, True), repeat=self.input_size):
-            if self.evaluate_at(list(set_of_assign), output_index) != current_value:
+        for input_assignment in itertools.product(
+            (False, True), repeat=self.input_size
+        ):
+            if self.evaluate_at(list(input_assignment), output_index) != current_value:
                 if change_value:
                     return False
                 change_value = True
@@ -391,17 +470,16 @@ class Circuit(BooleanFunction):
         """
         Check if all outputs are symmetric.
 
-        :return: True iff this function.
+        :return: True iff this function is symmetric.
 
         """
-        list_input = [False] * self.input_size
         for number_of_true in range(self.input_size + 1):
 
-            _iter = iter(input_iterator(list_input, number_of_true))
+            _iter = iter(input_iterator(self.input_size, number_of_true))
             value: list[bool] = self.evaluate(next(_iter))
 
-            for set_of_assign in _iter:
-                if value != self.evaluate(set_of_assign):
+            for input_assignment in _iter:
+                if value != self.evaluate(input_assignment):
                     return False
 
         return True
@@ -414,14 +492,13 @@ class Circuit(BooleanFunction):
         :return: True iff output `output_index` is symmetric.
 
         """
-        list_input = [False] * self.input_size
         for number_of_true in range(self.input_size + 1):
 
-            _iter = iter(input_iterator(list_input, number_of_true))
+            _iter = iter(input_iterator(self.input_size, number_of_true))
             value: GateState = self.evaluate_at(next(_iter), output_index)
 
-            for set_of_assign in _iter:
-                if value != self.evaluate_at(set_of_assign, output_index):
+            for input_assignment in _iter:
+                if value != self.evaluate_at(input_assignment, output_index):
                     return False
 
         return True
@@ -441,7 +518,7 @@ class Circuit(BooleanFunction):
         :return: True iff output `output_index` depends on input `input_index`.
 
         """
-        for x in itertools.product((False, True), repeat=self.input_size):
+        for x in itertools.product((False, True), repeat=self.input_size - 1):
             _x = list(x)
             _x.insert(input_index, False)
             value1 = self.evaluate_at(_x, output_index)
@@ -518,25 +595,26 @@ class Circuit(BooleanFunction):
             nonlocal output_index
             return [result[idx] for idx in output_index]
 
-        list_input = [False] * self.input_size
         for negations in itertools.product((False, True), repeat=self.input_size):
 
             symmetric = True
             for number_of_true in range(self.input_size + 1):
 
                 _iter = iter(
-                    input_iterator_with_negations(
-                        list_input,
+                    input_iterator(
+                        self.input_size,
                         number_of_true,
-                        list(negations),
+                        negations=list(negations),
                     )
                 )
                 value: list[GateState] = _filter_required_outputs(
                     self.evaluate(next(_iter))
                 )
 
-                for set_of_assign in _iter:
-                    if value != _filter_required_outputs(self.evaluate(set_of_assign)):
+                for input_assignment in _iter:
+                    if value != _filter_required_outputs(
+                        self.evaluate(input_assignment)
+                    ):
                         symmetric = False
                         break
 
@@ -561,10 +639,10 @@ class Circuit(BooleanFunction):
         return [
             list(i)
             for i in zip(
-                *[
+                *(
                     self.evaluate(list(x))
                     for x in itertools.product((False, True), repeat=self.input_size)
-                ]
+                )
             )
         ]
 
