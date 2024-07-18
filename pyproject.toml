@@ -95,7 +95,6 @@ warn_unused_configs = true
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ''
 ignore_missing_imports = true
 module = "pysat.*"
 
