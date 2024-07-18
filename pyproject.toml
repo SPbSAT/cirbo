@@ -88,7 +88,14 @@ blank = true
 recursive = true
 pre-summary-newline = true
 
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+
 [[tool.mypy.overrides]]
+module = ''
 ignore_missing_imports = true
 module = "pysat.*"
 
