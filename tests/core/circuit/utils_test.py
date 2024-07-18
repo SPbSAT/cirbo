@@ -1,42 +1,49 @@
 import pytest
 from boolean_circuit_tool.core.circuit.exceptions import CircuitElementIsAbsentError
 
-from boolean_circuit_tool.core.circuit.utils import input_iterator, order_list
+from boolean_circuit_tool.core.circuit.utils import (
+    input_iterator_with_fixed_sum,
+    order_list,
+)
 
 
 def test_input_iterator():
-    assert list(input_iterator(3, 0)) == [[False, False, False]]
+    assert list(input_iterator_with_fixed_sum(3, 0)) == [[False, False, False]]
 
-    _iter = iter(input_iterator(3, 1))
+    _iter = iter(input_iterator_with_fixed_sum(3, 1))
     assert list(next(_iter)) == [True, False, False]
     assert list(next(_iter)) == [False, True, False]
     assert list(next(_iter)) == [False, False, True]
 
-    _iter = iter(input_iterator(3, 2))
+    _iter = iter(input_iterator_with_fixed_sum(3, 2))
     assert list(next(_iter)) == [True, True, False]
     assert list(next(_iter)) == [True, False, True]
     assert list(next(_iter)) == [False, True, True]
 
-    assert list(input_iterator(3, 3)) == [[True, True, True]]
+    assert list(input_iterator_with_fixed_sum(3, 3)) == [[True, True, True]]
 
 
 def test_input_iterator_negations():
 
     negations = [False, True, True]
 
-    assert list(input_iterator(3, 0, negations=negations)) == [[False, True, True]]
+    assert list(input_iterator_with_fixed_sum(3, 0, negations=negations)) == [
+        [False, True, True]
+    ]
 
-    _iter = iter(input_iterator(3, 1, negations=negations))
+    _iter = iter(input_iterator_with_fixed_sum(3, 1, negations=negations))
     assert list(next(_iter)) == [True, True, True]
     assert list(next(_iter)) == [False, False, True]
     assert list(next(_iter)) == [False, True, False]
 
-    _iter = iter(input_iterator(3, 2, negations=negations))
+    _iter = iter(input_iterator_with_fixed_sum(3, 2, negations=negations))
     assert list(next(_iter)) == [True, False, True]
     assert list(next(_iter)) == [True, True, False]
     assert list(next(_iter)) == [False, False, False]
 
-    assert list(input_iterator(3, 3, negations=negations)) == [[True, False, False]]
+    assert list(input_iterator_with_fixed_sum(3, 3, negations=negations)) == [
+        [True, False, False]
+    ]
 
 
 def test_order_list():

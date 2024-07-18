@@ -16,7 +16,10 @@ from boolean_circuit_tool.core.circuit.exceptions import (
 )
 from boolean_circuit_tool.core.circuit.gate import Gate, GateType, INPUT, Label
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
-from boolean_circuit_tool.core.circuit.utils import input_iterator, order_list
+from boolean_circuit_tool.core.circuit.utils import (
+    input_iterator_with_fixed_sum,
+    order_list,
+)
 from boolean_circuit_tool.core.circuit.validation import (
     check_elements_exist,
     check_label_doesnt_exist,
@@ -284,6 +287,8 @@ class Circuit(BooleanFunction):
     def evaluate_circuit(
         self,
         assigment: dict[str, GateState],
+        *,
+        outputs: tp.Optional[list[Label]] = None,
     ) -> dict[str, GateState]:
         """
         Evaluate the circuit with the given input values and return full assigment.
@@ -301,7 +306,8 @@ class Circuit(BooleanFunction):
 
         queue_: list[Label] = list()
 
-        for output in self._outputs:
+        _outputs = self._outputs if outputs is None else outputs
+        for output in _outputs:
             if output not in self._inputs:
                 queue_.append(output)
 
@@ -366,28 +372,16 @@ class Circuit(BooleanFunction):
         :return: value of `output_index` evaluated for input values `inputs`.
 
         """
-        assigment_dict: dict[str, GateState] = {}
+        dict_inputs: dict[str, GateState] = {}
         for i, input in enumerate(self._inputs):
-            assigment_dict[input] = inputs[i]
+            dict_inputs[input] = inputs[i]
 
         label_output = self.output_at_index(output_index)
-        queue_: list[Label] = [label_output]
-
-        while queue_:
-            gate = self.get_element(queue_[-1])
-
-            for operand in gate.operands:
-                if operand not in assigment_dict:
-                    queue_.append(operand)
-
-            if gate.label == queue_[-1]:
-                assigment_dict[gate.label] = gate.operator(
-                    *(assigment_dict[op] for op in gate.operands)
-                )
-                queue_.pop()
-
         # because of the complete assignment we know that Undefined will not appear
-        return tp.cast(bool, assigment_dict[label_output])
+        return tp.cast(
+            bool,
+            self.evaluate_circuit(dict_inputs, outputs=[label_output])[label_output],
+        )
 
     def is_constant(self) -> bool:
         """
@@ -474,7 +468,7 @@ class Circuit(BooleanFunction):
         """
         for number_of_true in range(self.input_size + 1):
 
-            _iter = iter(input_iterator(self.input_size, number_of_true))
+            _iter = iter(input_iterator_with_fixed_sum(self.input_size, number_of_true))
             value: list[bool] = self.evaluate(next(_iter))
 
             for input_assignment in _iter:
@@ -493,7 +487,7 @@ class Circuit(BooleanFunction):
         """
         for number_of_true in range(self.input_size + 1):
 
-            _iter = iter(input_iterator(self.input_size, number_of_true))
+            _iter = iter(input_iterator_with_fixed_sum(self.input_size, number_of_true))
             value: GateState = self.evaluate_at(next(_iter), output_index)
 
             for input_assignment in _iter:
@@ -600,7 +594,7 @@ class Circuit(BooleanFunction):
             for number_of_true in range(self.input_size + 1):
 
                 _iter = iter(
-                    input_iterator(
+                    input_iterator_with_fixed_sum(
                         self.input_size,
                         number_of_true,
                         negations=list(negations),

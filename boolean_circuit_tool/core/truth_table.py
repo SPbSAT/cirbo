@@ -10,7 +10,7 @@ from boolean_circuit_tool.core.boolean_function import (
     RawTruthTableModel,
 )
 
-from boolean_circuit_tool.core.circuit.utils import input_iterator
+from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
 from boolean_circuit_tool.core.logic import TriValue
 from boolean_circuit_tool.core.utils import get_bit_value, input_to_canonical_index
 
@@ -235,7 +235,7 @@ class TruthTable(BooleanFunction):
         """
         for number_of_true in range(self.input_size + 1):
 
-            _iter = iter(input_iterator(self.input_size, number_of_true))
+            _iter = iter(input_iterator_with_fixed_sum(self.input_size, number_of_true))
             value: tp.Sequence[bool] = self.evaluate(next(_iter))
 
             for input_assignment in _iter:
@@ -254,7 +254,7 @@ class TruthTable(BooleanFunction):
         """
         for number_of_true in range(self.input_size + 1):
 
-            _iter = iter(input_iterator(self.input_size, number_of_true))
+            _iter = iter(input_iterator_with_fixed_sum(self.input_size, number_of_true))
             value: bool = self.evaluate_at(next(_iter), output_index)
 
             for input_assignment in _iter:
@@ -360,7 +360,7 @@ class TruthTable(BooleanFunction):
             for number_of_true in range(self.input_size + 1):
 
                 _iter = iter(
-                    input_iterator(
+                    input_iterator_with_fixed_sum(
                         self.input_size,
                         number_of_true,
                         negations=list(negations),

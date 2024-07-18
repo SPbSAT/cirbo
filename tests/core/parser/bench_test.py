@@ -7,12 +7,13 @@ from boolean_circuit_tool.core.circuit.exceptions import CircuitValidationError
 from boolean_circuit_tool.core.circuit.gate import AND, INPUT, NOT, OR
 
 
+def get_file_path(file_name):
+    return str(pathlib.Path.cwd()) + '/tests/core/parser/benches/' + file_name
+
+
 def test_trivial_instance():
 
-    file_path = (
-        str(pathlib.Path.cwd())
-        + '/tests/core/parser/benches/test_trivial_instance.bench'
-    )
+    file_path = get_file_path('test_trivial_instance.bench')
     instance = Circuit().from_bench(file_path)
 
     assert instance.elements_number == 5
@@ -45,7 +46,7 @@ def test_trivial_instance():
 
 def test_spaces():
 
-    file_path = str(pathlib.Path.cwd()) + '/tests/core/parser/benches/test_spaces.bench'
+    file_path = get_file_path('test_spaces.bench')
     instance = Circuit().from_bench(file_path)
 
     assert instance.elements_number == 5
@@ -80,19 +81,13 @@ def test_spaces():
 def test_not_init_operands():
 
     with pytest.raises(CircuitValidationError):
-        file_path = (
-            str(pathlib.Path.cwd())
-            + '/tests/core/parser/benches/test_not_init_operands.bench'
-        )
+        file_path = get_file_path('test_not_init_operands.bench')
         _ = Circuit().from_bench(file_path)
 
 
 def test_init_operands_after_using():
 
-    file_path = (
-        str(pathlib.Path.cwd())
-        + '/tests/core/parser/benches/test_init_operands_after_using.bench'
-    )
+    file_path = get_file_path('test_init_operands_after_using.bench')
     instance = Circuit().from_bench(file_path)
 
     assert instance.elements_number == 3
@@ -117,9 +112,7 @@ def test_init_operands_after_using():
 
 def test_sorting():
 
-    file_path = (
-        str(pathlib.Path.cwd()) + '/tests/core/parser/benches/test_sorting.bench'
-    )
+    file_path = get_file_path('test_sorting.bench')
     instance = Circuit().from_bench(file_path)
 
     assert instance.elements_number == 5

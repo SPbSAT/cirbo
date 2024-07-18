@@ -6,12 +6,12 @@ from boolean_circuit_tool.core.circuit.exceptions import CircuitElementIsAbsentE
 from boolean_circuit_tool.core.circuit.gate import Label
 
 __all__ = [
-    'input_iterator',
+    'input_iterator_with_fixed_sum',
     'order_list',
 ]
 
 
-def input_iterator(
+def input_iterator_with_fixed_sum(
     input_size: int,
     number_of_true: int,
     *,

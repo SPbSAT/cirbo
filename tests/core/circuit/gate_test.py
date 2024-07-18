@@ -1,16 +1,8 @@
-from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import AND, and_, Gate, INPUT, NOT
+from boolean_circuit_tool.core.circuit.gate import AND, and_, Gate
 
 
 def test_gate_capabilities():
-    instance = Circuit()
-
-    instance.add_gate(Gate('A', INPUT))
-    instance.add_gate(Gate('B', NOT, ('A',)))
-    instance.emplace_gate('C', AND, ('A', 'B'))
-    instance.mark_as_output('C')
-
-    my_gate = instance.get_element('C')
+    my_gate = Gate('C', AND, ('A', 'B'))
 
     assert my_gate.label == 'C'
     assert my_gate.gate_type == AND

@@ -150,6 +150,17 @@ def test_evaluate_circuit():
     assert instance.evaluate_circuit_outputs({'A': True}) == {'C': False}
     assert instance.evaluate_circuit_outputs({'A': False}) == {'C': False}
     assert instance.evaluate_circuit_outputs({'A': Undefined}) == {'C': Undefined}
+    assert instance.evaluate_circuit({'A': True}) == {'A': True, 'B': False, 'C': False}
+    assert instance.evaluate_circuit({'A': False}) == {
+        'A': False,
+        'B': True,
+        'C': False,
+    }
+    assert instance.evaluate_circuit({'A': Undefined}) == {
+        'A': Undefined,
+        'B': Undefined,
+        'C': Undefined,
+    }
 
     instance = Circuit()
 
@@ -168,7 +179,23 @@ def test_evaluate_circuit():
         'E': False,
         'F': False,
     }
+    assert instance.evaluate_circuit({'A': False, 'B': False}) == {
+        'A': False,
+        'B': False,
+        'C': Undefined,
+        'D': False,
+        'E': False,
+        'F': False,
+    }
     assert instance.evaluate_circuit_outputs({'A': False, 'B': True}) == {
+        'D': True,
+        'E': True,
+        'F': True,
+    }
+    assert instance.evaluate_circuit({'A': False, 'B': True}) == {
+        'A': False,
+        'B': True,
+        'C': Undefined,
         'D': True,
         'E': True,
         'F': True,
@@ -178,7 +205,23 @@ def test_evaluate_circuit():
         'E': Undefined,
         'F': Undefined,
     }
+    assert instance.evaluate_circuit({'A': False, 'B': Undefined}) == {
+        'A': False,
+        'B': Undefined,
+        'C': Undefined,
+        'D': Undefined,
+        'E': Undefined,
+        'F': Undefined,
+    }
     assert instance.evaluate_circuit_outputs({'A': True, 'B': False}) == {
+        'D': True,
+        'E': True,
+        'F': False,
+    }
+    assert instance.evaluate_circuit({'A': True, 'B': False}) == {
+        'A': True,
+        'B': False,
+        'C': Undefined,
         'D': True,
         'E': True,
         'F': False,
@@ -188,7 +231,23 @@ def test_evaluate_circuit():
         'E': False,
         'F': True,
     }
+    assert instance.evaluate_circuit({'A': True, 'B': True}) == {
+        'A': True,
+        'B': True,
+        'C': Undefined,
+        'D': True,
+        'E': False,
+        'F': True,
+    }
     assert instance.evaluate_circuit_outputs({'A': True, 'B': Undefined}) == {
+        'D': True,
+        'E': Undefined,
+        'F': Undefined,
+    }
+    assert instance.evaluate_circuit({'A': True, 'B': Undefined}) == {
+        'A': True,
+        'B': Undefined,
+        'C': Undefined,
         'D': True,
         'E': Undefined,
         'F': Undefined,
@@ -198,12 +257,36 @@ def test_evaluate_circuit():
         'E': Undefined,
         'F': False,
     }
+    assert instance.evaluate_circuit({'A': Undefined, 'B': False}) == {
+        'A': Undefined,
+        'B': False,
+        'C': Undefined,
+        'D': Undefined,
+        'E': Undefined,
+        'F': False,
+    }
     assert instance.evaluate_circuit_outputs({'A': Undefined, 'B': True}) == {
         'D': True,
         'E': Undefined,
         'F': True,
     }
+    assert instance.evaluate_circuit({'A': Undefined, 'B': True}) == {
+        'A': Undefined,
+        'B': True,
+        'C': Undefined,
+        'D': True,
+        'E': Undefined,
+        'F': True,
+    }
     assert instance.evaluate_circuit_outputs({'A': Undefined, 'B': Undefined}) == {
+        'D': Undefined,
+        'E': Undefined,
+        'F': Undefined,
+    }
+    assert instance.evaluate_circuit({'A': Undefined, 'B': Undefined}) == {
+        'A': Undefined,
+        'B': Undefined,
+        'C': Undefined,
         'D': Undefined,
         'E': Undefined,
         'F': Undefined,
