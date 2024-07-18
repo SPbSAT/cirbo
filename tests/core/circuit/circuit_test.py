@@ -498,7 +498,7 @@ def test_get_significant_inputs_of():
     assert instance.get_significant_inputs_of(1) == []
 
 
-def test_get_symmetric_and_negations_of():
+def test_find_negations_to_make_symmetric():
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -508,7 +508,7 @@ def test_get_symmetric_and_negations_of():
     instance.mark_as_output('D')
 
     assert instance.is_symmetric() == False
-    assert instance.get_symmetric_and_negations_of([0]) == [False, True]
+    assert instance.find_negations_to_make_symmetric([0]) == [False, True]
 
 
 def test_get_truth_table():

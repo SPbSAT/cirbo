@@ -9,7 +9,7 @@ import typing as tp
 
 import typing_extensions as tp_ext
 
-from boolean_circuit_tool.core.boolean_function import BooleanFunction
+from boolean_circuit_tool.core.boolean_function import BooleanFunction, RawTruthTable
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitElementAlreadyExistsError,
     CircuitElementIsAbsentError,
@@ -21,7 +21,6 @@ from boolean_circuit_tool.core.circuit.validation import (
     check_elements_exist,
     check_label_doesnt_exist,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -580,7 +579,7 @@ class Circuit(BooleanFunction):
             if self.is_dependent_on_input_at(output_index, input_index)
         ]
 
-    def get_symmetric_and_negations_of(
+    def find_negations_to_make_symmetric(
         self,
         output_index: list[int],
     ) -> tp.Optional[list[bool]]:
@@ -591,7 +590,7 @@ class Circuit(BooleanFunction):
 
         """
 
-        def _filter_required_outputs(result: list[bool]):
+        def _filter_required_outputs(result: tp.Sequence[bool]):
             nonlocal output_index
             return [result[idx] for idx in output_index]
 
@@ -626,7 +625,7 @@ class Circuit(BooleanFunction):
 
         return None
 
-    def get_truth_table(self) -> list[list[bool]]:
+    def get_truth_table(self) -> RawTruthTable:
         """
         Get truth table of a boolean function, which is a matrix, `i`th row of which
         contains values of `i`th output, and `j`th column corresponds to the input which
@@ -722,11 +721,11 @@ class Circuit(BooleanFunction):
     def __str__(self):
         input_str = textwrap.shorten(
             'INPUTS: ' + '; '.join(f'{input_label}' for input_label in self._inputs),
-            wigth=100,
+            width=100,
         )
         output_str = textwrap.shorten(
             'OUTPUTS: '
             + '; '.join(f'{output_label}' for output_label in self._outputs),
-            wigth=100,
+            width=100,
         )
         return f"{self.__class__.__name__}\n\t{input_str}\n\t{output_str}"
