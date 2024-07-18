@@ -8,6 +8,7 @@ __all__ = [
     'GateIsAbsentError',
     'FixGateError',
     'ForbidWireError',
+    'StringTruthTableException'
 ]
 
 
@@ -37,5 +38,11 @@ class FixGateError(CircuitFinderError):
 
 class ForbidWireError(CircuitFinderError):
     """Error on try to forbid a wire where from_gate >= to_gate."""
+
+    pass
+
+
+class StringTruthTableException(BooleanCircuitToolError):
+    """Every occurrence in the truth table must be '0', '1', or '*'."""
 
     pass

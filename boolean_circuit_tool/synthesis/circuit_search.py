@@ -11,7 +11,7 @@ from pebble import concurrent
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
-from boolean_circuit_tool.core.boolean_function import BooleanFunction
+from boolean_circuit_tool.core.boolean_function import BooleanFunctionModel, RawTruthTableModel
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -34,16 +34,24 @@ from boolean_circuit_tool.core.circuit import (
     RNOT,
     XOR,
 )
+from boolean_circuit_tool.core.logic import DontCare, TriValue
 from boolean_circuit_tool.synthesis.exception import (
     FixGateError,
     ForbidWireError,
     GateIsAbsentError,
     SolverTimeOutError,
+    StringTruthTableException,
 )
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Operation', 'Basis', 'PySATSolverNames', 'CircuitFinder']
+__all__ = [
+    'Operation',
+    'Basis',
+    'PySATSolverNames',
+    'CircuitFinder',
+    'get_tt_by_str'
+]
 
 
 class Operation(enum.Enum):
@@ -156,8 +164,28 @@ class PySATSolverNames(enum.Enum):
     MINISATGH = 'minisat-gh'
 
 
-def get_GateType_by_tt(gate_tt: tp.List[bool]) -> GateType:
+def _get_GateType_by_tt(gate_tt: tp.List[bool]) -> GateType:
     return _tt_to_gate_type[tuple(gate_tt)]
+
+
+def get_tt_by_str(str_truth_table: tp.List[str]) -> RawTruthTableModel:
+    """
+    Convert a truth table from a list of strings to a list of TriValue lists.
+
+    :param str_truth_table: List of strings representing the truth table
+    :return: List of lists with TriValues corresponding to the input strings
+    """
+
+    def _char_to_trivalue(char):
+        if char == "*":
+            return DontCare
+        if char == "1":
+            return True
+        if char == "0":
+            return False
+        raise StringTruthTableException()
+
+    return [[_char_to_trivalue(char) for char in row] for row in str_truth_table]
 
 
 class CircuitFinder:
@@ -171,7 +199,7 @@ class CircuitFinder:
 
     def __init__(
         self,
-        boolean_function: BooleanFunction,
+        boolean_function: BooleanFunctionModel,
         number_of_gates: int,
         basis: tp.Union[Basis, tp.List[Operation]] = Basis.XAIG,
         need_normalized: bool = False,
@@ -194,7 +222,7 @@ class CircuitFinder:
         """
 
         self._boolean_function = boolean_function
-        self._output_truth_tables = boolean_function.get_truth_table()
+        self._output_truth_tables = boolean_function.get_model_truth_table()
         self._basis_list = basis.value if isinstance(basis, Basis) else basis
         self._forbidden_operations = list(set(Basis.FULL.value) - set(self._basis_list))
 
@@ -290,7 +318,8 @@ class CircuitFinder:
         gate_type: tp.Union[GateType, None] = None,
     ):
 
-        assert gate in self._internal_gates
+        if gate not in self._internal_gates:
+            raise GateIsAbsentError()
 
         if first_predecessor is not None and first_predecessor not in self._gates:
             raise GateIsAbsentError()
@@ -395,7 +424,7 @@ class CircuitFinder:
 
         for h in self._outputs:
             for t in range(1 << self._boolean_function.input_size):
-                if self._output_truth_tables[h][t] == '*':
+                if isinstance(self._output_truth_tables[h][t], type(DontCare)):
                     continue
                 for gate in self._internal_gates:
                     self._cnf.extend(
@@ -440,7 +469,7 @@ class CircuitFinder:
         Checks if the input corresponding to the binary representation of the number `t`
         has no influence on the outputs.
 
-        This is determined by verifying that all corresponding output bits are '*',
+        This is determined by verifying that all corresponding output bits are DontCares,
         indicating "don't care" conditions.
 
         :params t: The integer representing the input in binary form.
@@ -451,7 +480,7 @@ class CircuitFinder:
             self._output_truth_tables[g][t]
             for g in range(self._boolean_function.output_size)
         ]
-        return output_col.count('*') == self._boolean_function.output_size  # type: ignore[arg-type]
+        return all([isinstance(o, type(DontCare)) for o in output_col])
 
     def _predecessors_variable(
         self, gate: int, first_pred: int, second_pred: int
@@ -558,7 +587,7 @@ class CircuitFinder:
             initial_circuit.add_gate(
                 Gate(
                     's' + str(gate),
-                    get_GateType_by_tt(gate_tt),
+                    _get_GateType_by_tt(gate_tt),
                     (str(first_predecessor_str), str(second_predecessor_str)),
                 )
             )
