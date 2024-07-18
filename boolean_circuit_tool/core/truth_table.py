@@ -9,6 +9,8 @@ from boolean_circuit_tool.core.boolean_function import (
     RawTruthTable,
     RawTruthTableModel,
 )
+
+from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
 from boolean_circuit_tool.core.logic import TriValue
 from boolean_circuit_tool.core.utils import get_bit_value, input_to_canonical_index
 
@@ -228,13 +230,19 @@ class TruthTable(BooleanFunction):
         """
         Check if all outputs are symmetric.
 
-        :return: True iff this function.
+        :return: True iff this function is symmetric.
 
         """
-        return (
-            self.find_negations_to_make_symmetric(list(range(self.output_size)))
-            is not None
-        )
+        for number_of_true in range(self.input_size + 1):
+
+            _iter = iter(input_iterator_with_fixed_sum(self.input_size, number_of_true))
+            value: tp.Sequence[bool] = self.evaluate(next(_iter))
+
+            for input_assignment in _iter:
+                if value != self.evaluate(input_assignment):
+                    return False
+
+        return True
 
     def is_symmetric_at(self, output_index: int) -> bool:
         """
@@ -244,7 +252,16 @@ class TruthTable(BooleanFunction):
         :return: True iff output `output_index` is symmetric.
 
         """
-        return self.find_negations_to_make_symmetric([output_index]) is not None
+        for number_of_true in range(self.input_size + 1):
+
+            _iter = iter(input_iterator_with_fixed_sum(self.input_size, number_of_true))
+            value: bool = self.evaluate_at(next(_iter), output_index)
+
+            for input_assignment in _iter:
+                if value != self.evaluate_at(input_assignment, output_index):
+                    return False
+
+        return True
 
     def is_dependent_on_input_at(self, output_index: int, input_index: int) -> bool:
         """
@@ -333,24 +350,37 @@ class TruthTable(BooleanFunction):
         :return: set of negations if it exists, else `None`.
 
         """
+
+        def _filter_required_outputs(result: tp.Sequence[bool]):
+            nonlocal output_index
+            return [result[idx] for idx in output_index]
+
         for negations in itertools.product((False, True), repeat=self.input_size):
-            saved_values = [{} for _ in range(len(output_index))]  # type: ignore
             symmetric = True
-            for x in itertools.product((False, True), repeat=self.input_size):
-                amount = sum(
-                    x[i] * (1 if negations[i] else -1) for i in range(self.input_size)
+            for number_of_true in range(self.input_size + 1):
+
+                _iter = iter(
+                    input_iterator_with_fixed_sum(
+                        self.input_size,
+                        number_of_true,
+                        negations=list(negations),
+                    )
                 )
-                values = self.evaluate(list(x))
-                for index in output_index:
-                    if amount not in saved_values[index]:
-                        saved_values[index][amount] = values[index]
-                    elif saved_values[index][amount] != values[index]:
+                value: list[bool] = _filter_required_outputs(self.evaluate(next(_iter)))
+
+                for input_assignment in _iter:
+                    if value != _filter_required_outputs(
+                        self.evaluate(input_assignment)
+                    ):
                         symmetric = False
                         break
+
                 if not symmetric:
                     break
+
             if symmetric:
-                return [bool(v) for v in negations]
+                return list(negations)
+
         return None
 
     def get_truth_table(self) -> RawTruthTable:

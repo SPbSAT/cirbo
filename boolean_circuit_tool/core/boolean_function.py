@@ -166,7 +166,7 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         """
         Check if all outputs are symmetric.
 
-        :return: True iff this function.
+        :return: True iff this function is symmetric.
 
         """
 
