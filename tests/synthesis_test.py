@@ -30,7 +30,8 @@ def check_exact_circuit_size(size, truth_tables, basis, hasdontcares=False):
 
 def check_is_suitable_truth_table(tt: RawTruthTable, pattern_tt: RawTruthTableModel):
     def _is_suitable_one_output_truth_table(
-        one_out_tt: tp.MutableSequence[bool], one_out_pattern_tt: tp.MutableSequence[TriValue]
+        one_out_tt: tp.MutableSequence[bool],
+        one_out_pattern_tt: tp.MutableSequence[TriValue],
     ):
         return all(
             isinstance(y, type(DontCare)) or x == y
@@ -142,7 +143,9 @@ def test_simple_operations():
 @pytest.mark.parametrize("inputs, outputs, size, tl", [(5, 3, 12, 1)])
 def test_time_limit(inputs: int, outputs: int, size: int, tl: int):
     tt = [
-        ''.join(str((sum(x) >> i) & 1) for x in itertools.product(range(2), repeat=inputs))
+        ''.join(
+            str((sum(x) >> i) & 1) for x in itertools.product(range(2), repeat=inputs)
+        )
         for i in range(outputs)
     ]
 

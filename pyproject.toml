@@ -16,7 +16,7 @@ click = "^8.1.7"
 more-itertools = "^10.3.0"
 typing-extensions = "^4.12.2"
 pebble = "^5.0.7"
-pysat = "^3.2.0"
+python-sat="^1.8.dev13"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
@@ -100,15 +100,3 @@ module = "pysat.*"
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = "pebble.*"
-
-[tool.pytest.ini_options]
-# Custom markers required for pysat tests
-markers = [
-    "all_inst: description of all_inst",
-    "first: description of first",
-    "download: description of download",
-    "second: description of second",
-    "load_options: description of load_options",
-    "new_tests: description of new_tests",
-    "no_download: description of no_download"
-]
