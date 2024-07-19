@@ -100,3 +100,9 @@ module = "pysat.*"
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = "pebble.*"
+
+[tool.pytest.ini_options]
+# Suppress warnings for invalid escape sequences in pysat package
+filterwarnings = [
+    "ignore:invalid escape sequence:DeprecationWarning"
+]

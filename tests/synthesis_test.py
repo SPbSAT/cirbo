@@ -140,7 +140,7 @@ def test_simple_operations():
     check_exact_circuit_size(6, tt, Basis.FULL)
 
 
-@pytest.mark.parametrize("inputs, outputs, size, tl", [(5, 3, 12, 1)])
+@pytest.mark.parametrize("inputs, outputs, size, tl", [(5, 3, 11, 1)])
 def test_time_limit(inputs: int, outputs: int, size: int, tl: int):
     tt = [
         ''.join(
