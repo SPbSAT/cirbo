@@ -90,7 +90,6 @@ pre-summary-newline = true
 
 [tool.mypy]
 python_version = "3.9"
-warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
 
@@ -102,4 +101,14 @@ module = "pysat.*"
 ignore_missing_imports = true
 module = "pebble.*"
 
-
+[tool.pytest.ini_options]
+# Custom markers required for pysat tests
+markers = [
+    "all_inst: description of all_inst",
+    "first: description of first",
+    "download: description of download",
+    "second: description of second",
+    "load_options: description of load_options",
+    "new_tests: description of new_tests",
+    "no_download: description of no_download"
+]

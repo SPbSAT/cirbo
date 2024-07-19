@@ -8,7 +8,7 @@ __all__ = [
     'GateIsAbsentError',
     'FixGateError',
     'ForbidWireError',
-    'StringTruthTableException'
+    'StringTruthTableException',
 ]
 
 

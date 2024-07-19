@@ -11,7 +11,10 @@ from pebble import concurrent
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
-from boolean_circuit_tool.core.boolean_function import BooleanFunctionModel, RawTruthTableModel
+from boolean_circuit_tool.core.boolean_function import (
+    BooleanFunctionModel,
+    RawTruthTableModel,
+)
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -34,7 +37,7 @@ from boolean_circuit_tool.core.circuit import (
     RNOT,
     XOR,
 )
-from boolean_circuit_tool.core.logic import DontCare, TriValue
+from boolean_circuit_tool.core.logic import DontCare
 from boolean_circuit_tool.synthesis.exception import (
     FixGateError,
     ForbidWireError,
@@ -45,13 +48,7 @@ from boolean_circuit_tool.synthesis.exception import (
 
 logger = logging.getLogger(__name__)
 
-__all__ = [
-    'Operation',
-    'Basis',
-    'PySATSolverNames',
-    'CircuitFinder',
-    'get_tt_by_str'
-]
+__all__ = ['Operation', 'Basis', 'PySATSolverNames', 'CircuitFinder', 'get_tt_by_str']
 
 
 class Operation(enum.Enum):
@@ -174,6 +171,7 @@ def get_tt_by_str(str_truth_table: tp.List[str]) -> RawTruthTableModel:
 
     :param str_truth_table: List of strings representing the truth table
     :return: List of lists with TriValues corresponding to the input strings
+
     """
 
     def _char_to_trivalue(char):
@@ -469,8 +467,8 @@ class CircuitFinder:
         Checks if the input corresponding to the binary representation of the number `t`
         has no influence on the outputs.
 
-        This is determined by verifying that all corresponding output bits are DontCares,
-        indicating "don't care" conditions.
+        This is determined by verifying that all corresponding output bits are
+        DontCares, indicating "don't care" conditions.
 
         :params t: The integer representing the input in binary form.
         :return: True if all corresponding output bits are '*', otherwise False.
