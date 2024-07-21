@@ -1,13 +1,37 @@
 import abc
 import typing as tp
 
-__all__ = ['BooleanFunction']
+import typing_extensions as tp_ext
+
+from boolean_circuit_tool.core.exceptions import BadDefinitionError
+from boolean_circuit_tool.core.logic import TriValue
+
+
+__all__ = [
+    'RawTruthTable',
+    'RawTruthTableModel',
+    'BooleanFunctionModel',
+    'BooleanFunction',
+]
+
+# Type that represents bare truth table object.
+RawTruthTable = tp.MutableSequence[tp.MutableSequence[bool]]
+# Raw truth table with don't care outputs.
+RawTruthTableModel = tp.MutableSequence[tp.MutableSequence[TriValue]]
+
+BooleanFunctionT = tp.TypeVar('BooleanFunctionT', covariant=True)
 
 
 @tp.runtime_checkable
-class BooleanFunction(tp.Protocol):
-    """Protocol for any object that behaves like boolean function, e.g. Circuit,
-    TruthTable or PythonFunction."""
+class BooleanFunctionModel(tp.Protocol[BooleanFunctionT]):
+    """
+    Protocol for any object that describes model of boolean function, meaning that it
+    defines subset of rules which must be satisfied by searched boolean function.
+
+    Outputs of model can be either `bool`, or `DontCare` object, which
+    means that output value is not fixed yet, and should be defined.
+
+    """
 
     @property
     @abc.abstractmethod
@@ -23,7 +47,62 @@ class BooleanFunction(tp.Protocol):
         :return: number of outputs.
         """
 
-    def evaluate(self, inputs: list[bool]) -> list[bool]:
+    def check(self, inputs: list[bool]) -> tp.Sequence[TriValue]:
+        """
+        Get model output values that correspond to provided `inputs`.
+
+        :param inputs: values of input gates.
+        :return: value of outputs evaluated for input values `inputs`.
+
+        """
+
+    def check_at(self, inputs: list[bool], output_index: int) -> TriValue:
+        """
+        Get model value of `output_index`th output that corresponds to provided
+        `inputs`.
+
+        :param inputs: values of input gates.
+        :param output_index: index of desired output.
+        :return: value of `output_index` evaluated for input values `inputs`.
+
+        """
+
+    def get_model_truth_table(self) -> RawTruthTableModel:
+        """
+        Get truth table of a boolean function, which is a matrix, `i`th row of which
+        contains values of `i`th output, which may contain bool or DontCare values, and
+        `j`th column corresponds to the input which is a binary encoding of a number `j`
+        (for example j=9 corresponds to [..., 1, 0, 0, 1])
+
+        :return: truth table describing this model.
+
+        """
+
+    def define(
+        self,
+        definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
+    ) -> BooleanFunctionT:
+        """
+        Defines this model by defining ambiguous output values.
+
+        :param definition: mapping of pairs (input value set, output index) to
+        output values, required to completely define this boolean function model.
+        :return: new object of `BooleanFunctionT` type.
+
+        """
+
+
+@tp.runtime_checkable
+class BooleanFunction(BooleanFunctionModel, tp.Protocol):
+    """
+    Protocol for any object that behaves like boolean function, e.g. Circuit, TruthTable
+    or PythonFunction.
+
+    Any `BooleanFunction` is also a completely defined `BooleanFunctionModel`.
+
+    """
+
+    def evaluate(self, inputs: list[bool]) -> tp.Sequence[bool]:
         """
         Get output values that correspond to provided `inputs`.
 
@@ -87,7 +166,7 @@ class BooleanFunction(tp.Protocol):
         """
         Check if all outputs are symmetric.
 
-        :return: True iff this function.
+        :return: True iff this function is symmetric.
 
         """
 
@@ -155,18 +234,20 @@ class BooleanFunction(tp.Protocol):
 
         """
 
-    def get_symmetric_and_negations_of(
+    def find_negations_to_make_symmetric(
         self,
         output_index: list[int],
     ) -> tp.Optional[list[bool]]:
         """
-        Check if function is symmetric on some output set and returns inputs negations.
+        Check if exist input negations set such that function is symmetric on given
+        output set.
 
         :param output_index: output index set
+        :return: set of negations if it exists, else `None`.
 
         """
 
-    def get_truth_table(self) -> list[list[bool]]:
+    def get_truth_table(self) -> RawTruthTable:
         """
         Get truth table of a boolean function, which is a matrix, `i`th row of which
         contains values of `i`th output, and `j`th column corresponds to the input which
@@ -176,3 +257,53 @@ class BooleanFunction(tp.Protocol):
         :return: truth table describing this function.
 
         """
+
+    def check(self, inputs: list[bool]) -> tp.Sequence[TriValue]:
+        """
+        Get model output values that correspond to provided `inputs`.
+
+        :param inputs: values of input gates.
+        :return: value of outputs evaluated for input values `inputs`.
+
+        """
+        return self.evaluate(inputs=inputs)
+
+    def check_at(self, inputs: list[bool], output_index: int) -> TriValue:
+        """
+        Get model value of `output_index`th output that corresponds to provided
+        `inputs`.
+
+        :param inputs: values of input gates.
+        :param output_index: index of desired output.
+        :return: value of `output_index` evaluated for input values `inputs`.
+
+        """
+        return self.evaluate_at(inputs=inputs, output_index=output_index)
+
+    def get_model_truth_table(self) -> RawTruthTableModel:
+        """
+        Get truth table of a boolean function, which is a matrix, `i`th row of which
+        contains values of `i`th output, which may contain bool or DontCare values, and
+        `j`th column corresponds to the input which is a binary encoding of a number `j`
+        (for example j=9 corresponds to [..., 1, 0, 0, 1])
+
+        :return: truth table describing this model.
+
+        """
+        return tp.cast(RawTruthTableModel, self.get_truth_table())
+
+    def define(
+        self,
+        definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
+    ) -> tp_ext.Self:
+        """
+        Defines this model by defining ambiguous output values.
+
+        :param definition: mapping of pairs (input value set, output index) to
+        output values, required to completely define this boolean function model.
+        :return: new object of `BooleanFunctionT` type.
+
+        """
+        if definition:
+            raise BadDefinitionError("Boolean function is already defined.")
+        return self

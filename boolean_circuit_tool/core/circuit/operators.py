@@ -12,17 +12,28 @@ import typing as tp
 
 from boolean_circuit_tool.core.circuit.exceptions import GateStateError
 
+
 __all__ = [
     'GateState',
     'Undefined',
-    'iff_',
-    'not_',
+    'always_false_',
+    'always_true_',
     'and_',
+    'geq_',
+    'gt_',
+    'iff_',
+    'leq_',
+    'liff_',
+    'lnot_',
+    'lt_',
     'nand_',
-    'or_',
     'nor_',
-    'xor_',
+    'not_',
     'nxor_',
+    'or_',
+    'riff_',
+    'rnot_',
+    'xor_',
 ]
 
 
@@ -34,7 +45,7 @@ class _Undefined:
         return isinstance(rhs, _Undefined)
 
     def __hash__(self):
-        return hash('Undefined')
+        return hash(self.__class__.__name__)
 
 
 # To be similar to False and True.
@@ -150,3 +161,95 @@ def xor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
 
 def nxor_(arg1: GateState, arg2: GateState, *args: GateState) -> GateState:
     return not_(xor_(arg1, arg2, *args))
+
+
+def always_true_(*args: GateState) -> GateState:
+    return True
+
+
+def always_false_(*args: GateState) -> GateState:
+    return False
+
+
+def rnot_(arg1: GateState, arg2: GateState) -> GateState:
+    return not_(arg2)
+
+
+def lnot_(arg1: GateState, arg2: GateState) -> GateState:
+    return not_(arg1)
+
+
+def riff_(arg1: GateState, arg2: GateState) -> GateState:
+    return arg2
+
+
+def liff_(arg1: GateState, arg2: GateState) -> GateState:
+    return arg1
+
+
+_gt: list[GateState] = [
+    False,  # arg1 = False
+    False,
+    False,
+    True,  # arg1 = True
+    False,
+    Undefined,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
+
+
+def gt_(arg1: GateState, arg2: GateState) -> GateState:
+    return _gt[index_from_state(arg1) * GateStateNumber + index_from_state(arg2)]
+
+
+_lt: list[GateState] = [
+    False,  # arg1 = False
+    True,
+    Undefined,
+    False,  # arg1 = True
+    False,
+    False,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
+
+
+def lt_(arg1: GateState, arg2: GateState) -> GateState:
+    return _lt[index_from_state(arg1) * GateStateNumber + index_from_state(arg2)]
+
+
+_geq: list[GateState] = [
+    True,  # arg1 = False
+    False,
+    Undefined,
+    True,  # arg1 = True
+    True,
+    True,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
+
+
+def geq_(arg1: GateState, arg2: GateState) -> GateState:
+    return _geq[index_from_state(arg1) * GateStateNumber + index_from_state(arg2)]
+
+
+_leq: list[GateState] = [
+    True,  # arg1 = False
+    True,
+    True,
+    False,  # arg1 = True
+    True,
+    Undefined,
+    Undefined,  # arg1 = Undefined
+    Undefined,
+    Undefined,
+]
+
+
+def leq_(arg1: GateState, arg2: GateState) -> GateState:
+    return _leq[index_from_state(arg1) * GateStateNumber + index_from_state(arg2)]

@@ -1,0 +1,10 @@
+# Comment Line
+#
+
+INPUT(A)
+INPUT(D)
+OUTPUT(C)
+B = NOT(A)
+C = AND(A, B)
+INPUT(E)
+OUTPUT(A)
