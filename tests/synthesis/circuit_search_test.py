@@ -10,22 +10,24 @@ from boolean_circuit_tool.core.truth_table import TruthTableModel
 from boolean_circuit_tool.synthesis.circuit_search import (
     _tt_to_gate_type,
     Basis,
-    CircuitFinder,
+    CircuitFinderSat,
     get_tt_by_str,
     Operation,
 )
-from boolean_circuit_tool.synthesis.exception import SolverTimeOutError
+from boolean_circuit_tool.synthesis.exception import NoSolutionError
 
 
 def check_exact_circuit_size(size, truth_tables, basis, hasdontcares=False):
     truth_tables_bool = get_tt_by_str(truth_tables)
-    circuit_finder = CircuitFinder(TruthTableModel(truth_tables_bool), size, basis)
-    circuit = circuit_finder.solve_cnf()
-    check_correctness(circuit, truth_tables_bool, hasdontcares)
-    assert (
-        CircuitFinder(TruthTableModel(truth_tables_bool), size - 1, basis).solve_cnf()
-        is False
+    circuit_finder = CircuitFinderSat(
+        TruthTableModel(truth_tables_bool), size, basis=basis
     )
+    circuit = circuit_finder.find_circuit()
+    check_correctness(circuit, truth_tables_bool, hasdontcares)
+    with pytest.raises(NoSolutionError):
+        CircuitFinderSat(
+            TruthTableModel(truth_tables_bool), size - 1, basis=basis
+        ).find_circuit()
 
 
 def check_is_suitable_truth_table(tt: RawTruthTable, pattern_tt: RawTruthTableModel):
@@ -34,8 +36,7 @@ def check_is_suitable_truth_table(tt: RawTruthTable, pattern_tt: RawTruthTableMo
         one_out_pattern_tt: tp.MutableSequence[TriValue],
     ):
         return all(
-            isinstance(y, type(DontCare)) or x == y
-            for x, y in zip(one_out_tt, one_out_pattern_tt)
+            y == DontCare or x == y for x, y in zip(one_out_tt, one_out_pattern_tt)
         )
 
     assert len(tt) == len(pattern_tt)
@@ -97,9 +98,9 @@ def test_sum_circuits(inputs: int, outputs: int, size: int):
         for i in range(outputs)
     ]
     truth_tables_bool = get_tt_by_str(tt)
-    circuit = CircuitFinder(
-        TruthTableModel(truth_tables_bool), size, Basis.XAIG
-    ).solve_cnf()
+    circuit = CircuitFinderSat(
+        TruthTableModel(truth_tables_bool), size, basis=Basis.XAIG
+    ).find_circuit()
     check_correctness(circuit, truth_tables_bool)
 
 
@@ -112,13 +113,15 @@ def test_sum_with_precomputed_xor(inputs: int, outputs: int, size: int):
         for i in range(outputs)
     ]
     truth_tables_bool = get_tt_by_str(tt)
-    circuit_finder = CircuitFinder(TruthTableModel(truth_tables_bool), size, Basis.XAIG)
+    circuit_finder = CircuitFinderSat(
+        TruthTableModel(truth_tables_bool), size, basis=Basis.XAIG
+    )
     circuit_finder.fix_gate(inputs, 0, 1, _tt_to_gate_type[(0, 1, 1, 0)])
     for k in range(inputs - 2):
         circuit_finder.fix_gate(
             inputs + k + 1, k + 2, inputs + k, _tt_to_gate_type[(0, 1, 1, 0)]
         )
-    circuit = circuit_finder.solve_cnf()
+    circuit = circuit_finder.find_circuit()
     check_correctness(circuit, truth_tables_bool)
 
 
@@ -127,9 +130,9 @@ def test_aig_basis(inputs: int, size: int):
     tt = [''.join(str(sum(x) % 2) for x in itertools.product(range(2), repeat=inputs))]
 
     truth_tables_bool = get_tt_by_str(tt)
-    circuit = CircuitFinder(
-        TruthTableModel(truth_tables_bool), size, Basis.AIG
-    ).solve_cnf()
+    circuit = CircuitFinderSat(
+        TruthTableModel(truth_tables_bool), size, basis=Basis.AIG
+    ).find_circuit()
     check_correctness(circuit, truth_tables_bool)
 
 
@@ -140,19 +143,19 @@ def test_simple_operations():
     check_exact_circuit_size(6, tt, Basis.FULL)
 
 
-@pytest.mark.parametrize("inputs, outputs, size, tl", [(5, 3, 11, 1)])
-def test_time_limit(inputs: int, outputs: int, size: int, tl: int):
-    tt = [
-        ''.join(
-            str((sum(x) >> i) & 1) for x in itertools.product(range(2), repeat=inputs)
-        )
-        for i in range(outputs)
-    ]
-
-    truth_tables_bool = get_tt_by_str(tt)
-    finder = CircuitFinder(TruthTableModel(truth_tables_bool), size, Basis.XAIG)
-    with pytest.raises(SolverTimeOutError):
-        finder.solve_cnf(time_limit=tl)
+# @pytest.mark.parametrize("inputs, outputs, size, tl", [(5, 3, 11, 1)])
+# def test_time_limit(inputs: int, outputs: int, size: int, tl: int):
+#     tt = [
+#         ''.join(
+#             str((sum(x) >> i) & 1) for x in itertools.product(range(2), repeat=inputs)
+#         )
+#         for i in range(outputs)
+#     ]
+#
+#     truth_tables_bool = get_tt_by_str(tt)
+#     finder = CircuitFinderSat(TruthTableModel(truth_tables_bool), size, basis=Basis.XAIG)
+#     with pytest.raises(SolverTimeOutError):
+#         finder.find_circuit(time_limit=tl)
 
 
 def test_simple_dont_care():

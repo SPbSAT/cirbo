@@ -7,8 +7,10 @@ __all__ = [
     'SolverTimeOutError',
     'GateIsAbsentError',
     'FixGateError',
-    'ForbidWireError',
-    'StringTruthTableException',
+    'ForbidWireOrderError',
+    'StringTruthTableError',
+    'NoSolutionError',
+    'FixGateOrderError',
 ]
 
 
@@ -36,13 +38,25 @@ class FixGateError(CircuitFinderError):
     pass
 
 
-class ForbidWireError(CircuitFinderError):
+class FixGateOrderError(CircuitFinderError):
+    """Error on try to fix gate with wrong order of predecessor."""
+
+    pass
+
+
+class ForbidWireOrderError(CircuitFinderError):
     """Error on try to forbid a wire where from_gate >= to_gate."""
 
     pass
 
 
-class StringTruthTableException(BooleanCircuitToolError):
+class StringTruthTableError(BooleanCircuitToolError):
     """Every occurrence in the truth table must be '0', '1', or '*'."""
+
+    pass
+
+
+class NoSolutionError(CircuitFinderError):
+    """Raised when no solution is found."""
 
     pass

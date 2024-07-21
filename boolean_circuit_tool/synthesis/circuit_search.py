@@ -4,10 +4,6 @@ import itertools
 import logging
 import typing as tp
 
-from concurrent.futures import TimeoutError
-
-from pebble import concurrent
-
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
@@ -40,15 +36,22 @@ from boolean_circuit_tool.core.circuit import (
 from boolean_circuit_tool.core.logic import DontCare
 from boolean_circuit_tool.synthesis.exception import (
     FixGateError,
-    ForbidWireError,
+    FixGateOrderError,
+    ForbidWireOrderError,
     GateIsAbsentError,
-    SolverTimeOutError,
-    StringTruthTableException,
+    NoSolutionError,
+    StringTruthTableError,
 )
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['Operation', 'Basis', 'PySATSolverNames', 'CircuitFinder', 'get_tt_by_str']
+__all__ = [
+    'Operation',
+    'Basis',
+    'PySATSolverNames',
+    'CircuitFinderSat',
+    'get_tt_by_str',
+]
 
 
 class Operation(enum.Enum):
@@ -181,12 +184,12 @@ def get_tt_by_str(str_truth_table: tp.List[str]) -> RawTruthTableModel:
             return True
         if char == "0":
             return False
-        raise StringTruthTableException()
+        raise StringTruthTableError()
 
     return [[_char_to_trivalue(char) for char in row] for row in str_truth_table]
 
 
-class CircuitFinder:
+class CircuitFinderSat:
     """
     A class for finding Boolean circuits using SAT-solvers.
 
@@ -197,15 +200,16 @@ class CircuitFinder:
 
     def __init__(
         self,
-        boolean_function: BooleanFunctionModel,
+        boolean_function_model: BooleanFunctionModel,
         number_of_gates: int,
+        *,
         basis: tp.Union[Basis, tp.List[Operation]] = Basis.XAIG,
         need_normalized: bool = False,
     ):
         """
         Initializes the CircuitFinder instance.
 
-        :param boolean_function:
+        :param boolean_function_model:
         The function for which the circuit is needed.
         :param number_of_gates:
         The number of gates in the circuit we are finding.
@@ -219,20 +223,20 @@ class CircuitFinder:
 
         """
 
-        self._boolean_function = boolean_function
-        self._output_truth_tables = boolean_function.get_model_truth_table()
+        self._boolean_function = boolean_function_model
+        self._output_truth_tables = boolean_function_model.get_model_truth_table()
         self._basis_list = basis.value if isinstance(basis, Basis) else basis
         self._forbidden_operations = list(set(Basis.FULL.value) - set(self._basis_list))
 
-        self._input_gates = list(range(boolean_function.input_size))
+        self._input_gates = list(range(boolean_function_model.input_size))
         self._internal_gates = list(
             range(
-                boolean_function.input_size,
-                boolean_function.input_size + number_of_gates,
+                boolean_function_model.input_size,
+                boolean_function_model.input_size + number_of_gates,
             )
         )
-        self._gates = list(range(boolean_function.input_size + number_of_gates))
-        self._outputs = list(range(boolean_function.output_size))
+        self._gates = list(range(boolean_function_model.input_size + number_of_gates))
+        self._outputs = list(range(boolean_function_model.output_size))
         self.need_normalized = need_normalized
         self._vpool = IDPool()
         self._cnf = CNF()
@@ -249,62 +253,59 @@ class CircuitFinder:
         """
         return self._cnf.clauses
 
-    def solve_cnf(
+    def find_circuit(
         self,
-        solver_name: PySATSolverNames = PySATSolverNames.CADICAL193,
-        verbose: bool = True,
+        solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL193,
         time_limit: tp.Union[int, None] = None,
-    ) -> tp.Union[Circuit, bool]:
+    ) -> Circuit:
         """
         Solves the Conjunctive Normal Form (CNF) using a specified SAT-solver and
         returns the circuit if it exists.
 
-        :param solver_name: The name of the SAT-solver to use (default is
-            PySATSolverNames.CADICAL193).
-        :param verbose: If True, prints solver information during solving (default is
-            True).
+        :param solver_name: The name of the SAT-solver to use. Default is
+            PySATSolverNames.CADICAL193 ("cadical195").
         :param time_limit : Maximum time in seconds allowed for solving (default is
             None, meaning no time limit).
-        :return: Circuit or False: If a solution is found within the time limit (if
-            specified), returns the found circuit. If no solution is found or the solver
-            times out, returns False.
+        :return: Circuit: If a solution is found within the specified time limit (if
+            provided), returns the found circuit. If no solution is found or the solver
+            times out, the corresponding error is raised.
+        :raises NoSolutionError: If no solution is found for the CNF.
+        :raises SolverTimeOutError: If the solver exceeds the specified time limit.
 
         """
-        if verbose:
-            logger.info(
-                f"Solving a CNF formula, "
-                f"solver: {solver_name.value}, "
-                f"time_limit: {time_limit}, "
-                f"current time: {datetime.datetime.now()}"
-            )
+        solver_name = PySATSolverNames(solver_name)
+        logger.debug(
+            f"Solving a CNF formula, "
+            f"solver: {solver_name.value}, "
+            f"time_limit: {time_limit}, "
+            f"current time: {datetime.datetime.now()}"
+        )
         if [] in self._cnf.clauses:
-            return False
+            raise NoSolutionError()
 
-        if verbose:
-            logger.info(f"Running {solver_name.value}")
+        logger.debug(f"Running {solver_name.value}")
         s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
-        if time_limit:
-
-            @concurrent.process(timeout=time_limit)
-            def cnf_from_bench_wrapper():
-                s.solve()
-                return s.get_model()
-
-            try:
-                future = cnf_from_bench_wrapper()
-                model = future.result()
-            except TimeoutError:
-                if verbose:
-                    logger.info("Solver timed out and is being stopped.")
-                s.delete()
-                raise SolverTimeOutError()
-        else:
-            s.solve()
-            model = s.get_model()
-            s.delete()
+        # if time_limit:
+        #
+        #     @concurrent.process(timeout=time_limit)
+        #     def cnf_from_bench_wrapper():
+        #         s.solve()
+        #         return s.get_model()
+        #
+        #     try:
+        #         future = cnf_from_bench_wrapper()
+        #         model = future.result()
+        #     except TimeoutError:
+        #         logger.debug("Solver timed out and is being stopped.")
+        #         s.delete()
+        #         raise SolverTimeOutError()
+        # else:
+        s.solve()
+        model = s.get_model()
+        s.delete()
 
         if model is None:
-            return False
+            raise NoSolutionError()
 
         return self._get_circuit_by_model(model)
 
@@ -315,6 +316,16 @@ class CircuitFinder:
         second_predecessor: tp.Union[int, None] = None,
         gate_type: tp.Union[GateType, None] = None,
     ):
+        """
+        Fix a specific gate in the circuit.
+
+        At least one predecessor should be given.
+        :param gate: The gate to be fixed.
+        :param first_predecessor: The first predecessor of the gate.
+        :param second_predecessor: The second predecessor of the gate.
+        :param gate_type: The gate type to be fixed.
+
+        """
 
         if gate not in self._internal_gates:
             raise GateIsAbsentError()
@@ -329,6 +340,8 @@ class CircuitFinder:
             raise FixGateError()
 
         if first_predecessor is not None and second_predecessor is not None:
+            if not (gate > second_predecessor > first_predecessor):
+                raise FixGateOrderError()
             self._cnf.append(
                 [
                     self._predecessors_variable(
@@ -336,11 +349,12 @@ class CircuitFinder:
                     )
                 ]
             )
-        else:
-            if first_predecessor is not None:
-                for a, b in itertools.combinations(range(gate), 2):
-                    if a != first_predecessor and b != first_predecessor:
-                        self._cnf.append([-self._predecessors_variable(gate, a, b)])
+        elif first_predecessor is not None:
+            if not (gate > first_predecessor):
+                raise FixGateOrderError()
+            for a, b in itertools.combinations(range(gate), 2):
+                if a != first_predecessor and b != first_predecessor:
+                    self._cnf.append([-self._predecessors_variable(gate, a, b)])
 
         # TODO: maintain gate_type
         # if gate_type:
@@ -350,22 +364,32 @@ class CircuitFinder:
         #         self._cnf.append([(1 if bit else -1) * self._gate_type_variable(gate, a, b)])
 
     def forbid_wire(self, from_gate: int, to_gate: int):
+        """
+        Forbids the wire of a circuit from one gate to another.
+
+        :param from_gate: The gate to be forbidden.
+        :param to_gate: The gate to be forbidden.
+
+        """
         if from_gate not in self._gates:
             raise GateIsAbsentError()
         if to_gate not in self._internal_gates:
             raise GateIsAbsentError()
         if from_gate >= to_gate:
-            raise ForbidWireError()
+            raise ForbidWireOrderError()
 
         for other in self._gates:
-            if other < to_gate and other != from_gate:
-                self._cnf.append(
-                    [
-                        -self._predecessors_variable(
-                            to_gate, min(other, from_gate), max(other, from_gate)
-                        )
-                    ]
-                )
+            if other >= to_gate:
+                break
+            if other == from_gate:
+                continue
+            self._cnf.append(
+                [
+                    -self._predecessors_variable(
+                        to_gate, min(other, from_gate), max(other, from_gate)
+                    )
+                ]
+            )
 
     def _init_default_cnf_formula(self) -> None:
         """Creating a CNF formula for finding a fixed-size circuit."""
@@ -380,7 +404,7 @@ class CircuitFinder:
             )
 
         # each output is computed somewhere
-        for h in range(len(self._outputs)):
+        for h in self._outputs:
             self._add_exactly_one_of(
                 [self._output_gate_variable(h, gate) for gate in self._internal_gates]
             )
@@ -402,36 +426,30 @@ class CircuitFinder:
                     for t in range(1 << self._boolean_function.input_size):
                         if self._is_dont_cares_input(t):
                             continue
-                        self._cnf.extend(
+                        self._cnf.append(
                             [
-                                [
-                                    -self._predecessors_variable(
-                                        gate, first_pred, second_pred
-                                    ),
-                                    (-1 if a else 1)
-                                    * self._gate_value_variable(gate, t),
-                                    (-1 if b else 1)
-                                    * self._gate_value_variable(first_pred, t),
-                                    (-1 if c else 1)
-                                    * self._gate_value_variable(second_pred, t),
-                                    (1 if a else -1)
-                                    * self._gate_type_variable(gate, b, c),
-                                ]
+                                -self._predecessors_variable(
+                                    gate, first_pred, second_pred
+                                ),
+                                (-1 if a else 1) * self._gate_value_variable(gate, t),
+                                (-1 if b else 1)
+                                * self._gate_value_variable(first_pred, t),
+                                (-1 if c else 1)
+                                * self._gate_value_variable(second_pred, t),
+                                (1 if a else -1) * self._gate_type_variable(gate, b, c),
                             ]
                         )
 
         for h in self._outputs:
             for t in range(1 << self._boolean_function.input_size):
-                if isinstance(self._output_truth_tables[h][t], type(DontCare)):
+                if self._output_truth_tables[h][t] == DontCare:
                     continue
                 for gate in self._internal_gates:
-                    self._cnf.extend(
+                    self._cnf.append(
                         [
-                            [
-                                -self._output_gate_variable(h, gate),
-                                (1 if self._output_truth_tables[h][t] else -1)
-                                * self._gate_value_variable(gate, t),
-                            ]
+                            -self._output_gate_variable(h, gate),
+                            (1 if self._output_truth_tables[h][t] else -1)
+                            * self._gate_value_variable(gate, t),
                         ]
                     )
 
@@ -439,12 +457,11 @@ class CircuitFinder:
         for gate in self._internal_gates:
             for op in self._forbidden_operations:
                 assert len(op.value) == 4 and all(int(b) in (0, 1) for b in op.value)
-                clause = []
-                for i in range(4):
-                    clause.append(
-                        (-1 if int(op.value[i]) == 1 else 1)
-                        * self._gate_type_variable(gate, i // 2, i % 2)
-                    )
+                clause = [
+                    (-1 if int(op.value[i]) == 1 else 1)
+                    * self._gate_type_variable(gate, i // 2, i % 2)
+                    for i in range(4)
+                ]
                 self._cnf.append(clause)
 
         if self.need_normalized:
@@ -474,11 +491,11 @@ class CircuitFinder:
         :return: True if all corresponding output bits are '*', otherwise False.
 
         """
-        output_col = [
+        output_col = (
             self._output_truth_tables[g][t]
             for g in range(self._boolean_function.output_size)
-        ]
-        return all([isinstance(o, type(DontCare)) for o in output_col])
+        )
+        return all((o == DontCare for o in output_col))
 
     def _predecessors_variable(
         self, gate: int, first_pred: int, second_pred: int

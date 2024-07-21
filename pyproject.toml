@@ -97,10 +97,6 @@ check_untyped_defs = true
 ignore_missing_imports = true
 module = "pysat.*"
 
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
-module = "pebble.*"
-
 [tool.pytest.ini_options]
 # Suppress warnings for invalid escape sequences in pysat package
 filterwarnings = [
