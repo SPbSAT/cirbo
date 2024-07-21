@@ -12,6 +12,7 @@ import typing as tp
 
 from boolean_circuit_tool.core.circuit.exceptions import GateStateError
 
+
 __all__ = [
     'GateState',
     'Undefined',
@@ -44,7 +45,7 @@ class _Undefined:
         return isinstance(rhs, _Undefined)
 
     def __hash__(self):
-        return hash('Undefined')
+        return hash(self.__class__.__name__)
 
 
 # To be similar to False and True.

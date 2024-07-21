@@ -25,6 +25,7 @@ from boolean_circuit_tool.core.circuit.operators import (
     xor_,
 )
 
+
 __all__ = [
     'Gate',
     'GateType',

@@ -4,6 +4,7 @@ import typing as tp
 
 from boolean_circuit_tool.core.circuit.exceptions import CircuitValidationError
 
+
 __all__ = ['check_elements_exist', 'check_label_doesnt_exist']
 
 if tp.TYPE_CHECKING:
