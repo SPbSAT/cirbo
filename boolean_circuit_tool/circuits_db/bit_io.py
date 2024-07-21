@@ -24,6 +24,9 @@ class BitWriter:
         for i in range(bit_length):
             self.write(bool((number >> i) & 1))
 
+    def write_byte(self, byte_: int) -> None:
+        self.write_number(byte_, 8)
+
 
 class BitReader:
     def __init__(self, data: bytes):
@@ -51,3 +54,6 @@ class BitReader:
             bit = self.read()
             number |= bit << i
         return number
+
+    def read_byte(self) -> int:
+        return self.read_number(8)

@@ -3,12 +3,21 @@ from boolean_circuit_tool.exceptions import BooleanCircuitToolError
 __all__ = [
     'BinaryDictIOError',
     'BitIOError',
+    'CircuitsDatabaseError',
 ]
 
 
-class BinaryDictIOError(BooleanCircuitToolError):
+class CircuitsDatabaseError(BooleanCircuitToolError):
     pass
 
 
-class BitIOError(BooleanCircuitToolError):
+class BinaryDictIOError(CircuitsDatabaseError):
+    pass
+
+
+class BitIOError(CircuitsDatabaseError):
+    pass
+
+
+class CircuitCodingError(CircuitsDatabaseError):
     pass
