@@ -1,9 +1,8 @@
 import typing as tp
 from pathlib import Path
-from typing import Union, Tuple, List
 
-from boolean_circuit_tool.core.circuits_db.binary_dict_io import BinaryDictReader, BinaryDictWriter
-from boolean_circuit_tool.core.circuits_db.circuits_coding import encode_circuit, decode_circuit
+from boolean_circuit_tool.circuits_db.binary_dict_io import BinaryDictReader, BinaryDictWriter
+from boolean_circuit_tool.circuits_db.circuits_coding import encode_circuit, decode_circuit
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.exceptions import BooleanCircuitToolError
 

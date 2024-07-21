@@ -1,8 +1,8 @@
 import typing as tp
 
 from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import NOT, OR, NOR, AND, NAND, XOR, NXOR, IFF, INPUT, Label, Gate, GateType
-from boolean_circuit_tool.core.circuits_db.bit_io import BitReader, BitWriter
+from boolean_circuit_tool.core.circuit.gate import NOT, OR, NOR, AND, NAND, XOR, NXOR, IFF, INPUT, Label, GateType
+from boolean_circuit_tool.circuits_db.bit_io import BitReader, BitWriter
 from boolean_circuit_tool.exceptions import BooleanCircuitToolError
 
 __all__ = ['encode_circuit', 'decode_circuit']

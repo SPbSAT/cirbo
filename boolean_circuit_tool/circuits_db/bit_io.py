@@ -1,9 +1,7 @@
-from boolean_circuit_tool.exceptions import BooleanCircuitToolError
+from boolean_circuit_tool.circuits_db.exceptions import BitIOError
 
 __all__ = ['BitWriter', 'BitReader']
 
-
-# TODO: maybe rename? io refers to file input output. But there are no files
 
 class BitWriter:
     def __init__(self):
@@ -22,22 +20,22 @@ class BitWriter:
 
     def write_number(self, number: int, bit_length: int) -> None:
         if (number >> bit_length) != 0:
-            raise BooleanCircuitToolError(f"Number {number} is too large to be encoded with {bit_length} bits")
+            raise BitIOError(f"Number {number} is too large to be encoded with {bit_length} bits")
         for i in range(bit_length):
             self.write(bool((number >> i) & 1))
 
 
 class BitReader:
     def __init__(self, data: bytes):
-        self._bytearray = bytearray(data)
+        self._bytes = data
         self._byte_pos = 0
         self._bit_pos = 0
 
     def read(self) -> bool:
-        if self._byte_pos >= len(self._bytearray):
-            raise BooleanCircuitToolError("No more bits to read")
+        if self._byte_pos >= len(self._bytes):
+            raise BitIOError("No more bits to read")
 
-        current_byte = self._bytearray[self._byte_pos]
+        current_byte = self._bytes[self._byte_pos]
         bit = (current_byte >> self._bit_pos) & 1
 
         self._bit_pos += 1
