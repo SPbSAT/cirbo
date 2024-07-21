@@ -15,7 +15,6 @@ python = "^3.9"
 click = "^8.1.7"
 more-itertools = "^10.3.0"
 typing-extensions = "^4.12.2"
-pebble = "^5.0.7"
 python-sat="^1.8.dev13"
 
 [tool.poetry.group.dev.dependencies]
