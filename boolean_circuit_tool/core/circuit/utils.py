@@ -1,3 +1,4 @@
+import copy
 import itertools
 import typing as tp
 
@@ -48,17 +49,19 @@ def order_list(
     `ordered_list` must be subset of `old_list`.
 
     """
+    old_list_copy = copy.copy(old_list)
+
     new_list = list()
     for elem in ordered_list:
-        if elem not in old_list:
+        if elem not in old_list_copy:
             raise CircuitElementIsAbsentError()
         new_list.append(elem)
-        old_list.remove(elem)
+        old_list_copy.remove(elem)
 
     if len(new_list) == len(old_list):
         return new_list
 
-    for elem in old_list:
+    for elem in old_list_copy:
         new_list.append(elem)
 
     return new_list

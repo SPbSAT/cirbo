@@ -228,8 +228,7 @@ class Circuit(BooleanFunction):
             raise CircuitElementAlreadyExistsError()
 
         if old_label in self._inputs:
-            self._inputs.remove(old_label)
-            self._inputs.append(new_label)
+            self._inputs[self.index_of_input(old_label)] = new_label
 
         for idx in self.all_indexes_of_output(old_label):
             self._outputs[idx] = new_label
@@ -261,7 +260,7 @@ class Circuit(BooleanFunction):
         return self
 
     def mark_as_output(self, label: Label) -> None:
-        """Mark as output a gate."""
+        """Mark as output a gate and append it to the end of `self._outputs`."""
         check_elements_exist((label,), self)
         self._outputs.append(label)
 
@@ -299,18 +298,31 @@ class Circuit(BooleanFunction):
         """
         :param inversed: a boolean value specifying the sort order.
             If inversed == True, Iterator will start from inputs, otherwise from outputs.
-        :return: Iterator of gates 1..N, sorted in topological order according Kana algorithm.
+        :return: Iterator of gates, which sorted in topological order according Kana algorithm.
 
         """
+
+        if self.elements_number == 0:
+            return
+
+        _predecessors_getter = (
+            (lambda elem: len(elem.operands))
+            if inversed
+            else (lambda elem: len(self.get_element_users(elem.label)))
+        )
+
+        _successors_getter = (
+            (lambda elem: self.get_element_users(elem.label))
+            if inversed
+            else (lambda elem: elem.operands)
+        )
+
         indegree_map: dict[Label, int] = {
-            label: (
-                len(gate.operands) if inversed else len(self.get_element_users(label))
-            )
-            for label, gate in self._elements.items()
+            elem.label: _predecessors_getter(elem) for elem in self._elements.values()
         }
 
         queue: list[Label] = [
-            elem for elem, value in indegree_map.items() if value == 0
+            label for label, value in indegree_map.items() if value == 0
         ]
 
         if not queue:
@@ -318,17 +330,10 @@ class Circuit(BooleanFunction):
 
         while queue:
             current_elem = self.get_element(queue.pop())
-
-            neighbours = (
-                self.get_element_users(current_elem.label)
-                if inversed
-                else current_elem.operands
-            )
-
-            for oper in neighbours:
-                indegree_map[oper] -= 1
-                if indegree_map[oper] == 0:
-                    queue.append(oper)
+            for succ in _successors_getter(current_elem):
+                indegree_map[succ] -= 1
+                if indegree_map[succ] == 0:
+                    queue.append(succ)
             yield current_elem
 
     def evaluate_circuit(

@@ -149,3 +149,31 @@ def test_top_sort():
         '5',
         '3',
     ]
+
+
+def test_top_sort_several_output():
+
+    file_path = get_file_path('test_top_sort_several_output.bench')
+    instance = Circuit().from_bench(file_path)
+
+    assert [elem.label for elem in instance.top_sort()] == [
+        '4',
+        '6',
+        '3',
+        '5',
+        '2',
+        '1',
+    ]
+    assert [elem.label for elem in instance.top_sort(inversed=True)] == [
+        '2',
+        '1',
+        '5',
+        '3',
+        '6',
+        '4',
+    ]
+
+
+def test_top_sort_empty_circuit():
+    instance = Circuit()
+    assert list(instance.top_sort()) == []
