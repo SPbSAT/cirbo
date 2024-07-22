@@ -297,7 +297,8 @@ class Circuit(BooleanFunction):
 
     def top_sort(self, *, inversed: bool = False) -> tp.Iterable[Gate]:
         """
-        :param inversed: a boolean value specifying the sort order. If inversed == True, Iterator will start from inputs, otherwise from outputs.
+        :param inversed: a boolean value specifying the sort order.
+            If inversed == True, Iterator will start from inputs, otherwise from outputs.
         :return: Iterator of gates 1..N, sorted in topological order according Kana algorithm.
 
         """
