@@ -1,4 +1,3 @@
-import inspect
 import typing as tp
 
 import pytest
