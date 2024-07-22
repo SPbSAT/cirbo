@@ -65,6 +65,18 @@ def test_create_circuit():
     with pytest.raises(CircuitValidationError):
         instance.add_gate(Gate('D', OR, ('B', 'V')))
 
+    instance.mark_as_output('C')
+    assert instance.outputs == ['C', 'C']
+    assert instance.output_size == 2
+    assert instance.all_indexes_of_output('C') == [0, 1]
+    assert instance.index_of_output('C') == 0
+
+    assert instance.elements == {
+        'A': Gate('A', INPUT, ()),
+        'B': Gate('B', NOT, ('A',)),
+        'C': Gate('C', AND, ('A', 'B')),
+    }
+
 
 def test_rename_gate():
 

@@ -1,0 +1,7 @@
+INPUT(1)
+3 = NOT(1)
+5 = XOR(1, 2)
+6 = AND(2, 4)
+4 = AND(1, 2)
+INPUT(2)
+OUTPUT(6)

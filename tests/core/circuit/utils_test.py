@@ -51,6 +51,13 @@ def test_order_list():
     assert order_list([], []) == []
     assert order_list(['3', '1'], ['1', '2', '3']) == ['3', '1', '2']
     assert order_list(['3', '2', '1'], ['1', '2', '3']) == ['3', '2', '1']
+    assert order_list(['3', '2', '1'], ['3', '3', '2', '3', '1']) == [
+        '3',
+        '2',
+        '1',
+        '3',
+        '3',
+    ]
 
     with pytest.raises(CircuitElementIsAbsentError):
         order_list(['1', '4'], ['1', '2', '3'])

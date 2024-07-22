@@ -53,12 +53,12 @@ def order_list(
         if elem not in old_list:
             raise CircuitElementIsAbsentError()
         new_list.append(elem)
+        old_list.remove(elem)
 
     if len(new_list) == len(old_list):
         return new_list
 
     for elem in old_list:
-        if elem not in new_list:
-            new_list.append(elem)
+        new_list.append(elem)
 
     return new_list
