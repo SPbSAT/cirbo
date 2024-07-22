@@ -1,4 +1,5 @@
 import copy
+import itertools
 import typing as tp
 from pathlib import Path
 
@@ -6,7 +7,8 @@ from boolean_circuit_tool.circuits_db.binary_dict_io import read_binary_dict, wr
 from boolean_circuit_tool.circuits_db.circuits_coding import encode_circuit, decode_circuit, Basis
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.circuits_db.exceptions import CircuitsDatabaseError
-from boolean_circuit_tool.core.boolean_function import RawTruthTable
+from boolean_circuit_tool.core.boolean_function import RawTruthTable, RawTruthTableModel
+from boolean_circuit_tool.core.logic import DontCare
 
 __all__ = ['CircuitsDatabase']
 
@@ -21,21 +23,7 @@ class CircuitsDatabase:
             return None
         return decode_circuit(encoded_circuit)
 
-    def add_circuit(self, circuit: Circuit, label: tp.Optional[str] = None,
-                    basis: tp.Union[Basis, str] = Basis.XAIG) -> None:
-        basis = Basis(basis)
-        if label is None:
-            truth_table = circuit.get_truth_table()
-            ordered_truth_table, outputs_permutation = _normalize_outputs_order(truth_table)
-            label = _truth_table_to_label(ordered_truth_table)
-            circuit = copy.deepcopy(circuit)
-            _permute_circuit_outputs(circuit, outputs_permutation)
-        encoded_circuit = encode_circuit(circuit, basis)
-        if label in self._dict.keys():
-            raise CircuitsDatabaseError(f"Label: {label} is already in Circuits Database")
-        self._dict[label] = encoded_circuit
-
-    def get_by_truth_table(self, truth_table: RawTruthTable) -> tp.Optional[Circuit]:
+    def get_by_raw_truth_table(self, truth_table: RawTruthTable) -> tp.Optional[Circuit]:
         ordered_truth_table, outputs_permutation = _normalize_outputs_order(truth_table)
         label = _truth_table_to_label(ordered_truth_table)
         circuit = self.get_by_label(label)
@@ -44,9 +32,40 @@ class CircuitsDatabase:
         _permute_circuit_outputs(circuit, _invert_permutation(outputs_permutation))
         return circuit
 
-    def get_dont_cares(self, truth_table) -> Circuit:
-        # TODO: how the table is presented?
-        raise NotImplementedError()
+    def add_circuit(self, circuit: Circuit, label: tp.Optional[str] = None,
+                    basis: tp.Union[Basis, str] = Basis.XAIG) -> None:
+        basis = Basis(basis)
+        if label is None:
+            truth_table = circuit.get_truth_table()
+            ordered_truth_table, outputs_permutation = _normalize_outputs_order(truth_table)
+            label = _truth_table_to_label(ordered_truth_table)
+            circuit = copy.deepcopy(circuit)  # TODO: should I copy circuit to avoid damage of input object?
+            _permute_circuit_outputs(circuit, outputs_permutation)
+        encoded_circuit = encode_circuit(circuit, basis)
+        if label in self._dict.keys():
+            raise CircuitsDatabaseError(f"Label: {label} is already in Circuits Database")
+        self._dict[label] = encoded_circuit
+
+    def get_by_raw_truth_table_model(self, truth_table: RawTruthTableModel) -> tp.Optional[Circuit]:
+        undefined_positions: tp.Dict[int, tp.Tuple[int, int]] = dict()
+        defined_truth_table = [[False if val is DontCare else val for val in table] for table in truth_table]
+        for i, table in enumerate(truth_table):
+            for j, value in enumerate(table):
+                if value is not DontCare:
+                    continue
+                undefined_positions[len(undefined_positions)] = (i, j)
+
+        result: tp.Optional[Circuit] = None
+        for substitution in itertools.product((False, True), repeat=len(undefined_positions)):
+            for i, val in enumerate(substitution):
+                pos = undefined_positions[i]
+                defined_truth_table[pos[0]][pos[1]] = val
+            circuit = self.get_by_raw_truth_table(defined_truth_table)
+            if circuit is None:
+                continue
+            if result is None or circuit.elements_number < result.elements_number:
+                result = circuit
+        return result
 
     def save_to_file(self, file: Path) -> None:
         write_binary_dict(self._dict, file)
