@@ -1,6 +1,7 @@
 import inspect
 import itertools
 import typing as tp
+
 from mypy_extensions import VarArg
 
 from boolean_circuit_tool.core.boolean_function import BooleanFunction, RawTruthTable
@@ -100,7 +101,9 @@ class PythonFunction(BooleanFunction):
         :return: True iff this function is monotonic.
 
         """
-        return all(self.is_monotonic_at(i, inverse=inverse) for i in range(self.output_size))
+        return all(
+            self.is_monotonic_at(i, inverse=inverse) for i in range(self.output_size)
+        )
 
     def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
         """
