@@ -202,4 +202,4 @@ _gate_type_to_int: tp.Dict[GateType, int] = {
     LT: 11,
 }
 
-_int_to_gate_type: tp.Dict[int, GateType] = {val: key for key, val in _gate_type_to_int}
+_int_to_gate_type: tp.Dict[int, GateType] = {val: key for key, val in _gate_type_to_int.items()}

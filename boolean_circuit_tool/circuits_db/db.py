@@ -3,7 +3,7 @@ import typing as tp
 from pathlib import Path
 
 from boolean_circuit_tool.circuits_db.binary_dict_io import read_binary_dict, write_binary_dict
-from boolean_circuit_tool.circuits_db.circuits_coding import encode_circuit, decode_circuit
+from boolean_circuit_tool.circuits_db.circuits_coding import encode_circuit, decode_circuit, Basis
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.circuits_db.exceptions import CircuitsDatabaseError
 from boolean_circuit_tool.core.boolean_function import RawTruthTable
@@ -22,7 +22,8 @@ class CircuitsDatabase:
         return decode_circuit(encoded_circuit)
 
     def add_circuit(self, circuit: Circuit, label: tp.Optional[str] = None,
-                    basis: tp.Literal["aig", "bench"] = "bench") -> None:
+                    basis: tp.Union[Basis, str] = Basis.XAIG) -> None:
+        basis = Basis(basis)
         if label is None:
             truth_table = circuit.get_truth_table()
             ordered_truth_table, outputs_permutation = _normalize_outputs_order(truth_table)
