@@ -1,23 +1,34 @@
+import inspect
 import itertools
 import typing as tp
+from mypy_extensions import VarArg
 
 from boolean_circuit_tool.core.boolean_function import BooleanFunction, RawTruthTable
 from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
-from boolean_circuit_tool.core.utils import canonical_index_to_input, get_bit_value
+from boolean_circuit_tool.core.utils import canonical_index_to_input
+
+
+__all__ = [
+    'PythonFunction',
+    'FunctionType',
+]
+
+
+FunctionType = tp.Callable[..., tp.Sequence[bool]]
 
 
 class PythonFunction(BooleanFunction):
     """Boolean function given as a python function."""
 
-    def __init__(self, input_size: int, output_size: int, func: tp.Callable):
+    def __init__(self, func: FunctionType):
         """
-        :param input_size: number of inputs.
-        :param output_size: number of outputs.
         :param func: python callable.
 
         """
-        self._input_size = input_size
-        self._output_size = output_size
+        s = inspect.signature(func)
+        self._input_size = len(s.parameters)
+        result = func(*([0] * self.input_size))
+        self._output_size = len(result)
         self._func = func
 
     @property
@@ -42,7 +53,7 @@ class PythonFunction(BooleanFunction):
         :return: value of outputs evaluated for input values `inputs`.
 
         """
-        return list(self._func(*inputs))
+        return self._func(*inputs)
 
     def evaluate_at(self, inputs: tp.Sequence[bool], output_index: int) -> bool:
         """
@@ -72,18 +83,14 @@ class PythonFunction(BooleanFunction):
         :return: True iff output `output_index` is constant.
 
         """
-        first_value = self.evaluate_at(
-            canonical_index_to_input(0, self.input_size), output_index
-        )
-        for i in range(1, 2**self.input_size):
-            value = self.evaluate_at(
-                canonical_index_to_input(i, self.input_size), output_index
-            )
+        first_value = self.evaluate_at([False] * self.input_size, output_index)
+        for x in itertools.product((False, True), repeat=self.input_size):
+            value = self.evaluate_at(x, output_index)
             if value != first_value:
                 return False
         return True
 
-    def is_monotonic(self, inverse: bool) -> bool:
+    def is_monotonic(self, *, inverse: bool) -> bool:
         """
         Check if all outputs are monotonic (output value doesn't decrease when
         inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
@@ -93,9 +100,9 @@ class PythonFunction(BooleanFunction):
         :return: True iff this function is monotonic.
 
         """
-        return all(self.is_monotonic_at(i, inverse) for i in range(self.output_size))
+        return all(self.is_monotonic_at(i, inverse=inverse) for i in range(self.output_size))
 
-    def is_monotonic_at(self, output_index: int, inverse: bool) -> bool:
+    def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
         """
         Check if output `output_index` is monotonic (output value doesn't
         decrease when inputs are enumerated in a classic order: 0000, 0001,
@@ -108,10 +115,8 @@ class PythonFunction(BooleanFunction):
 
         """
         ones_started = False
-        for i in range(2**self.input_size):
-            value = self.evaluate_at(
-                canonical_index_to_input(i, self.input_size), output_index
-            )
+        for x in itertools.product((False, True), repeat=self.input_size):
+            value = self.evaluate_at(x, output_index)
             if not ones_started and (value != inverse):
                 ones_started = True
             elif ones_started and (value == inverse):
@@ -190,11 +195,9 @@ class PythonFunction(BooleanFunction):
         `input_index`.
 
         """
-        for idx in range(2**self.input_size):
-            output_value = self.evaluate_at(
-                canonical_index_to_input(idx, self.input_size), output_index
-            )
-            input_value = get_bit_value(idx, input_index)
+        for x in itertools.product((False, True), repeat=self.input_size):
+            output_value = self.evaluate_at(x, output_index)
+            input_value = x[input_index]
             if output_value != input_value:
                 return False
         return True
@@ -213,11 +216,9 @@ class PythonFunction(BooleanFunction):
         `input_index`.
 
         """
-        for idx in range(2**self.input_size):
-            output_value = self.evaluate_at(
-                canonical_index_to_input(idx, self.input_size), output_index
-            )
-            input_value = not get_bit_value(idx, input_index)
+        for x in itertools.product((False, True), repeat=self.input_size):
+            output_value = self.evaluate_at(x, output_index)
+            input_value = not x[input_index]
             if output_value != input_value:
                 return False
         return True
@@ -292,7 +293,11 @@ class PythonFunction(BooleanFunction):
 
         """
         table = [
-            self.evaluate(canonical_index_to_input(i, self.input_size))
-            for i in range(2**self.input_size)
+            self.evaluate(x)
+            for x in itertools.product((False, True), repeat=self.input_size)
         ]
         return [list(i) for i in zip(*table)]
+
+
+def f(x1: bool, x2: bool, x3: bool) -> list[bool]:
+    return sorted([x1, x2, x3])
