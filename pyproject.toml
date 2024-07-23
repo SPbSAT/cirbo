@@ -99,6 +99,7 @@ ignore_missing_imports = true
 module = "pysat.*"
 
 [[tool.mypy.overrides]]
+ignore_missing_imports = true
 module = "pebble.*"
 
 [tool.pytest.ini_options]
