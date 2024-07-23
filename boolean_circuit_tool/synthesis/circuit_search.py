@@ -4,6 +4,8 @@ import itertools
 import logging
 import typing as tp
 
+from pebble import concurrent
+
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
@@ -41,6 +43,7 @@ from boolean_circuit_tool.synthesis.exception import (
     GateIsAbsentError,
     NoSolutionError,
     StringTruthTableError,
+    SolverTimeOutError,
 )
 
 logger = logging.getLogger(__name__)
@@ -189,6 +192,12 @@ def get_tt_by_str(str_truth_table: tp.List[str]) -> RawTruthTableModel:
     return [[_char_to_trivalue(char) for char in row] for row in str_truth_table]
 
 
+def _cnf_from_bench_wrapper(s):
+    s.solve()
+    model = s.get_model()
+    return model
+
+
 class CircuitFinderSat:
     """
     A class for finding Boolean circuits using SAT-solvers.
@@ -285,24 +294,21 @@ class CircuitFinderSat:
 
         logger.debug(f"Running {solver_name.value}")
         s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
-        # if time_limit:
-        #
-        #     @concurrent.process(timeout=time_limit)
-        #     def cnf_from_bench_wrapper():
-        #         s.solve()
-        #         return s.get_model()
-        #
-        #     try:
-        #         future = cnf_from_bench_wrapper()
-        #         model = future.result()
-        #     except TimeoutError:
-        #         logger.debug("Solver timed out and is being stopped.")
-        #         s.delete()
-        #         raise SolverTimeOutError()
-        # else:
-        s.solve()
-        model = s.get_model()
-        s.delete()
+        if time_limit:
+            @concurrent.process(timeout=time_limit)
+            def wrapper():
+                return _cnf_from_bench_wrapper(s)
+            try:
+                future = wrapper()
+                model = future.result()
+            except TimeoutError:
+                logger.debug("Solver timed out and is being stopped.")
+                s.delete()
+                raise SolverTimeOutError()
+        else:
+            s.solve()
+            model = s.get_model()
+            s.delete()
 
         if model is None:
             raise NoSolutionError()
