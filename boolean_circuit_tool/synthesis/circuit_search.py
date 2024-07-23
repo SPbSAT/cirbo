@@ -6,6 +6,8 @@ import typing as tp
 import multiprocessing as mp
 from pebble import concurrent
 
+from concurrent.futures import TimeoutError
+
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
@@ -42,7 +44,8 @@ from boolean_circuit_tool.synthesis.exception import (
     ForbidWireOrderError,
     GateIsAbsentError,
     NoSolutionError,
-    StringTruthTableError, SolverTimeOutError,
+    StringTruthTableError,
+    SolverTimeOutError,
 )
 
 logger = logging.getLogger(__name__)
