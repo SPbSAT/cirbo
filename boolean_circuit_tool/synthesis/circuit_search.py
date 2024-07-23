@@ -2,11 +2,12 @@ import datetime
 import enum
 import itertools
 import logging
-import typing as tp
 import multiprocessing as mp
-from pebble import concurrent
+import typing as tp
 
 from concurrent.futures import TimeoutError
+
+from pebble import concurrent
 
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
@@ -44,8 +45,8 @@ from boolean_circuit_tool.synthesis.exception import (
     ForbidWireOrderError,
     GateIsAbsentError,
     NoSolutionError,
-    StringTruthTableError,
     SolverTimeOutError,
+    StringTruthTableError,
 )
 
 logger = logging.getLogger(__name__)

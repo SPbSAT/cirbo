@@ -153,7 +153,9 @@ def test_time_limit(inputs: int, outputs: int, size: int, tl: int):
     ]
 
     truth_tables_bool = get_tt_by_str(tt)
-    finder = CircuitFinderSat(TruthTableModel(truth_tables_bool), size, basis=Basis.XAIG)
+    finder = CircuitFinderSat(
+        TruthTableModel(truth_tables_bool), size, basis=Basis.XAIG
+    )
     with pytest.raises(SolverTimeOutError):
         finder.find_circuit(time_limit=tl)
 
