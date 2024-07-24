@@ -114,8 +114,8 @@ class PythonFunction(BooleanFunction):
         old_value = self.evaluate(next(input_iter))
         for x in input_iter:
             value = self.evaluate(x)
-            one_less = any(a < b for a,b in zip(value, old_value))
-            one_greater = any(a > b for a,b in zip(value, old_value))
+            one_less = any(a < b for a, b in zip(value, old_value))
+            one_greater = any(a > b for a, b in zip(value, old_value))
             if one_greater if inverse else one_less:
                 return False
         return True
