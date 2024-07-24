@@ -71,7 +71,12 @@ class PythonFunction(BooleanFunction):
         :return: True iff this function is constant.
 
         """
-        return all(self.is_constant_at(out) for out in range(self.output_size))
+        first_value = self.evaluate([False] * self.input_size)
+        for x in itertools.product((False, True), repeat=self.input_size):
+            value = self.evaluate(x)
+            if value != first_value:
+                return False
+        return True
 
     def is_constant_at(self, output_index: int) -> bool:
         """
