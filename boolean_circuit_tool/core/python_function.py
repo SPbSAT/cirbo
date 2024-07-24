@@ -21,7 +21,8 @@ class PythonFunction(BooleanFunction):
     def __init__(self, func: FunctionType, *, output_size: tp.Optional[int] = None):
         """
 
-        :param func: python callable. This callable will be invoked once on false input set if output_size is None.
+        :param func: python callable. This callable will be invoked once
+        on false input set if output_size is None.
         :param output_size: optional size of func output.
 
         """
@@ -113,9 +114,9 @@ class PythonFunction(BooleanFunction):
         old_value = self.evaluate(next(input_iter))
         for x in input_iter:
             value = self.evaluate(x)
-            if not inverse and value < old_value:
-                return False
-            elif inverse and value > old_value:
+            one_less = any(a < b for a,b in zip(value, old_value))
+            one_greater = any(a > b for a,b in zip(value, old_value))
+            if one_greater if inverse else one_less:
                 return False
         return True
 
