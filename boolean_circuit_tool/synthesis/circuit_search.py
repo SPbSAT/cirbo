@@ -1,3 +1,4 @@
+import abc
 import datetime
 import enum
 import itertools
@@ -189,7 +190,92 @@ def get_tt_by_str(str_truth_table: tp.List[str]) -> RawTruthTableModel:
     return [[_char_to_trivalue(char) for char in row] for row in str_truth_table]
 
 
-class CircuitFinderSat:
+class CircuitFinderModel(metaclass=abc.ABCMeta):
+    """
+    An abstract base class for finding circuits.
+
+    This class defines the interface and common behavior for different types
+    of circuit finders. It includes methods for finding circuits, fixing gates,
+    and forbidding wires between gates. Subclasses must implement specific
+    behavior by overriding the `_find_circuit`, `_fix_gate`, and `_forbid_wire`
+    methods.
+
+    Attributes:
+    ----------
+    need_check_db : bool
+        A flag indicating whether a database check is required.
+
+    """
+
+    need_check_db = True
+
+    def find_circuit(self, *args, **kwargs):
+        """
+        Finds a circuit using the specific logic implemented in subclasses.
+
+        Subclasses should provide their specific
+        implementation in the `_find_circuit` method.
+
+        """
+        # TODO: add database check
+        # if self.need_check_db:
+        #     ...
+
+        return self._find_circuit(*args, **kwargs)
+
+    @abc.abstractmethod
+    def _find_circuit(self, *args, **kwargs):
+        """Abstract method to be implemented by subclasses for specific circuit finding
+        logic."""
+        raise NotImplementedError()
+
+    def fix_gate(
+        self,
+        gate: int,
+        first_predecessor: tp.Optional[int] = None,
+        second_predecessor: tp.Optional[int] = None,
+        gate_type: tp.Optional[GateType] = None,
+    ):
+        """
+        Fix a specific gate in the circuit.
+
+        At least one predecessor should be given.
+        :param gate: The gate to be fixed.
+        :param first_predecessor: The first predecessor of the gate.
+        :param second_predecessor: The second predecessor of the gate.
+        :param gate_type: The gate type to be fixed.
+
+        """
+        self.need_check_db = False
+        self._fix_gate(gate, first_predecessor, second_predecessor, gate_type)
+
+    @abc.abstractmethod
+    def _fix_gate(
+        self,
+        gate: int,
+        first_predecessor: tp.Optional[int] = None,
+        second_predecessor: tp.Optional[int] = None,
+        gate_type: tp.Optional[GateType] = None,
+    ):
+        raise NotImplementedError()
+
+    def forbid_wire(self, from_gate: int, to_gate: int):
+        """
+        Forbids the wire of a circuit from one gate to another.
+
+        :param from_gate: The gate to be forbidden.
+        :param to_gate: The gate to be forbidden.
+
+        """
+        self.need_check_db = False
+        self._forbid_wire(from_gate, to_gate)
+
+    @abc.abstractmethod
+    def _forbid_wire(self, from_gate: int, to_gate: int):
+        raise NotImplementedError()
+
+
+class CircuitFinderSat(CircuitFinderModel):
     """
     A class for finding Boolean circuits using SAT-solvers.
 
@@ -240,7 +326,6 @@ class CircuitFinderSat:
         self.need_normalized = need_normalized
         self._vpool = IDPool()
         self._cnf = CNF()
-        self._init_default_cnf_formula()
 
     def get_cnf(self) -> tp.List[tp.List[int]]:
         """
@@ -253,10 +338,10 @@ class CircuitFinderSat:
         """
         return self._cnf.clauses
 
-    def find_circuit(
+    def _find_circuit(
         self,
         solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL193,
-        time_limit: tp.Union[int, None] = None,
+        time_limit: tp.Optional[int] = None,
     ) -> Circuit:
         """
         Solves the Conjunctive Normal Form (CNF) using a specified SAT-solver and
@@ -273,6 +358,7 @@ class CircuitFinderSat:
         :raises SolverTimeOutError: If the solver exceeds the specified time limit.
 
         """
+        self._init_default_cnf_formula()
         solver_name = PySATSolverNames(solver_name)
         logger.debug(
             f"Solving a CNF formula, "
@@ -309,12 +395,12 @@ class CircuitFinderSat:
 
         return self._get_circuit_by_model(model)
 
-    def fix_gate(
+    def _fix_gate(
         self,
         gate: int,
-        first_predecessor: tp.Union[int, None] = None,
-        second_predecessor: tp.Union[int, None] = None,
-        gate_type: tp.Union[GateType, None] = None,
+        first_predecessor: tp.Optional[int] = None,
+        second_predecessor: tp.Optional[int] = None,
+        gate_type: tp.Optional[GateType] = None,
     ):
         """
         Fix a specific gate in the circuit.
@@ -356,14 +442,18 @@ class CircuitFinderSat:
                 if a != first_predecessor and b != first_predecessor:
                     self._cnf.append([-self._predecessors_variable(gate, a, b)])
 
-        # TODO: maintain gate_type
-        # if gate_type:
-        #     for a, b in itertools.product(range(2), repeat=2):
-        #         bit = int(gate_type[2 * a + b])
-        #         assert bit in range(2)
-        #         self._cnf.append([(1 if bit else -1) * self._gate_type_variable(gate, a, b)])
+        if gate_type:
+            for a, b in itertools.product(range(2), repeat=2):
+                bit = gate_type.operator(bool(a), bool(b))
+                assert bit in [True, False]
+                self._cnf.append(
+                    [
+                        (1 if bit else -1)
+                        * self._gate_type_variable(gate, int(a), int(b))
+                    ]
+                )
 
-    def forbid_wire(self, from_gate: int, to_gate: int):
+    def _forbid_wire(self, from_gate: int, to_gate: int):
         """
         Forbids the wire of a circuit from one gate to another.
 
@@ -611,5 +701,4 @@ class CircuitFinderSat:
             for gate in self._gates:
                 if self._output_gate_variable(h, gate) in model:
                     initial_circuit.mark_as_output('s' + str(gate))
-
         return initial_circuit

@@ -46,7 +46,7 @@ def check_is_suitable_truth_table(tt: RawTruthTable, pattern_tt: RawTruthTableMo
 
 
 def check_correctness(
-    circuit: tp.Union[Circuit, bool],
+    circuit: Circuit,
     truth_table: RawTruthTableModel,
     hasdontcares: bool = False,
 ):
