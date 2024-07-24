@@ -18,16 +18,21 @@ FunctionType = tp.Callable[..., tp.Sequence[bool]]
 class PythonFunction(BooleanFunction):
     """Boolean function given as a python function."""
 
-    def __init__(self, func: FunctionType):
+    def __init__(self, func: FunctionType, *, output_size: tp.Optional[int] = None):
         """
-        :param func: python callable.
+
+        :param func: python callable. This callable will be invoked once on false input set if output_size is None.
+        :param output_size: optional size of func output.
 
         """
         s = inspect.signature(func)
-        self._input_size = len(s.parameters)
-        result = func(*([0] * self.input_size))
-        self._output_size = len(result)
         self._func = func
+        self._input_size = len(s.parameters)
+        if output_size is None:
+            result = func(*([0] * self.input_size))
+            self._output_size = len(result)
+        else:
+            self._output_size = output_size
 
     @property
     def input_size(self) -> int:
@@ -86,8 +91,9 @@ class PythonFunction(BooleanFunction):
         :return: True iff output `output_index` is constant.
 
         """
-        first_value = self.evaluate_at([False] * self.input_size, output_index)
-        for x in itertools.product((False, True), repeat=self.input_size):
+        input_iter = itertools.product((False, True), repeat=self.input_size)
+        first_value = self.evaluate_at(next(input_iter), output_index)
+        for x in input_iter:
             value = self.evaluate_at(x, output_index)
             if value != first_value:
                 return False
@@ -103,9 +109,15 @@ class PythonFunction(BooleanFunction):
         :return: True iff this function is monotonic.
 
         """
-        return all(
-            self.is_monotonic_at(i, inverse=inverse) for i in range(self.output_size)
-        )
+        input_iter = itertools.product((False, True), repeat=self.input_size)
+        old_value = self.evaluate(next(input_iter))
+        for x in input_iter:
+            value = self.evaluate(x)
+            if not inverse and value < old_value:
+                return False
+            elif inverse and value > old_value:
+                return False
+        return True
 
     def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
         """
@@ -302,7 +314,3 @@ class PythonFunction(BooleanFunction):
             for x in itertools.product((False, True), repeat=self.input_size)
         ]
         return [list(i) for i in zip(*table)]
-
-
-def f(x1: bool, x2: bool, x3: bool) -> list[bool]:
-    return sorted([x1, x2, x3])
