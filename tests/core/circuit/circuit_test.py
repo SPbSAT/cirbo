@@ -65,6 +65,20 @@ def test_create_circuit():
     with pytest.raises(CircuitValidationError):
         instance.add_gate(Gate('D', OR, ('B', 'V')))
 
+    instance.mark_as_output('A')
+    instance.mark_as_output('C')
+    instance.mark_as_output('A')
+    assert instance.outputs == ['C', 'A', 'C', 'A']
+    assert instance.output_size == 4
+    assert instance.all_indexes_of_output('C') == [0, 2]
+    assert instance.index_of_output('A') == 1
+
+    assert instance.elements == {
+        'A': Gate('A', INPUT, ()),
+        'B': Gate('B', NOT, ('A',)),
+        'C': Gate('C', AND, ('A', 'B')),
+    }
+
 
 def test_rename_gate():
 
@@ -98,6 +112,18 @@ def test_rename_gate():
 
     with pytest.raises(CircuitElementIsAbsentError):
         instance.rename_element('D', 'E')
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('E', INPUT))
+    instance.add_gate(Gate('F', INPUT))
+    instance.mark_as_output('F')
+    instance.mark_as_output('A')
+    instance.mark_as_output('E')
+
+    instance.rename_element('A', 'V')
+    assert instance.inputs == ['V', 'E', 'F']
+    assert instance.outputs == ['F', 'V', 'E']
 
 
 @pytest.mark.parametrize(
