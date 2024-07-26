@@ -77,8 +77,9 @@ class PythonFunction(BooleanFunction):
         :return: True iff this function is constant.
 
         """
-        first_value = self.evaluate([False] * self.input_size)
-        for x in itertools.product((False, True), repeat=self.input_size):
+        input_iter = itertools.product((False, True), repeat=self.input_size)
+        first_value = self.evaluate(next(input_iter))
+        for x in input_iter:
             value = self.evaluate(x)
             if value != first_value:
                 return False
@@ -114,9 +115,9 @@ class PythonFunction(BooleanFunction):
         old_value = self.evaluate(next(input_iter))
         for x in input_iter:
             value = self.evaluate(x)
-            one_less = any(a < b for a, b in zip(value, old_value))
-            one_greater = any(a > b for a, b in zip(value, old_value))
-            if one_greater if inverse else one_less:
+            if not inverse and any(a < b for a, b in zip(value, old_value)):
+                return False
+            elif inverse and any(a > b for a, b in zip(value, old_value)):
                 return False
         return True
 
