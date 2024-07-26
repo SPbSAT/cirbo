@@ -440,6 +440,17 @@ files = [
 ]
 
 [[package]]
+name = "pebble"
+version = "5.0.7"
+description = "Threading and multiprocessing eye-candy."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "Pebble-5.0.7-py3-none-any.whl", hash = "sha256:f1742f2a62e8544e722c7b387211fb1a06038ca8cda322e5d55c84c793fd8d7d"},
+    {file = "Pebble-5.0.7.tar.gz", hash = "sha256:2784c147766f06388cea784084b14bec93fdbaa793830f1983155aa330a2a6e4"},
+]
+
+[[package]]
 name = "platformdirs"
 version = "4.2.2"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
@@ -823,4 +834,4 @@ trailrunner = ">=1.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "3a27e3253a72acc8983dda8849421f45ee6450012a5362caceb9451dd18ad3b4"
+content-hash = "169882166a43594fbb8085d229fa633e7857ce0fb641cb93dd90986a9e47495a"
