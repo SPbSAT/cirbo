@@ -1,13 +1,11 @@
 import typing as tp
-from typing import List, Tuple
-
 import pytest
-from boolean_circuit_tool.cnf import CnfRaw, Tseytin
 
+from boolean_circuit_tool.cnf import CnfRaw, Tseytin
 from boolean_circuit_tool.core.circuit import AND, Circuit, Gate, INPUT, NOT, OR, XOR
 
 
-def generate_circuit1() -> tuple[Circuit, CnfRaw]:
+def generate_circuit1() -> tp.Tuple[Circuit, CnfRaw]:
     circuit = Circuit()
     circuit.add_gate(Gate('A', INPUT))
     circuit.add_gate(Gate('B', INPUT))
@@ -27,7 +25,7 @@ def generate_circuit1() -> tuple[Circuit, CnfRaw]:
     return circuit, [[1, -3], [2, -3], [3, -1, -2], [3]]
 
 
-def generate_circuit2() -> tuple[Circuit, CnfRaw]:
+def generate_circuit2() -> tp.Tuple[Circuit, CnfRaw]:
     circuit = Circuit()
     circuit.add_gate(Gate('A', INPUT))
     circuit.add_gate(Gate('B', INPUT))

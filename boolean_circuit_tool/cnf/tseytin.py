@@ -35,7 +35,7 @@ class Tseytin:
     def __init__(self, circuit: Circuit):
         self._circuit = circuit
         self._next_number = 1
-        self._saved_lits = {}
+        self._saved_lits: dict[str, int] = {}
         for input_label in self._circuit.inputs:
             self._generate_and_save_new_lit(input_label)
 
@@ -53,7 +53,8 @@ class Tseytin:
         """
         Makes Tseytin for outputs needed to be true.
 
-        :param outputs: optional output indices which must be true. If it is None, indices are [0, 1,..., output_size-1].
+        :param outputs: optional output indices which must be true.
+        If it is None, indices are [0, 1,..., output_size-1].
 
         """
         if outputs is None:
@@ -67,7 +68,7 @@ class Tseytin:
     def _process_gate(self, label: str, cnf: CnfRaw) -> int:
         gate = self._circuit.get_element(label)
         operands = gate.operands
-        lits = [self._process_gate(l, cnf) for l in operands]
+        lits = [self._process_gate(lit, cnf) for lit in operands]
         gate_type = gate.gate_type
         top_lit = self._get_lit(label)
         if gate_type == INPUT:
