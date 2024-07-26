@@ -3,7 +3,12 @@ import datetime
 import enum
 import itertools
 import logging
+import multiprocessing as mp
 import typing as tp
+
+from concurrent.futures import TimeoutError
+
+from pebble import concurrent
 
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
@@ -41,6 +46,7 @@ from boolean_circuit_tool.synthesis.exception import (
     ForbidWireOrderError,
     GateIsAbsentError,
     NoSolutionError,
+    SolverTimeOutError,
     StringTruthTableError,
 )
 
@@ -371,24 +377,24 @@ class CircuitFinderSat(CircuitFinderModel):
 
         logger.debug(f"Running {solver_name.value}")
         s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
-        # if time_limit:
-        #
-        #     @concurrent.process(timeout=time_limit)
-        #     def cnf_from_bench_wrapper():
-        #         s.solve()
-        #         return s.get_model()
-        #
-        #     try:
-        #         future = cnf_from_bench_wrapper()
-        #         model = future.result()
-        #     except TimeoutError:
-        #         logger.debug("Solver timed out and is being stopped.")
-        #         s.delete()
-        #         raise SolverTimeOutError()
-        # else:
-        s.solve()
-        model = s.get_model()
-        s.delete()
+        if time_limit:
+
+            @concurrent.process(timeout=time_limit, context=mp.get_context('fork'))
+            def cnf_from_bench_wrapper():
+                s.solve()
+                return s.get_model()
+
+            try:
+                future = cnf_from_bench_wrapper()
+                model = future.result()
+            except TimeoutError as te:
+                logger.debug("Solver timed out and is being stopped.")
+                s.delete()
+                raise SolverTimeOutError() from te
+        else:
+            s.solve()
+            model = s.get_model()
+            s.delete()
 
         if model is None:
             raise NoSolutionError()

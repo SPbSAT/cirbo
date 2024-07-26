@@ -14,7 +14,7 @@ from boolean_circuit_tool.synthesis.circuit_search import (
     get_tt_by_str,
     Operation,
 )
-from boolean_circuit_tool.synthesis.exception import NoSolutionError
+from boolean_circuit_tool.synthesis.exception import NoSolutionError, SolverTimeOutError
 
 
 def check_exact_circuit_size(size, truth_tables, basis, hasdontcares=False):
@@ -143,19 +143,21 @@ def test_simple_operations():
     check_exact_circuit_size(6, tt, Basis.FULL)
 
 
-# @pytest.mark.parametrize("inputs, outputs, size, tl", [(5, 3, 11, 1)])
-# def test_time_limit(inputs: int, outputs: int, size: int, tl: int):
-#     tt = [
-#         ''.join(
-#             str((sum(x) >> i) & 1) for x in itertools.product(range(2), repeat=inputs)
-#         )
-#         for i in range(outputs)
-#     ]
-#
-#     truth_tables_bool = get_tt_by_str(tt)
-#     finder = CircuitFinderSat(TruthTableModel(truth_tables_bool), size, basis=Basis.XAIG)
-#     with pytest.raises(SolverTimeOutError):
-#         finder.find_circuit(time_limit=tl)
+@pytest.mark.parametrize("inputs, outputs, size, tl", [(5, 3, 11, 1)])
+def test_time_limit(inputs: int, outputs: int, size: int, tl: int):
+    tt = [
+        ''.join(
+            str((sum(x) >> i) & 1) for x in itertools.product(range(2), repeat=inputs)
+        )
+        for i in range(outputs)
+    ]
+
+    truth_tables_bool = get_tt_by_str(tt)
+    finder = CircuitFinderSat(
+        TruthTableModel(truth_tables_bool), size, basis=Basis.XAIG
+    )
+    with pytest.raises(SolverTimeOutError):
+        finder.find_circuit(time_limit=tl)
 
 
 def test_simple_dont_care():
