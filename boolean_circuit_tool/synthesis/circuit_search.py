@@ -301,10 +301,10 @@ class CircuitFinderSat:
             try:
                 future = cnf_from_bench_wrapper()
                 model = future.result()
-            except TimeoutError:
+            except TimeoutError as te:
                 logger.debug("Solver timed out and is being stopped.")
                 s.delete()
-                raise SolverTimeOutError()
+                raise SolverTimeOutError() from te
         else:
             s.solve()
             model = s.get_model()
