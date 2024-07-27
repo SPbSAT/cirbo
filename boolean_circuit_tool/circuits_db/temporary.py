@@ -1,6 +1,8 @@
 # TODO:
 #  This file is needed for intermediate representations only. It is not gonna be used in the production.
 #  Where to place it? How to format it? Should it be deleted?
+import random
+import time
 
 from boolean_circuit_tool.core.circuit import Circuit, Gate, Label, AND, OR, NOT, INPUT, IFF
 from boolean_circuit_tool.circuits_db.db import CircuitsDatabase
@@ -10,11 +12,10 @@ import typing as tp
 
 __all__ = [
     'read_circuit_from_aig_string',
-
 ]
 
 
-def read_circuit_from_aig_string(string: str) -> Circuit:
+def read_circuit_from_aig_string(string: str) -> tp.Optional[Circuit]:
     circuit = Circuit()
 
     tokens = string.split()
@@ -29,6 +30,9 @@ def read_circuit_from_aig_string(string: str) -> Circuit:
 
     outputs_count = int(tokens[1])
     output_codes = list(map(int, tokens[2:2 + outputs_count]))
+    if len(set(output_codes)) != len(output_codes):
+        # TODO: handle same outputs correctly. They are skipped for now
+        return None
     output_labels = list(map(lambda x: _generate_label(int(x)), tokens[2 + outputs_count:2 + 2 * outputs_count]))
 
     i = 2 + 2 * outputs_count
@@ -60,25 +64,17 @@ def read_circuit_from_aig_string(string: str) -> Circuit:
     for gate in order:
         circuit.add_gate(gate)
 
-    # TODO: improve same outputs handling. Do not create output copies
-    used_output_labels: tp.Dict[Label, int] = dict()
     for label in output_labels:
-        if label in used_output_labels:
-            entry_count = used_output_labels[label]
-            copy_label = f"{label}_copy_{entry_count}"
-            original_gate = gates[label]
-            circuit.emplace_gate(copy_label, original_gate.gate_type, original_gate.operands)
-            circuit.mark_as_output(copy_label)
-            used_output_labels[label] = entry_count + 1
-        else:
-            circuit.mark_as_output(label)
-            used_output_labels[label] = 1
+        assert label not in circuit.outputs, \
+            f"\nCircuit: \n\t{circuit}\nString:\n\t{string}\nCodes: {output_codes}"
+        circuit.mark_as_output(label)
 
     tt = circuit.get_truth_table()
     assert len(tt) == len(output_codes)
-    for table, code in zip(tt, output_codes):
+    for i, (table, code) in enumerate(zip(tt, output_codes)):
         table_num = int(''.join(map(lambda x: str(int(x)), reversed(table))), base=2)
-        assert table_num == code
+        assert table_num == code, \
+            f"\nCircuit: \n\t{circuit}\nString:\n\t{string}\nCodes: {output_codes}\nTable num: {table_num} ({i})"
 
     return circuit
 
@@ -88,10 +84,13 @@ def txt_db_to_bin_db(txt_file: Path, bin_file: Path) -> None:
     with txt_file.open("r") as in_stream:
         for i, aig_string in enumerate(in_stream.readlines()):
             circuit = read_circuit_from_aig_string(aig_string)
+            if circuit is None:
+                continue
             db.add_circuit(circuit, basis='aig')
             if i % 10000 == 0:
                 print(f"Processed {i} circuits")
-    db.save_to_file(bin_file)
+    with bin_file.open("wb") as stream:
+        db.save(stream)
 
 
 def _generate_label(identifier: int) -> Label:
@@ -108,5 +107,22 @@ def _topology_sort(gate: Gate, used: tp.Set[Gate], gates: tp.Dict[Label, Gate], 
 
 
 if __name__ == "__main__":
-    txt_db_to_bin_db(Path("/home/vsevolod/sat/boolean-circuit-tool/aig_db.txt"),
-                     Path("/home/vsevolod/sat/boolean-circuit-tool/aig_db.bin"))
+    # txt_db_to_bin_db(Path("/home/vsevolod/sat/boolean-circuit-tool/aig_db.txt"),
+    #                  Path("/home/vsevolod/sat/boolean-circuit-tool/aig_db.bin"))
+    timer = time.time()
+    with Path("/home/vsevolod/sat/boolean-circuit-tool/aig_db.bin").open("rb") as stream:
+        db = CircuitsDatabase(stream)
+    duration = time.time() - timer
+    print(f"Loading duration: {duration}")
+
+    for i in range(10000000):
+        if i % 1000 == 0:
+            print(i)
+        inputs = random.randint(2, 3)
+        outputs = random.randint(1, 3)
+        tt = [[random.choice([True, False]) for _ in range(1 << inputs)] for _ in range(outputs)]
+        if len(set(map(tuple, tt))) < len(tt):
+            continue
+        circuit = db.get_by_raw_truth_table(tt)
+        assert circuit is not None
+        assert circuit.get_truth_table() == tt

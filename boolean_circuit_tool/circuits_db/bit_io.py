@@ -36,7 +36,7 @@ class BitReader:
 
     def read(self) -> bool:
         if self._byte_pos >= len(self._bytes):
-            raise BitIOError("No more bits to read")
+            raise BitIOError("No more bytes to read")
 
         current_byte = self._bytes[self._byte_pos]
         bit = (current_byte >> self._bit_pos) & 1

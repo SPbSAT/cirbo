@@ -1,7 +1,6 @@
 import copy
 import itertools
 import typing as tp
-from pathlib import Path
 
 from boolean_circuit_tool.circuits_db.binary_dict_io import read_binary_dict, write_binary_dict
 from boolean_circuit_tool.circuits_db.circuits_coding import encode_circuit, decode_circuit, Basis
@@ -14,8 +13,12 @@ __all__ = ['CircuitsDatabase']
 
 
 class CircuitsDatabase:
-    def __init__(self, db_file: tp.Optional[Path] = None):
-        self._dict = read_binary_dict(db_file) if db_file is not None else dict()
+    def __init__(self, db_stream: tp.Optional[tp.BinaryIO] = None):
+        self._dict: tp.Dict[str, bytes]
+        if db_stream is None:
+            self._dict = dict()
+        else:
+            self._dict = read_binary_dict(db_stream)
 
     def get_by_label(self, label: str) -> tp.Optional[Circuit]:
         encoded_circuit = self._dict.get(label)
@@ -67,8 +70,8 @@ class CircuitsDatabase:
                 result = circuit
         return result
 
-    def save_to_file(self, file: Path) -> None:
-        write_binary_dict(self._dict, file)
+    def save(self, stream: tp.BinaryIO) -> None:
+        write_binary_dict(self._dict, stream)
 
 
 def _normalize_outputs_order(truth_table: RawTruthTable) \

@@ -46,7 +46,7 @@ def decode_circuit(bytes_: bytes) -> Circuit:
     basis, word_size = _decode_header(bit_reader)
     inputs_count, outputs_count, intermediates_count = _decode_circuit_parameters(bit_reader, word_size)
     circuit = Circuit()
-    _decode_circuit_body(bit_reader, basis, word_size, inputs_count, intermediates_count, circuit)
+    _decode_circuit_body(bit_reader, basis, word_size, inputs_count, outputs_count, intermediates_count, circuit)
     return circuit
 
 
@@ -89,7 +89,7 @@ def _encode_gate(bit_writer: BitWriter,
         bit_writer.write_number(gate_identifiers[operand_label], word_size)
 
 
-def _gen_label(gate_id: int) -> Label:
+def _generate_label(gate_id: int) -> Label:
     return f"gate_{gate_id}"
 
 
@@ -101,7 +101,7 @@ def _decode_gate(bit_reader: BitReader, gate_bit_size: int, word_size: int, gate
         raise CircuitCodingError("Tried to decode undefined gate type")
     operands: tp.List[Label] = []
     gate_id = len(gates)
-    label = _gen_label(gate_id)
+    label = _generate_label(gate_id)
     for _ in range(_get_arity(gate_type)):
         arg_gate_id = bit_reader.read_number(word_size)
         arg_gate = gates.get(arg_gate_id)
@@ -127,18 +127,23 @@ def _encode_circuit_body(bit_writer: BitWriter, basis: Basis, word_size: int, ci
 def _decode_circuit_body(bit_reader: BitReader,
                          basis: Basis,
                          word_size: int,
-                         input_gates: int,
-                         intermediate_gates: int,
+                         inputs_count: int,
+                         outputs_count: int,
+                         intermediates_count: int,
                          circuit: Circuit) -> None:
     gates: tp.Dict[int, Gate] = dict()
     gate_bit_size = _get_gate_bit_size(basis)
-    for i in range(input_gates):
-        gate = Gate(_gen_label(i), INPUT)
+    for i in range(inputs_count):
+        gate = Gate(_generate_label(i), INPUT)
         gates[i] = gate
         circuit.add_gate(gate)
 
-    for _ in range(intermediate_gates):
+    for _ in range(intermediates_count):
         _decode_gate(bit_reader, gate_bit_size, word_size, gates, circuit)
+
+    for _ in range(outputs_count):
+        output_id = bit_reader.read_number(word_size)
+        circuit.mark_as_output(_generate_label(output_id))
 
 
 def _encode_basis(basis: Basis) -> int:
@@ -166,7 +171,7 @@ def _get_word_size(circuit: Circuit) -> int:
     if circuit.elements_number == 0:
         return 1
     else:
-        return (circuit.elements_number - 1).bit_length()
+        return max(len(circuit.inputs), len(circuit.outputs), circuit.elements_number - 1).bit_length()
 
 
 def _enumerate_gates(circuit: Circuit) -> tp.Dict[Label, int]:
