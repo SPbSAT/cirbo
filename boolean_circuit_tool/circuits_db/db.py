@@ -1,11 +1,14 @@
 import copy
 import itertools
 import typing as tp
+import typing_extensions as tp_ext
 
 from boolean_circuit_tool.circuits_db.binary_dict_io import read_binary_dict, write_binary_dict
 from boolean_circuit_tool.circuits_db.circuits_coding import encode_circuit, decode_circuit, Basis
 from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.circuits_db.exceptions import CircuitsDatabaseError
+from boolean_circuit_tool.circuits_db.exceptions import (CircuitsDatabaseError,
+                                                         CircuitDatabaseOpenError,
+                                                         CircuitDatabaseCloseError)
 from boolean_circuit_tool.core.boolean_function import RawTruthTable, RawTruthTableModel
 from boolean_circuit_tool.core.logic import DontCare
 
@@ -14,11 +17,30 @@ __all__ = ['CircuitsDatabase']
 
 class CircuitsDatabase:
     def __init__(self, db_stream: tp.Optional[tp.BinaryIO] = None):
+        self._db_stream = db_stream
+        self._dict = None
+
+    def open(self) -> None:
+        if self._dict is not None:
+            raise CircuitDatabaseOpenError("Try to open already opened database")
         self._dict: tp.Dict[str, bytes]
-        if db_stream is None:
+        if self._db_stream is None:
             self._dict = dict()
         else:
-            self._dict = read_binary_dict(db_stream)
+            self._db_stream.seek(0)
+            self._dict = read_binary_dict(self._db_stream)
+
+    def close(self) -> None:
+        if self._dict is None:
+            raise CircuitDatabaseCloseError("Try to close already closed database")
+        self._dict = None
+
+    def __enter__(self) -> tp_ext.Self:
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
 
     def get_by_label(self, label: str) -> tp.Optional[Circuit]:
         encoded_circuit = self._dict.get(label)

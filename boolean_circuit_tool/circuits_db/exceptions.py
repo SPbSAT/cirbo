@@ -4,10 +4,20 @@ __all__ = [
     'BinaryDictIOError',
     'BitIOError',
     'CircuitsDatabaseError',
+    'CircuitDatabaseOpenError',
+    'CircuitDatabaseCloseError'
 ]
 
 
 class CircuitsDatabaseError(BooleanCircuitToolError):
+    pass
+
+
+class CircuitDatabaseOpenError(CircuitsDatabaseError):
+    pass
+
+
+class CircuitDatabaseCloseError(CircuitsDatabaseError):
     pass
 
 
