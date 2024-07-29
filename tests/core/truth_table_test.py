@@ -173,12 +173,29 @@ def test_evaluate(input_size: int, output_size: int):
         assert values[i] == truth_table.evaluate(input_values)
 
 
+def test_is_constant_simple():
+    tt = TruthTable(['0000', '1101'])
+    assert tt.is_constant_at(0)
+    assert not tt.is_constant_at(1)
+    assert not tt.is_constant()
+
+
 @pytest.mark.parametrize("input_size", [3, 4, 5, 6, 7])
 def test_is_out_constant(input_size: int):
     constant_out = [False] * (2**input_size)
     truth_table = TruthTable([constant_out])
     assert truth_table.is_constant_at(0)
     assert truth_table.is_constant()
+
+
+def test_is_monotonic_simple():
+    tt = TruthTable(['1110', '0001'])
+    assert not tt.is_monotonic_at(0, inverse=False)
+    assert tt.is_monotonic_at(1, inverse=False)
+    assert not tt.is_monotonic(inverse=False)
+    assert tt.is_monotonic_at(0, inverse=True)
+    assert not tt.is_monotonic_at(1, inverse=True)
+    assert not tt.is_monotonic(inverse=True)
 
 
 @pytest.mark.parametrize("input_size", [3, 4, 5, 6, 7])
@@ -240,6 +257,35 @@ def test_get_out_is_input_negation():
     truth_table = TruthTable([out])
     assert truth_table.is_output_equal_to_input(0, 1)
     assert not truth_table.is_output_equal_to_input_negation(0, 1)
+
+
+def test_is_output_equal_to_input():
+    tt1 = TruthTable(['0101'])
+    assert tt1.is_output_equal_to_input(0, 0)
+    tt2 = TruthTable(['1010'])
+    assert not tt2.is_output_equal_to_input(0, 0)
+
+
+def test_is_output_equal_to_input_negation():
+    tt1 = TruthTable(['1010'])
+    assert tt1.is_output_equal_to_input_negation(0, 0)
+    tt2 = TruthTable(['0010'])
+    assert not tt2.is_output_equal_to_input_negation(0, 0)
+
+
+def test_is_symmetric():
+    tt1 = TruthTable(['00000000', '00000000'])
+    assert tt1.is_symmetric()
+    assert tt1.is_symmetric_at(0)
+    assert tt1.is_symmetric_at(1)
+    tt2 = TruthTable(['0110', '1001'])
+    assert tt2.is_symmetric()
+    assert tt2.is_symmetric_at(0)
+    assert tt2.is_symmetric_at(1)
+    tt3 = TruthTable(['0100', '1001'])
+    assert not tt3.is_symmetric()
+    assert not tt3.is_symmetric_at(0)
+    assert tt3.is_symmetric_at(1)
 
 
 def test_is_out_symmetric():
