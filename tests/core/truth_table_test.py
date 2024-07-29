@@ -117,12 +117,18 @@ def test_parse_trival(x, expected):
             [[False, True, True, True], [False, False, True, False]],
             [[False, False], [True, False], [True, True], [True, False]],
         ),
+        (
+            ['00000001'],
+            [[False, False, False, False, False, False, False, True]],
+            [[False], [False], [False], [False], [False], [False], [False], [True]],
+        ),
     ],
 )
 def test_truth_table_initialization(arg_tt, expected_tt, expected_transposed_tt):
     tt = TruthTable(arg_tt)
     assert tt.get_truth_table() == expected_tt
     assert tt._table_t == expected_transposed_tt
+    assert TruthTable(['00000001'])
 
 
 @pytest.mark.parametrize(

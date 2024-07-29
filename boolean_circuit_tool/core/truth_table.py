@@ -156,7 +156,7 @@ class TruthTableModel(BooleanFunctionModel):
 class TruthTable(BooleanFunction):
     """Boolean function given as a truth table."""
 
-    def __init__(self, table: RawTruthTable):
+    def __init__(self, table: TruthTableArg):
         """
         :param table: truth table given as a list of lists of bools. `i`th list
         is a truth table for output number `i`, trimmed to contain only output
