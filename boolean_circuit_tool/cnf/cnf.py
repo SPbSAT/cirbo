@@ -1,12 +1,14 @@
 import typing as tp
 
-from boolean_circuit_tool.cnf.tseytin import Tseytin
-from boolean_circuit_tool.cnf.utils import Clause, CnfRaw
-
 from boolean_circuit_tool.core.circuit import Circuit
 
 
-__all__ = ['Cnf']
+__all__ = ['Cnf', 'Lit', 'Clause', 'CnfRaw']
+
+
+Lit = int
+Clause = list[Lit]
+CnfRaw = list[Clause]
 
 
 class Cnf:
@@ -23,14 +25,16 @@ class Cnf:
             self._cnf = cnf
 
     @staticmethod
-    def from_circuit_tseytin(circuit: Circuit) -> 'Cnf':
+    def from_circuit(circuit: Circuit) -> 'Cnf':
         """
         Converts circuit to CNF by Tseytin transformation and returns CNF.
 
         :param circuit: Circuit what will be converted to cnf.
 
         """
-        return Cnf(Tseytin(circuit).to_cnf())
+        from boolean_circuit_tool.cnf.tseytin import tseytin_transformation
+
+        return tseytin_transformation(circuit)
 
     def add_clause(self, clause: Clause):
         """

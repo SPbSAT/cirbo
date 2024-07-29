@@ -1,12 +1,14 @@
+import collections
 import typing as tp
 
-from boolean_circuit_tool.cnf.utils import CnfRaw
+from boolean_circuit_tool.cnf.cnf import Cnf, CnfRaw, Lit
 
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
     AND,
     Circuit,
+    GateType,
     GEQ,
     GT,
     IFF,
@@ -26,126 +28,144 @@ from boolean_circuit_tool.core.circuit import (
 )
 
 
-__all__ = ['Tseytin']
+__all__ = ['tseytin_transformation']
 
 
-class Tseytin:
-    """Class for converting circuits into CNF by Tseytin transformation."""
+def tseytin_transformation(
+    circuit: Circuit, outputs: tp.Optional[list[int]] = None
+) -> Cnf:
+    next_lit = 0
 
-    def __init__(self, circuit: Circuit):
-        self._circuit = circuit
-        self._next_number = 1
-        self._saved_lits: dict[str, int] = {}
-        for input_label in self._circuit.inputs:
-            self._generate_and_save_new_lit(input_label)
+    def __register_new_gate() -> int:
+        nonlocal next_lit
+        next_lit += 1
+        return next_lit
 
-    def _generate_and_save_new_lit(self, label: str):
-        index = self._next_number
-        self._next_number += 1
-        self._saved_lits[label] = index
+    saved_lits = collections.defaultdict(__register_new_gate)
 
-    def _get_lit(self, label: str) -> int:
-        if label not in self._saved_lits:
-            self._generate_and_save_new_lit(label)
-        return self._saved_lits[label]
+    def get_lit(label: str) -> Lit:
+        return saved_lits[label]
 
-    def to_cnf(self, outputs: tp.Optional[list[int]] = None) -> CnfRaw:
-        """
-        Makes Tseytin for outputs needed to be true.
+    for input_label in circuit.inputs:
+        _ = saved_lits[input_label]
 
-        :param outputs: optional output indices which must be true.
-        If it is None, indices are [0, 1,..., output_size-1].
+    if outputs is None:
+        outputs = list(range(circuit.output_size))
+    cnf: CnfRaw = []
 
-        """
-        if outputs is None:
-            outputs = list(range(self._circuit.output_size))
-        cnf: CnfRaw = []
-        for output_index in outputs:
-            lit = self._process_gate(self._circuit.output_at_index(output_index), cnf)
-            cnf.append([lit])
-        return cnf
+    def _process_input(_: Lit, __: list[Lit]):
+        pass
 
-    def _process_gate(self, label: str, cnf: CnfRaw) -> int:
-        gate = self._circuit.get_element(label)
+    def _process_always_true(top_lit: Lit, _: list[Lit]):
+        cnf.append([top_lit])
+
+    def _process_always_false(top_lit: Lit, _: list[Lit]):
+        _process_always_true(-top_lit, _)
+
+    def _process_not_or_lnot(top_lit: Lit, lits: list[Lit]):
+        cnf.append([lits[0], top_lit])
+        cnf.append([-lits[0], -top_lit])
+
+    def _process_rnot(top_lit: Lit, lits: list[Lit]):
+        cnf.append([lits[1], top_lit])
+        cnf.append([-lits[1], -top_lit])
+
+    def _process_iff_or_liff(top_lit: Lit, lits: list[Lit]):
+        cnf.append([lits[0], -top_lit])
+        cnf.append([-lits[0], top_lit])
+
+    def _process_riff(top_lit: Lit, lits: list[Lit]):
+        cnf.append([lits[1], -top_lit])
+        cnf.append([-lits[1], top_lit])
+
+    def _process_and(top_lit: Lit, lits: list[Lit]):
+        common = [top_lit]
+        for lit in lits:
+            common.append(-lit)
+            cnf.append([lit, -top_lit])
+        cnf.append(common)
+
+    def _process_nand(top_lit: Lit, lits: list[Lit]):
+        return _process_and(-top_lit, lits)
+
+    def _process_or(top_lit: Lit, lits: list[Lit]):
+        common = [-top_lit]
+        for lit in lits:
+            common.append(lit)
+            cnf.append([-lit, top_lit])
+        cnf.append(common)
+
+    def _process_nor(top_lit: Lit, lits: list[Lit]):
+        return _process_or(-top_lit, lits)
+
+    def _process_xor(top_lit: Lit, lits: list[Lit]):
+        a, b, c = lits[0], lits[1], top_lit
+        cnf.append([-a, -b, -c])
+        cnf.append([-a, b, c])
+        cnf.append([a, -b, c])
+        cnf.append([a, b, -c])
+
+    def _process_nxor(top_lit: Lit, lits: list[Lit]):
+        return _process_xor(-top_lit, lits)
+
+    def _process_gt(top_lit: Lit, lits: list[Lit]):
+        a, b, c = lits[0], lits[1], top_lit
+        cnf.append([a, -c])
+        cnf.append([-b, -c])
+        cnf.append([-a, b, c])
+
+    def _process_lt(top_lit: Lit, lits: list[Lit]):
+        a, b, c = lits[0], lits[1], top_lit
+        cnf.append([-a, -c])
+        cnf.append([b, -c])
+        cnf.append([a, -b, c])
+
+    def _process_geq(top_lit: Lit, lits: list[Lit]):
+        a, b, c = lits[0], lits[1], top_lit
+        cnf.append([-a, c])
+        cnf.append([b, c])
+        cnf.append([a, -b, -c])
+
+    def _process_leq(top_lit: Lit, lits: list[Lit]):
+        a, b, c = lits[0], lits[1], top_lit
+        cnf.append([a, c])
+        cnf.append([-b, c])
+        cnf.append([-a, b, -c])
+
+    _operations: dict[GateType, tp.Callable[[Lit, list[Lit]], None]] = {
+        INPUT: _process_input,
+        ALWAYS_TRUE: _process_always_true,
+        ALWAYS_FALSE: _process_always_false,
+        NOT: _process_not_or_lnot,
+        LNOT: _process_not_or_lnot,
+        RNOT: _process_rnot,
+        IFF: _process_iff_or_liff,
+        LIFF: _process_iff_or_liff,
+        RIFF: _process_riff,
+        AND: _process_and,
+        NAND: _process_nand,
+        OR: _process_or,
+        NOR: _process_nor,
+        XOR: _process_xor,
+        NXOR: _process_nxor,
+        GT: _process_gt,
+        LT: _process_lt,
+        GEQ: _process_geq,
+        LEQ: _process_leq,
+    }
+
+    def process_gate(label: str) -> Lit:
+        if label in saved_lits:
+            return saved_lits[label]
+        gate = circuit.get_element(label)
         operands = gate.operands
-        lits = [self._process_gate(lit, cnf) for lit in operands]
+        lits = [process_gate(lit) for lit in operands]
         gate_type = gate.gate_type
-        top_lit = self._get_lit(label)
-        if gate_type == INPUT:
-            pass
-        elif gate_type == ALWAYS_TRUE:
-            cnf.append([top_lit])
-        elif gate_type == ALWAYS_FALSE:
-            cnf.append([-top_lit])
-        elif gate_type == NOT or gate_type == LNOT:
-            cnf.append([lits[0], top_lit])
-            cnf.append([-lits[0], -top_lit])
-        elif gate_type == RNOT:
-            cnf.append([lits[1], top_lit])
-            cnf.append([-lits[1], -top_lit])
-        elif gate_type == IFF or gate_type == LIFF:
-            return lits[0]
-        elif gate_type == RIFF:
-            return lits[1]
-        elif gate_type == AND:
-            common = [top_lit]
-            for lit in lits:
-                common.append(-lit)
-                cnf.append([lit, -top_lit])
-            cnf.append(common)
-        elif gate_type == NAND:
-            common = [-top_lit]
-            for lit in lits:
-                common.append(-lit)
-                cnf.append([lit, top_lit])
-            cnf.append(common)
-        elif gate_type == OR:
-            common = [-top_lit]
-            for lit in lits:
-                common.append(lit)
-                cnf.append([-lit, top_lit])
-            cnf.append(common)
-        elif gate_type == NOR:
-            common = [top_lit]
-            for lit in lits:
-                common.append(lit)
-                cnf.append([-lit, -top_lit])
-            cnf.append(common)
-        else:
-            a, b, c = lits[0], lits[1], top_lit
-            if gate_type == XOR:
-                a, b, c = lits[0], lits[1], top_lit
-                cnf.append([-a, -b, -c])
-                cnf.append([-a, b, c])
-                cnf.append([a, -b, c])
-                cnf.append([a, b, -c])
-            elif gate_type == NXOR:
-                cnf.append([-a, -b, c])
-                cnf.append([-a, b, -c])
-                cnf.append([a, -b, -c])
-                cnf.append([a, b, c])
-            elif gate_type == AND:
-                cnf.append([a, -c])
-                cnf.append([b, -c])
-                cnf.append([-a, -b, c])
-            elif gate_type == OR:
-                cnf.append([-a, c])
-                cnf.append([-b, c])
-                cnf.append([a, b, -c])
-            elif gate_type == GT:
-                cnf.append([a, -c])
-                cnf.append([-b, -c])
-                cnf.append([-a, b, c])
-            elif gate_type == LT:
-                cnf.append([-a, -c])
-                cnf.append([b, -c])
-                cnf.append([a, -b, c])
-            elif gate_type == GEQ:
-                cnf.append([-a, c])
-                cnf.append([b, c])
-                cnf.append([a, -b, -c])
-            elif gate_type == LEQ:
-                cnf.append([a, c])
-                cnf.append([-b, c])
-                cnf.append([-a, b, -c])
+        top_lit = get_lit(label)
+        _operations[gate_type](top_lit, lits)
         return top_lit
+
+    for output_index in outputs:
+        output_lit = process_gate(circuit.output_at_index(output_index))
+        cnf.append([output_lit])
+    return Cnf(cnf)

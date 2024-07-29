@@ -1,6 +1,5 @@
-from boolean_circuit_tool.cnf.cnf import Cnf
-from boolean_circuit_tool.cnf.tseytin import Tseytin
-from boolean_circuit_tool.cnf.utils import Clause, CnfRaw
+from boolean_circuit_tool.cnf.cnf import Clause, Cnf, CnfRaw, Lit
+from boolean_circuit_tool.cnf.tseytin import tseytin_transformation
 
 
-__all__ = ['Clause', 'CnfRaw', 'Cnf', 'Tseytin']
+__all__ = ['Lit', 'Clause', 'CnfRaw', 'Cnf', 'tseytin_transformation']

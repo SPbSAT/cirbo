@@ -1,7 +1,8 @@
 import typing as tp
+
 import pytest
 
-from boolean_circuit_tool.cnf import CnfRaw, Tseytin
+from boolean_circuit_tool.cnf import Cnf, CnfRaw
 from boolean_circuit_tool.core.circuit import AND, Circuit, Gate, INPUT, NOT, OR, XOR
 
 
@@ -55,8 +56,6 @@ def generate_circuit2() -> tp.Tuple[Circuit, CnfRaw]:
 
     circuit.mark_as_output('F')
     return circuit, [
-        [2, 4],
-        [-2, -4],
         [2, 4],
         [-2, -4],
         [-1, 5],
@@ -126,6 +125,5 @@ def generate_circuit3() -> tuple[Circuit, CnfRaw]:
 )
 def test_tseytin(generate_circuit: tp.Callable[[], tp.Tuple[Circuit, CnfRaw]]):
     circuit, expected_cnf = generate_circuit()
-    cnf = Tseytin(circuit).to_cnf()
-    print(cnf)
+    cnf = Cnf.from_circuit(circuit).get_raw()
     assert cnf == expected_cnf
