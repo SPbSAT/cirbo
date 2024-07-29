@@ -2,10 +2,21 @@ import random
 import typing as tp
 
 import pytest
-
 from boolean_circuit_tool.core.boolean_function import RawTruthTable
+
+from boolean_circuit_tool.core.exceptions import (
+    BadBooleanStringError,
+    TruthTableBadShapeError,
+)
 from boolean_circuit_tool.core.logic import DontCare
-from boolean_circuit_tool.core.truth_table import TruthTable, TruthTableModel
+from boolean_circuit_tool.core.truth_table import (
+    _parse_bool,
+    _parse_trival,
+    _str_to_bool,
+    _str_to_trival,
+    TruthTable,
+    TruthTableModel,
+)
 
 
 def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTable:
@@ -13,6 +24,135 @@ def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTa
         [random.choice([True, False]) for _ in range(2**input_size)]
         for _ in range(output_size)
     ]
+
+
+@pytest.mark.parametrize(
+    'x, expected',
+    [
+        ('0', False),
+        ('1', True),
+    ],
+)
+def test_str_to_bool(x, expected):
+    assert _str_to_bool(x) == expected
+
+
+@pytest.mark.parametrize(
+    'x',
+    [
+        ('*',),
+        ('abc',),
+        ('123',),
+        ('',),
+    ],
+)
+def test_str_to_bool_raises(x):
+    with pytest.raises(BadBooleanStringError):
+        _ = _str_to_bool(x)
+
+
+@pytest.mark.parametrize(
+    'x, expected',
+    [
+        ('0', False),
+        ('1', True),
+        ('*', DontCare),
+    ],
+)
+def test_str_to_trival(x, expected):
+    assert _str_to_trival(x) == expected
+
+
+@pytest.mark.parametrize(
+    'x',
+    [
+        ('*',),
+        ('abc',),
+        ('123',),
+        ('',),
+    ],
+)
+def test_str_to_bool_trival(x):
+    with pytest.raises(BadBooleanStringError):
+        _ = _str_to_trival(x)
+
+
+@pytest.mark.parametrize(
+    'x, expected',
+    [
+        (0, False),
+        (1, True),
+        (False, False),
+        (True, True),
+        ('0', False),
+        ('1', True),
+    ],
+)
+def test_parse_bool(x, expected):
+    assert _parse_bool(x) == expected
+
+
+@pytest.mark.parametrize(
+    'x, expected',
+    [
+        (0, False),
+        (1, True),
+        (False, False),
+        (True, True),
+        (DontCare, DontCare),
+        ('0', False),
+        ('1', True),
+        ('*', DontCare),
+    ],
+)
+def test_parse_trival(x, expected):
+    assert _parse_trival(x) == expected
+
+
+@pytest.mark.parametrize(
+    'arg_tt, expected_tt, expected_transposed_tt',
+    [
+        (
+            [[False, True, '1', '1'], '0010'],
+            [[False, True, True, True], [False, False, True, False]],
+            [[False, False], [True, False], [True, True], [True, False]],
+        ),
+    ],
+)
+def test_truth_table_initialization(arg_tt, expected_tt, expected_transposed_tt):
+    tt = TruthTable(arg_tt)
+    assert tt.get_truth_table() == expected_tt
+    assert tt._table_t == expected_transposed_tt
+
+
+@pytest.mark.parametrize(
+    'arg_tt, expected_model_tt, expected_transposed_model_tt',
+    [
+        (
+            [[False, DontCare, '*', '1'], '0*10'],
+            [[False, DontCare, DontCare, True], [False, DontCare, True, False]],
+            [[False, False], [DontCare, DontCare], [DontCare, True], [True, False]],
+        ),
+    ],
+)
+def test_truth_table_model_initialization(
+    arg_tt,
+    expected_model_tt,
+    expected_transposed_model_tt,
+):
+    tt = TruthTableModel(arg_tt)
+    assert tt.get_model_truth_table() == expected_model_tt
+    assert tt._table_t == expected_transposed_model_tt
+
+
+def test_bad_tt_arg_raises():
+    with pytest.raises(TruthTableBadShapeError):
+        _ = TruthTable([[True, True, False], [True, True]])
+
+
+def test_bad_tt_arg_model_raises():
+    with pytest.raises(TruthTableBadShapeError):
+        _ = TruthTableModel([[DontCare, True, False], [True, True]])
 
 
 @pytest.mark.parametrize("input_size, output_size", [(3, 3), (5, 2), (6, 1), (7, 1)])

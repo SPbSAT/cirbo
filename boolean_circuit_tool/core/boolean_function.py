@@ -15,9 +15,9 @@ __all__ = [
 ]
 
 # Type that represents bare truth table object.
-RawTruthTable = tp.MutableSequence[tp.MutableSequence[bool]]
+RawTruthTable = tp.Sequence[tp.MutableSequence[bool]]
 # Raw truth table with don't care outputs.
-RawTruthTableModel = tp.MutableSequence[tp.MutableSequence[TriValue]]
+RawTruthTableModel = tp.Sequence[tp.MutableSequence[TriValue]]
 
 BooleanFunctionT = tp.TypeVar('BooleanFunctionT', covariant=True)
 
