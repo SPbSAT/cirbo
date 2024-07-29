@@ -36,12 +36,12 @@ def tseytin_transformation(
 ) -> Cnf:
     next_lit = 0
 
-    def __register_new_gate() -> int:
+    def __register_new_gate() -> Lit:
         nonlocal next_lit
         next_lit += 1
         return next_lit
 
-    saved_lits = collections.defaultdict(__register_new_gate)
+    saved_lits: dict[str, Lit] = collections.defaultdict(__register_new_gate)
 
     def get_lit(label: str) -> Lit:
         return saved_lits[label]
