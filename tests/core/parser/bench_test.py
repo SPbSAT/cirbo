@@ -177,3 +177,41 @@ def test_top_sort_several_output():
 def test_top_sort_empty_circuit():
     instance = Circuit()
     assert list(instance.top_sort()) == []
+
+
+def bypass_circuit():
+
+    file_path = get_file_path('test_top_sort_several_output.bench')
+    instance = Circuit().from_bench(file_path)
+
+    assert [elem.label for elem in instance.bypass_circuit(type=False, inversed=False)] == [
+        '4',
+        '6',
+        '3',
+        '1',
+        '2',
+    ]
+    assert [elem.label for elem in instance.bypass_circuit(type=False, inversed=True)] == [
+        '2',
+        '6',
+        '4',
+        '5',
+        '1',
+        '3',
+    ]
+    assert [elem.label for elem in instance.bypass_circuit(type=True, inversed=False)] == [
+       '6',
+       '4',
+       '2',
+       '3',
+       '1',
+    ]
+    assert [elem.label for elem in instance.bypass_circuit(type=False, inversed=True)] == [
+        '1',
+        '2',
+        '3',
+        '5',
+        '4',
+        '6',
+    ]
+
