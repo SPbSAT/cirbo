@@ -338,16 +338,16 @@ class Circuit(BooleanFunction):
             yield current_elem
 
     def bypass_circuit(
-        self, 
-        *, 
-        type: bool = False, 
+        self,
+        *,
+        type: bool = False,
         inversed: bool = False,
-        pre_enter: tp.Optional[tp.Callable[[Gate], None]] = None, 
-        post_enter: tp.Optional[tp.Callable[[Gate], None]] = None, 
+        pre_enter: tp.Optional[tp.Callable[[Gate], None]] = None,
+        post_enter: tp.Optional[tp.Callable[[Gate], None]] = None,
         for_unvisited: tp.Optional[tp.Callable[[Gate], None]] = None,
     ) -> tp.Iterable[Gate]:
         """
-        :param type: a boolean value specifying the type bypass the circuit. 
+        :param type: a boolean value specifying the type bypass the circuit.
             If type == False, type bypass will be dfs, otherwise - bfs;
         :param inversed: a boolean value specifying the sort order.
             If inversed == True, Iterator will start from inputs, otherwise from outputs.
@@ -360,7 +360,7 @@ class Circuit(BooleanFunction):
 
         if self.elements_number == 0:
             return
-        
+
         pop_index: int = 0 if type else -1
 
         _next_getter = (
@@ -372,28 +372,31 @@ class Circuit(BooleanFunction):
         if inversed:
             queue: list[Label] = copy.copy(self.inputs)
         else:
-            queue: list[Label] = copy.copy(self.outputs)
+            queue = copy.copy(self.outputs)
 
         dict_of_visits: dict[Label, bool] = {elem: False for elem in self.elements}
 
-        while queue: 
-            
+        while queue:
+
             current_elem = self.get_element(queue.pop(pop_index))
             if dict_of_visits[current_elem.label]:
                 continue
 
-            pre_enter(current_elem)
+            if pre_enter is not None:
+                pre_enter(current_elem)
 
             dict_of_visits[current_elem.label] = True
             queue.extend(_next_getter(current_elem))
             yield current_elem
 
-            post_enter(current_elem)
+            if post_enter is not None:
+                post_enter(current_elem)
 
         for label, visited in dict_of_visits.items():
             if visited:
                 continue
-            for_unvisited(self.get_element(label))
+            if for_unvisited is not None:
+                for_unvisited(self.get_element(label))
 
     def evaluate_circuit(
         self,

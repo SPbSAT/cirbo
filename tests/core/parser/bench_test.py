@@ -184,14 +184,18 @@ def bypass_circuit():
     file_path = get_file_path('test_top_sort_several_output.bench')
     instance = Circuit().from_bench(file_path)
 
-    assert [elem.label for elem in instance.bypass_circuit(type=False, inversed=False)] == [
+    assert [
+        elem.label for elem in instance.bypass_circuit(type=False, inversed=False)
+    ] == [
         '4',
         '6',
         '3',
         '1',
         '2',
     ]
-    assert [elem.label for elem in instance.bypass_circuit(type=False, inversed=True)] == [
+    assert [
+        elem.label for elem in instance.bypass_circuit(type=False, inversed=True)
+    ] == [
         '2',
         '6',
         '4',
@@ -199,14 +203,18 @@ def bypass_circuit():
         '1',
         '3',
     ]
-    assert [elem.label for elem in instance.bypass_circuit(type=True, inversed=False)] == [
-       '6',
-       '4',
-       '2',
-       '3',
-       '1',
+    assert [
+        elem.label for elem in instance.bypass_circuit(type=True, inversed=False)
+    ] == [
+        '6',
+        '4',
+        '2',
+        '3',
+        '1',
     ]
-    assert [elem.label for elem in instance.bypass_circuit(type=False, inversed=True)] == [
+    assert [
+        elem.label for elem in instance.bypass_circuit(type=False, inversed=True)
+    ] == [
         '1',
         '2',
         '3',
@@ -214,4 +222,3 @@ def bypass_circuit():
         '4',
         '6',
     ]
-
