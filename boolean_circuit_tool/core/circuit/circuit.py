@@ -176,6 +176,19 @@ class Circuit(BooleanFunction):
         check_elements_exist(gate.operands, self)
 
         return self._add_gate(gate)
+    
+    def remove_gate(self, gate: Gate) -> tp_ext.Self:
+        """
+        Remove gate from the circuit.
+
+        :param gate: gate to remove.
+        :return: modified circuit.
+
+        """
+        check_elements_exist((gate.label,), self)
+        # check_elements_exist(gate.operands, self)
+
+        return self._remove_gate(gate)
 
     def emplace_gate(
         self,
@@ -345,43 +358,6 @@ class Circuit(BooleanFunction):
         assigment_dict: dict[str, GateState] = self.evaluate_circuit(assigment)
 
         return {output: assigment_dict[output] for output in self._outputs}
-    
-    def evaluate_full_circuit(
-        self,
-        assigment: dict[str, GateState],
-    ) -> dict[str, GateState]:
-        """
-        Evaluate the circuit with the given input values.
-
-        :param assigment: assigment for inputs
-        :return: outputs dictionary with the obtained values
-
-        """
-
-        assigment_dict: dict[str, GateState] = dict(assigment)
-        for input in self._inputs:
-            assigment_dict.setdefault(input, Undefined)
-
-        queue_: list[Label] = list()
-
-        for output in self._outputs:
-            if output not in self._inputs:
-                queue_.append(output)
-
-        while queue_:
-            gate = self.get_element(queue_[-1])
-
-            for operand in gate.operands:
-                if operand not in assigment_dict:
-                    queue_.append(operand)
-
-            if gate.label == queue_[-1]:
-                assigment_dict[gate.label] = gate.operator(
-                    *(assigment_dict[op] for op in gate.operands)
-                )
-                queue_.pop()
-
-        return assigment_dict
 
     def evaluate(self, inputs: list[bool]) -> list[bool]:
         """
@@ -718,6 +694,25 @@ class Circuit(BooleanFunction):
             self._inputs.append(gate.label)
 
         return self
+    
+    def _remove_gate(self, gate: Gate) -> tp_ext.Self:
+        """
+        Remove gate from the ciurcuit without any checkings (!!!)
+
+        :param: gate.
+        :return: circuit without gate.
+
+        """
+        for operand in gate.operands:
+            self._remove_user(operand, gate.label)
+
+        self._elements.pop(gate.label, None)
+        if gate.gate_type == INPUT:
+            self._inputs.remove(gate.label)
+
+        self._outputs = [x for x in self._outputs if x != gate]
+
+        return self
 
     def _emplace_gate(
         self,
@@ -748,6 +743,10 @@ class Circuit(BooleanFunction):
     def _add_user(self, element: Label, user: Label):
         """Adds user for `element`."""
         self._element_to_users[element].append(user)
+
+    def _remove_user(self, element: Label, user: Label):
+        """Adds user for `element`."""
+        self._element_to_users[element].remove(user)
 
     def __str__(self):
         input_str = textwrap.shorten(
