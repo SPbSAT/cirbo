@@ -10,16 +10,25 @@ Python >=3.9 is used to cover all currently
 2. Setup virtual environment by running `poetry install`
 3. Set your env to the oldest supported Python version `poetry env use 3.9`
 4. Enable virtual environment using `poetry shell`
+5. Init and update repository submodules `git submodule update --init --recursive`
 
 ## Updating dependencies
 
+To add or update python dependencies do the following:
+
 1. Use `poetry add <package>` to add new dependency. To add dev-only dependency
-use `poetry add <package> --group dev`.
+use `poetry add <package> --group dev`. To update package version to the latest
+of available execute `poetry update <package>`.
 2. Commit changed `pyproject.toml` and `poetry.lock`.
 
 If conflict occurred during merge request, one should repeat both steps above
 on a fresh `main` version in order to correctly resolve valid versions for
 all dependencies.
+
+To bring new third-party dependency to the repository (e.g. some `C` library
+sources) use `git submodule add <repository> third_party/<repository name>`.
+Read more about submodules in
+[docs](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
 
 ## Codestyle guidelines
 
