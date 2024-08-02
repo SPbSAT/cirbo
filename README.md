@@ -11,24 +11,22 @@ Python >=3.9 is used to cover all currently
 3. Set your env to the oldest supported Python version `poetry env use 3.9`
 4. Enable virtual environment using `poetry shell`
 5. Init and update repository submodules `git submodule update --init --recursive`
+6. Run `poetry build` to locally build extensions.
+7. Run `poetry install` to install built extensions.
 
-## Updating dependencies
+Note: probably one will need to restart an IDE after extensions are built and
+installed to refresh its index and stubs.
 
-To add or update python dependencies do the following:
+## Building extensions
 
-1. Use `poetry add <package>` to add new dependency. To add dev-only dependency
-use `poetry add <package> --group dev`. To update package version to the latest
-of available execute `poetry update <package>`.
-2. Commit changed `pyproject.toml` and `poetry.lock`.
+This package provides bridges to some external `C/C++` libraries written
+using `pybind11`. Those dependencies should be built before can be used
+locally. To build dependencies run `poetry build` and to install them use
+`poetry install`.
 
-If conflict occurred during merge request, one should repeat both steps above
-on a fresh `main` version in order to correctly resolve valid versions for
-all dependencies.
-
-To bring new third-party dependency to the repository (e.g. some `C` library
-sources) use `git submodule add <repository> third_party/<repository name>`.
-Read more about submodules in
-[docs](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
+Note: to build dependencies one should have all building tools available
+in the system. Currently, dependencies require `gcc` or `clang` compiler
+to be available.
 
 ## Codestyle guidelines
 
@@ -67,6 +65,40 @@ To execute tests run `poetry run pytest`.
 Tests are located at the `tests` subdirectory, and should be written for all
 functionalities of the package. Also, directory structure of `tests` should
 repeat structure of main `boolean-circuit-tool` package.
+
+## Updating dependencies
+
+To add or update python dependencies do the following:
+
+1. Use `poetry add <package>` to add new dependency. To add dev-only dependency
+use `poetry add <package> --group dev`. To update package version to the latest
+of available execute `poetry update <package>`.
+2. Commit changed `pyproject.toml` and `poetry.lock`.
+
+If conflict occurred during merge request, one should repeat both steps above
+on a fresh `main` version in order to correctly resolve valid versions for
+all dependencies.
+
+To bring new third-party dependency to the repository (e.g. some `C` library
+sources) use `git submodule add <repository> third_party/<repository name>`.
+Read more about submodules in
+[docs](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
+
+## Writing extensions
+
+`C/C++` extensions are written using `pybind11`. To create new extension one should:
+
+1. Put source files to `extensions/<extension name>/src/`.
+2. Add extension specification to `build.py`, to `ext_modules` variable.
+3. Locally compile and install extensions
+   ```sh
+   poetry build
+   poetry run
+   ```
+4. Add python tests to `tests/<extension name/>` directory.
+
+Note: there is an `dummy_extension` needed solely to demonstrate a minimal
+configuration extension should have.
 
 ## CI flow
 
