@@ -14,16 +14,6 @@ CnfRaw = list[Clause]
 class Cnf:
     """Class for CNF storage."""
 
-    def __init__(self, cnf: tp.Optional[CnfRaw] = None):
-        """
-
-        :param cnf: CNF can be not assigned, it means cnf is empty.
-        """
-        if cnf is None:
-            self._cnf = []
-        else:
-            self._cnf = cnf
-
     @staticmethod
     def from_circuit(circuit: Circuit) -> 'Cnf':
         """
@@ -35,6 +25,16 @@ class Cnf:
         from boolean_circuit_tool.cnf.tseytin import tseytin_transformation
 
         return tseytin_transformation(circuit)
+
+    def __init__(self, cnf: tp.Optional[CnfRaw] = None):
+        """
+
+        :param cnf: CNF can be not assigned, it means cnf is empty.
+        """
+        if cnf is None:
+            self._cnf = []
+        else:
+            self._cnf = cnf
 
     def add_clause(self, clause: Clause):
         """

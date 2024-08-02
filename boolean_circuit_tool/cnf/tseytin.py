@@ -53,86 +53,7 @@ def tseytin_transformation(
         outputs = list(range(circuit.output_size))
     cnf: CnfRaw = []
 
-    def _process_input(_: Lit, __: list[Lit]):
-        pass
-
-    def _process_always_true(top_lit: Lit, _: list[Lit]):
-        cnf.append([top_lit])
-
-    def _process_always_false(top_lit: Lit, _: list[Lit]):
-        _process_always_true(-top_lit, _)
-
-    def _process_not_or_lnot(top_lit: Lit, lits: list[Lit]):
-        cnf.append([lits[0], top_lit])
-        cnf.append([-lits[0], -top_lit])
-
-    def _process_rnot(top_lit: Lit, lits: list[Lit]):
-        cnf.append([lits[1], top_lit])
-        cnf.append([-lits[1], -top_lit])
-
-    def _process_iff_or_liff(top_lit: Lit, lits: list[Lit]):
-        cnf.append([lits[0], -top_lit])
-        cnf.append([-lits[0], top_lit])
-
-    def _process_riff(top_lit: Lit, lits: list[Lit]):
-        cnf.append([lits[1], -top_lit])
-        cnf.append([-lits[1], top_lit])
-
-    def _process_and(top_lit: Lit, lits: list[Lit]):
-        common = [top_lit]
-        for lit in lits:
-            common.append(-lit)
-            cnf.append([lit, -top_lit])
-        cnf.append(common)
-
-    def _process_nand(top_lit: Lit, lits: list[Lit]):
-        return _process_and(-top_lit, lits)
-
-    def _process_or(top_lit: Lit, lits: list[Lit]):
-        common = [-top_lit]
-        for lit in lits:
-            common.append(lit)
-            cnf.append([-lit, top_lit])
-        cnf.append(common)
-
-    def _process_nor(top_lit: Lit, lits: list[Lit]):
-        return _process_or(-top_lit, lits)
-
-    def _process_xor(top_lit: Lit, lits: list[Lit]):
-        a, b, c = lits[0], lits[1], top_lit
-        cnf.append([-a, -b, -c])
-        cnf.append([-a, b, c])
-        cnf.append([a, -b, c])
-        cnf.append([a, b, -c])
-
-    def _process_nxor(top_lit: Lit, lits: list[Lit]):
-        return _process_xor(-top_lit, lits)
-
-    def _process_gt(top_lit: Lit, lits: list[Lit]):
-        a, b, c = lits[0], lits[1], top_lit
-        cnf.append([a, -c])
-        cnf.append([-b, -c])
-        cnf.append([-a, b, c])
-
-    def _process_lt(top_lit: Lit, lits: list[Lit]):
-        a, b, c = lits[0], lits[1], top_lit
-        cnf.append([-a, -c])
-        cnf.append([b, -c])
-        cnf.append([a, -b, c])
-
-    def _process_geq(top_lit: Lit, lits: list[Lit]):
-        a, b, c = lits[0], lits[1], top_lit
-        cnf.append([-a, c])
-        cnf.append([b, c])
-        cnf.append([a, -b, -c])
-
-    def _process_leq(top_lit: Lit, lits: list[Lit]):
-        a, b, c = lits[0], lits[1], top_lit
-        cnf.append([a, c])
-        cnf.append([-b, c])
-        cnf.append([-a, b, -c])
-
-    _operations: dict[GateType, tp.Callable[[Lit, list[Lit]], None]] = {
+    _operations: dict[GateType, tp.Callable[[CnfRaw, Lit, list[Lit]], None]] = {
         INPUT: _process_input,
         ALWAYS_TRUE: _process_always_true,
         ALWAYS_FALSE: _process_always_false,
@@ -162,10 +83,118 @@ def tseytin_transformation(
         lits = [process_gate(lit) for lit in operands]
         gate_type = gate.gate_type
         top_lit = get_lit(label)
-        _operations[gate_type](top_lit, lits)
+        _operations[gate_type](cnf, top_lit, lits)
         return top_lit
 
     for output_index in outputs:
         output_lit = process_gate(circuit.output_at_index(output_index))
         cnf.append([output_lit])
     return Cnf(cnf)
+
+
+def _process_input(_: CnfRaw, __: Lit, ___: list[Lit]):
+    pass
+
+
+def _process_always_true(cnf: CnfRaw, top_lit: Lit, _: list[Lit]):
+    cnf.append([top_lit])
+
+
+def _process_always_false(cnf: CnfRaw, top_lit: Lit, _: list[Lit]):
+    cnf.append([-top_lit])
+
+
+def _process_not_or_lnot(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    cnf.append([lits[0], top_lit])
+    cnf.append([-lits[0], -top_lit])
+
+
+def _process_rnot(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    cnf.append([lits[1], top_lit])
+    cnf.append([-lits[1], -top_lit])
+
+
+def _process_iff_or_liff(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    cnf.append([lits[0], -top_lit])
+    cnf.append([-lits[0], top_lit])
+
+
+def _process_riff(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    cnf.append([lits[1], -top_lit])
+    cnf.append([-lits[1], top_lit])
+
+
+def _process_and(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    common = [top_lit]
+    for lit in lits:
+        common.append(-lit)
+        cnf.append([lit, -top_lit])
+    cnf.append(common)
+
+
+def _process_nand(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    common = [-top_lit]
+    for lit in lits:
+        common.append(-lit)
+        cnf.append([lit, top_lit])
+    cnf.append(common)
+
+
+def _process_or(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    common = [-top_lit]
+    for lit in lits:
+        common.append(lit)
+        cnf.append([-lit, top_lit])
+    cnf.append(common)
+
+
+def _process_nor(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    common = [top_lit]
+    for lit in lits:
+        common.append(lit)
+        cnf.append([-lit, -top_lit])
+    cnf.append(common)
+
+
+def _process_xor(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    a, b, c = lits[0], lits[1], top_lit
+    cnf.append([-a, -b, -c])
+    cnf.append([-a, b, c])
+    cnf.append([a, -b, c])
+    cnf.append([a, b, -c])
+
+
+def _process_nxor(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    a, b, c = lits[0], lits[1], top_lit
+    cnf.append([-a, -b, c])
+    cnf.append([-a, b, -c])
+    cnf.append([a, -b, -c])
+    cnf.append([a, b, c])
+
+
+def _process_gt(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    a, b, c = lits[0], lits[1], top_lit
+    cnf.append([a, -c])
+    cnf.append([-b, -c])
+    cnf.append([-a, b, c])
+
+
+def _process_lt(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    a, b, c = lits[0], lits[1], top_lit
+    cnf.append([-a, -c])
+    cnf.append([b, -c])
+    cnf.append([a, -b, c])
+
+
+def _process_geq(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    a, b, c = lits[0], lits[1], top_lit
+    cnf.append([-a, c])
+    cnf.append([b, c])
+    cnf.append([a, -b, -c])
+
+
+def _process_leq(cnf: CnfRaw, top_lit: Lit, lits: list[Lit]):
+    a, b, c = lits[0], lits[1], top_lit
+    cnf.append([a, c])
+    cnf.append([-b, c])
+    cnf.append([-a, b, -c])
