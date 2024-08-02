@@ -7,12 +7,12 @@ Python >=3.9 is used to cover all currently
 [maintained versions](https://devguide.python.org/versions/).
 
 1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
-2. Setup virtual environment by running `poetry install`
-3. Set your env to the oldest supported Python version `poetry env use 3.9`
-4. Enable virtual environment using `poetry shell`
-5. Init and update repository submodules `git submodule update --init --recursive`
-6. Run `poetry build` to locally build extensions.
-7. Run `poetry install` to install built extensions.
+1. Init and update repository submodules `git submodule update --init --recursive`
+1. Setup virtual environment by running `poetry install`
+1. Set your env to the oldest supported Python version `poetry env use 3.9`
+1. Enable virtual environment using `poetry shell`
+1. Run `poetry build` to locally build extensions.
+1. Run `poetry install` to install built extensions.
 
 Note: probably one will need to restart an IDE after extensions are built and
 installed to refresh its index and stubs.
@@ -95,7 +95,7 @@ Read more about submodules in
    poetry build
    poetry run
    ```
-4. Add python tests to `tests/<extension name/>` directory.
+4. Add python tests to `tests/<extension name>` package.
 
 Note: there is an `dummy_extension` needed solely to demonstrate a minimal
 configuration extension should have.
