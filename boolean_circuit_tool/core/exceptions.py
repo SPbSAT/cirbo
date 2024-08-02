@@ -7,7 +7,8 @@ __all__ = [
     'BooleanFunctionError',
     'BadDefinitionError',
     'DontCareCastError',
-    'BadBooleanStringError',
+    'BadBooleanValue',
+    'BadBooleanValue',
     'TruthTableBadShapeError',
 ]
 
@@ -36,8 +37,8 @@ class DontCareCastError(BooleanModelError):
     pass
 
 
-class BadBooleanStringError(BooleanModelError):
-    """Represents error raised when string doesn't represent boolean or trival."""
+class BadBooleanValue(BooleanModelError):
+    """Represents error raised when value can't be parsed as boolean or trival."""
 
     pass
 

@@ -11,7 +11,7 @@ from boolean_circuit_tool.core.boolean_function import (
 )
 from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
 from boolean_circuit_tool.core.exceptions import (
-    BadBooleanStringError,
+    BadBooleanValue,
     TruthTableBadShapeError,
 )
 from boolean_circuit_tool.core.logic import DontCare, TriValue
@@ -34,7 +34,7 @@ def _str_to_bool(x: str) -> bool:
         return True
     if x == '0':
         return False
-    raise BadBooleanStringError()
+    raise BadBooleanValue()
 
 
 def _str_to_trival(x: str) -> TriValue:
@@ -44,21 +44,29 @@ def _str_to_trival(x: str) -> TriValue:
         return True
     if x == '0':
         return False
-    raise BadBooleanStringError()
+    raise BadBooleanValue()
 
 
-def _parse_bool(x: tp.Union[str, bool]) -> bool:
+def _parse_bool(x: tp.Union[str, bool, tp.Literal[0, 1]]) -> bool:
     if isinstance(x, str):
         return _str_to_bool(x)
-    return bool(x)
+    if x == 1:
+        return True
+    if x == 0:
+        return False
+    raise BadBooleanValue()
 
 
-def _parse_trival(x: tp.Union[str, TriValue]) -> TriValue:
+def _parse_trival(x: tp.Union[str, TriValue, tp.Literal[0, 1]]) -> TriValue:
     if isinstance(x, str):
         return _str_to_trival(x)
     if x == DontCare:
-        return x
-    return bool(x)
+        return DontCare
+    if x == 1:
+        return True
+    if x == 0:
+        return False
+    raise BadBooleanValue()
 
 
 class TruthTableModel(BooleanFunctionModel):
@@ -343,7 +351,9 @@ class TruthTable(BooleanFunction):
 
         """
         for idx, output_value in enumerate(self._table[output_index]):
-            input_value = get_bit_value(idx, input_index)
+            input_value = get_bit_value(
+                idx, bit_idx=input_index, bit_size=self.input_size
+            )
             if output_value != input_value:
                 return False
         return True
@@ -363,7 +373,9 @@ class TruthTable(BooleanFunction):
 
         """
         for idx, output_value in enumerate(self._table[output_index]):
-            input_value = not get_bit_value(idx, input_index)
+            input_value = not get_bit_value(
+                idx, bit_idx=input_index, bit_size=self.input_size
+            )
             if output_value != input_value:
                 return False
         return True

@@ -5,7 +5,7 @@ import pytest
 from boolean_circuit_tool.core.boolean_function import RawTruthTable
 
 from boolean_circuit_tool.core.exceptions import (
-    BadBooleanStringError,
+    BadBooleanValue,
     TruthTableBadShapeError,
 )
 from boolean_circuit_tool.core.logic import DontCare
@@ -40,14 +40,14 @@ def test_str_to_bool(x, expected):
 @pytest.mark.parametrize(
     'x',
     [
-        ('*',),
-        ('abc',),
-        ('123',),
-        ('',),
+        '*',
+        'abc',
+        '123',
+        '',
     ],
 )
 def test_str_to_bool_raises(x):
-    with pytest.raises(BadBooleanStringError):
+    with pytest.raises(BadBooleanValue):
         _ = _str_to_bool(x)
 
 
@@ -66,14 +66,13 @@ def test_str_to_trival(x, expected):
 @pytest.mark.parametrize(
     'x',
     [
-        ('*',),
-        ('abc',),
-        ('123',),
-        ('',),
+        'abc',
+        '123',
+        '',
     ],
 )
 def test_str_to_bool_trival(x):
-    with pytest.raises(BadBooleanStringError):
+    with pytest.raises(BadBooleanValue):
         _ = _str_to_trival(x)
 
 
@@ -128,7 +127,6 @@ def test_truth_table_initialization(arg_tt, expected_tt, expected_transposed_tt)
     tt = TruthTable(arg_tt)
     assert tt.get_truth_table() == expected_tt
     assert tt._table_t == expected_transposed_tt
-    assert TruthTable(['00000001'])
 
 
 @pytest.mark.parametrize(
@@ -151,14 +149,30 @@ def test_truth_table_model_initialization(
     assert tt._table_t == expected_transposed_model_tt
 
 
-def test_bad_tt_arg_raises():
-    with pytest.raises(TruthTableBadShapeError):
-        _ = TruthTable([[True, True, False], [True, True]])
+@pytest.mark.parametrize(
+    'raw_tt, exc',
+    [
+        ([[True, True, False], [True, True]], TruthTableBadShapeError),
+        ([[True, 'A'], [False, False]], BadBooleanValue),
+        ([[True, True], [15, False]], BadBooleanValue),
+    ],
+)
+def test_bad_tt_arg_raises(raw_tt, exc):
+    with pytest.raises(exc):
+        _ = TruthTable(raw_tt)
 
 
-def test_bad_tt_arg_model_raises():
-    with pytest.raises(TruthTableBadShapeError):
-        _ = TruthTableModel([[DontCare, True, False], [True, True]])
+@pytest.mark.parametrize(
+    'raw_tt, exc',
+    [
+        ([[DontCare, True, False], [True, True]], TruthTableBadShapeError),
+        ([[DontCare, 'A'], [DontCare, False]], BadBooleanValue),
+        ([[DontCare, True], [7, False]], BadBooleanValue),
+    ],
+)
+def test_bad_tt_arg_model_raises(raw_tt, exc):
+    with pytest.raises(exc):
+        _ = TruthTableModel(raw_tt)
 
 
 @pytest.mark.parametrize("input_size, output_size", [(3, 3), (5, 2), (6, 1), (7, 1)])
@@ -261,16 +275,16 @@ def test_get_out_is_input_negation():
 
 def test_is_output_equal_to_input():
     tt1 = TruthTable(['0101'])
-    assert tt1.is_output_equal_to_input(0, 0)
+    assert tt1.is_output_equal_to_input(0, 1)
     tt2 = TruthTable(['1010'])
-    assert not tt2.is_output_equal_to_input(0, 0)
+    assert not tt2.is_output_equal_to_input(0, 1)
 
 
 def test_is_output_equal_to_input_negation():
     tt1 = TruthTable(['1010'])
-    assert tt1.is_output_equal_to_input_negation(0, 0)
+    assert tt1.is_output_equal_to_input_negation(0, 1)
     tt2 = TruthTable(['0010'])
-    assert not tt2.is_output_equal_to_input_negation(0, 0)
+    assert not tt2.is_output_equal_to_input_negation(0, 1)
 
 
 def test_is_symmetric():

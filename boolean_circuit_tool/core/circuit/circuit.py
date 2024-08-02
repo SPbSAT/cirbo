@@ -345,7 +345,9 @@ class Circuit(BooleanFunction):
         """
         Evaluate the circuit with the given input values and return full assigment.
 
-        :param assigment: full or partually assigment for inputs.
+        :param assigment: full or partial assigment for inputs.
+        :param outputs: set of outputs which need to be evaluated. Those outputs will
+               be used to initialise depth-first iteration across the circuit.
         :return: outputs dictionary with the obtained values.
 
         `assignment` can be on any element of the circuit.
