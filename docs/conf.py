@@ -8,7 +8,8 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../boolean_circuit_tool'))  # Source code dir relative to this file
+
+sys.path.insert(0, os.path.abspath('../boolean_circuit_tool'))
 
 project = 'boolean-circuit-tool'
 copyright = '2024, todo'
@@ -25,11 +26,12 @@ extensions = [
 ]
 autosummary_generate = True
 
-autoapi_dirs = ['../boolean_circuit_tool',]
+autoapi_dirs = [
+    '../boolean_circuit_tool',
+]
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
 
 
 # -- Options for HTML output -------------------------------------------------
