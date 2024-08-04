@@ -1,5 +1,6 @@
 from boolean_circuit_tool.core.circuit import Circuit, Gate
-from itertools import product
+from itertools import product, zip_longest
+
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
 from boolean_circuit_tool.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
 
@@ -547,7 +548,7 @@ def add_sum(circuit, input_labels):
     n = len(input_labels)
     assert n > 0
     if n == 1:
-        return input_labels[0]
+        return [input_labels[0]]
     if n == 2:
         return add_sum2(circuit, input_labels)
     if n == 3:
@@ -597,6 +598,34 @@ def add_weighted_sum(circuit, weights, input_labels):
             w, k = w // 2, k + 1
 
     return add_sum_pow2_weights(circuit, weighted_bits)
+
+# divides the sum into blocks of size 2^n-1 
+# will be replaced with calls of 4.5n sums generator
+def add_sum_pow2_m1(circuit, input_labels):
+    n = len(input_labels)
+    assert n > 0
+
+    if n == 1:
+        return [input_labels[0]]
+
+    out = []
+    it = 0
+    while (len(input_labels) > 2):
+        for pw in range(5, 1, -1):
+            i = 2 ** pw - 1 
+            while len(input_labels) >= i:
+                out.append(add_sum(circuit, input_labels[0: i]))
+                input_labels = input_labels[i:]
+                input_labels.append(out[it][0])
+                it += 1 
+    if(len(input_labels) == 2):
+        out.append(add_sum2(circuit, input_labels[0: 2]))
+        input_labels = input_labels[2:]
+        input_labels.append(out[it][0])
+
+    out = [list(filter(None, x)) for x in zip_longest(*out)]
+    out[0] = [out[0][len(out[0])-1]] 
+    return out
 
 
 def circ_size(ckt):
