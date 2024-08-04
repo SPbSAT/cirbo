@@ -1,4 +1,5 @@
 import copy
+import io
 import itertools
 import typing as tp
 import typing_extensions as tp_ext
@@ -11,6 +12,7 @@ from boolean_circuit_tool.circuits_db.exceptions import (CircuitsDatabaseError,
                                                          CircuitDatabaseOpenError,
                                                          CircuitDatabaseCloseError)
 from boolean_circuit_tool.core.boolean_function import RawTruthTable, RawTruthTableModel
+from boolean_circuit_tool.core.circuit.gate import NOT, INPUT, IFF
 from boolean_circuit_tool.core.logic import DontCare
 
 __all__ = ['CircuitsDatabase']
@@ -32,7 +34,7 @@ class CircuitsDatabase:
         elif isinstance(self._db_source, Path):
             with self._db_source.open('rb') as stream:
                 self._dict = read_binary_dict(stream)
-        elif isinstance(self._db_source, tp.BinaryIO):
+        elif isinstance(self._db_source, io.BytesIO):
             self._db_source.seek(0)
             self._dict = read_binary_dict(self._db_source)
         else:
@@ -89,6 +91,7 @@ class CircuitsDatabase:
                 undefined_positions[len(undefined_positions)] = (i, j)
 
         result: tp.Optional[Circuit] = None
+        result_size: tp.Optional[int] = None
         for substitution in itertools.product((False, True), repeat=len(undefined_positions)):
             for i, val in enumerate(substitution):
                 pos = undefined_positions[i]
@@ -96,7 +99,9 @@ class CircuitsDatabase:
             circuit = self.get_by_raw_truth_table(defined_truth_table)
             if circuit is None:
                 continue
-            if result is None or circuit.elements_number < result.elements_number:
+            circuit_size = _get_circuit_size(circuit)
+            if result_size is None or circuit_size < result_size:
+                result_size = circuit_size
                 result = circuit
         return result
 
@@ -136,3 +141,9 @@ def _truth_table_to_label(truth_table: RawTruthTable) -> str:
     str_truth_tables = [''.join(str(int(i)) for i in table)
                         for table in truth_table]
     return '_'.join(str_truth_tables)
+
+
+def _get_circuit_size(circuit: Circuit) -> int:
+    gate_types = map(lambda x: x.gate_type, circuit.elements.values())
+    nontrivial_gates = list(filter(lambda x: x not in [NOT, IFF, INPUT], gate_types))
+    return len(nontrivial_gates)
