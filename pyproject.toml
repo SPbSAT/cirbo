@@ -27,6 +27,7 @@ more-itertools = "^10.3.0"
 typing-extensions = "^4.12.2"
 python-sat="^1.8.dev13"
 pebble = "^5.0.7"
+pybind11 = "^2.13.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
