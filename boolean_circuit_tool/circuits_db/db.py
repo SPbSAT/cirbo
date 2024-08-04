@@ -2,6 +2,7 @@ import copy
 import itertools
 import typing as tp
 import typing_extensions as tp_ext
+from pathlib import Path
 
 from boolean_circuit_tool.circuits_db.binary_dict_io import read_binary_dict, write_binary_dict
 from boolean_circuit_tool.circuits_db.circuits_coding import encode_circuit, decode_circuit, Basis
@@ -16,19 +17,26 @@ __all__ = ['CircuitsDatabase']
 
 
 class CircuitsDatabase:
-    def __init__(self, db_stream: tp.Optional[tp.BinaryIO] = None):
-        self._db_stream = db_stream
+    def __init__(self, db_source: tp.Optional[tp.Union[tp.BinaryIO, Path, str]] = None):
+        self._db_source = db_source
         self._dict = None
 
     def open(self) -> None:
         if self._dict is not None:
             raise CircuitDatabaseOpenError("Try to open already opened database")
         self._dict: tp.Dict[str, bytes]
-        if self._db_stream is None:
+        if isinstance(self._db_source, str):
+            self._db_source = Path(self._db_source)
+        if self._db_source is None:
             self._dict = dict()
+        elif isinstance(self._db_source, Path):
+            with self._db_source.open('rb') as stream:
+                self._dict = read_binary_dict(stream)
+        elif isinstance(self._db_source, tp.BinaryIO):
+            self._db_source.seek(0)
+            self._dict = read_binary_dict(self._db_source)
         else:
-            self._db_stream.seek(0)
-            self._dict = read_binary_dict(self._db_stream)
+            raise CircuitDatabaseOpenError("Unsupported db source type")
 
     def close(self) -> None:
         if self._dict is None:
