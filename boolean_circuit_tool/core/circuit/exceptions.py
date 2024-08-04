@@ -37,6 +37,12 @@ class CircuitElementAlreadyExistsError(CircuitError):
     pass
 
 
+class CircuitIsCyclicalError(CircuitError):
+    """Error the circuit has a cycle."""
+
+    pass
+
+
 class GateTypeNoOperatorError(CircuitError):
     """Represents error in operator getter, when operator is None."""
 

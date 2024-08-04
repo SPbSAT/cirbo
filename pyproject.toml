@@ -15,6 +15,8 @@ python = "^3.9"
 click = "^8.1.7"
 more-itertools = "^10.3.0"
 typing-extensions = "^4.12.2"
+python-sat="^1.8.dev13"
+pebble = "^5.0.7"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
@@ -88,10 +90,16 @@ pre-summary-newline = true
 
 [tool.mypy]
 python_version = "3.9"
-warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ''
 ignore_missing_imports = true
+module = ["pysat.*", "pebble.*"]
+
+
+[tool.pytest.ini_options]
+# Suppress warnings for invalid escape sequences in pysat package
+filterwarnings = [
+    "ignore:invalid escape sequence:DeprecationWarning"
+]
