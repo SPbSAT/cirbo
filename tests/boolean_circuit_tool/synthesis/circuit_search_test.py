@@ -32,7 +32,7 @@ def check_exact_circuit_size(size, truth_tables, basis, hasdontcares=False):
 
 def check_is_suitable_truth_table(tt: RawTruthTable, pattern_tt: RawTruthTableModel):
     def _is_suitable_one_output_truth_table(
-        one_out_tt: tp.MutableSequence[bool],
+        one_out_tt: tp.Sequence[bool],
         one_out_pattern_tt: tp.MutableSequence[TriValue],
     ):
         return all(

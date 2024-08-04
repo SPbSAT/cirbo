@@ -45,10 +45,15 @@ def canonical_index_to_input(index: int, input_size: int) -> tp.Sequence[bool]:
     return [bool(int(c)) for c in s]
 
 
-def get_bit_value(value: int, bit_idx: int) -> bool:
+def get_bit_value(value: int, bit_idx: int, bit_size: int) -> bool:
     """
     :param value: some integer value.
-    :param bit_idx: big-endian index of bit.
+    :param bit_idx: little-endian index of bit. Since leftmost element of input is
+           considered to set 0'th input value this method will return `bit_idx`th
+           bit of `value` in little-endian order which corresponds to `bit_idx`th
+           input value.
+    :param bit_size: number of bits in the given integer.
     :return: `bit_idx`th index of number `value`.
     """
-    return bool((value & (1 << bit_idx)) >> bit_idx)
+    _shift = bit_size - bit_idx - 1
+    return bool((value & (1 << _shift)) >> _shift)

@@ -5,8 +5,18 @@ description = "Tools and utilities for boolean circuit manipulations."
 # TODO: list all authors.
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
+license = "LICENCE"
 # Temporary guard against occasional publishing.
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    # Temporary guard against occasional publishing.
     "Private :: Do not Upload",
 ]
 
@@ -28,8 +38,21 @@ pytest = "^8.2.2"
 usort = "^1.0.8.post1"
 docformatter = "^1.7.5"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7.4.7"
+sphinx-autoapi = "^3.2.1"
+
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = true
+
 [build-system]
-requires = ["poetry-core"]
+requires = [
+    "poetry-core>=1.0.0",
+    "setuptools>=45",
+    "wheel",
+    "pybind11>=2.13",
+]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]

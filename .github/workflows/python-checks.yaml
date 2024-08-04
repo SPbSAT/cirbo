@@ -29,6 +29,9 @@ jobs:
         poetry-version: ["1.8.3"]
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+#   checks should not take more than 5 minutes. If it is the
+#   case probably something heavy trespassed to unit tests.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -41,13 +44,14 @@ jobs:
           version: 1.8.3
           virtualenvs-create: true
           virtualenvs-in-project: true
+      - run: poetry build --no-interaction
       - run: poetry install --no-interaction
       - name: mypy
         if: always()
         run: poetry run mypy -p boolean_circuit_tool
       - name: flake8
         if: always()
-        run: poetry run flake8
+        run: poetry run flake8 boolean_circuit_tool tests tools docs
       - name: pytest
         if: always()
         run: poetry run pytest
