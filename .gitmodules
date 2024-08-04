@@ -1,3 +1,6 @@
 [submodule "third_party/mockturtle"]
 	path = third_party/mockturtle
 	url = https://github.com/lsils/mockturtle.git
+[submodule "third_party/abc"]
+	path = third_party/abc
+	url = https://github.com/berkeley-abc/abc.git
