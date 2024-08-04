@@ -59,27 +59,3 @@ def add_square_pow2_m1(circuit, input_labels):
         else:
             d[i] = add_sum_pow2_m1(circuit, inp)
     return [d[i][0][0] for i in range(2*n)]
-
-def add_square(circuit, input_labels_a):
-    for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
-    n = len(input_labels_a)
-
-    if n < 10:
-        return add_mul(circuit, input_labels_a, input_labels_a)[:2*n]
-
-    mid = n // 2
-    b = input_labels_a[mid:]
-    a = input_labels_a[:mid]
-    aa = add_square(circuit, a)
-    bb = add_square(circuit, b)
-
-    if n < 16:
-        ab = add_mul(circuit, a, b)
-    else:
-        ab = add_mul_karatsuba(circuit, a, b)
-
-    res = add_sum_two_numbers_with_shift(circuit, mid + 1, aa, ab)
-    final_res = add_sum_two_numbers_with_shift(circuit, 2*mid, res, bb)
-
-    return final_res[:2*n]
