@@ -1,9 +1,25 @@
 import pytest
-from boolean_circuit_tool.core.circuit.gate import (
-    NOT, AND, OR, NOR, NAND, XOR, NXOR, IFF, GEQ, GT, LEQ, LT, INPUT, Gate
+from boolean_circuit_tool.circuits_db.circuits_encoding import (
+    decode_circuit,
+    encode_circuit,
 )
 from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.circuits_db.circuits_encoding import encode_circuit, decode_circuit
+from boolean_circuit_tool.core.circuit.gate import (
+    AND,
+    Gate,
+    GEQ,
+    GT,
+    IFF,
+    INPUT,
+    LEQ,
+    LT,
+    NAND,
+    NOR,
+    NOT,
+    NXOR,
+    OR,
+    XOR,
+)
 
 
 def create_test_circuit(gates):
@@ -19,21 +35,35 @@ def create_test_circuit(gates):
     "gates",
     [
         [],
-
         # Simple circuits
         [("A", INPUT, ()), ("B", NOT, ("A",)), ("C", AND, ("A", "B"))],
         [("A", INPUT, ()), ("B", NOT, ("A",)), ("C", OR, ("A", "B"))],
-
         # Complex circuit with multiple gate types (XAIG basis)
-        [("A", INPUT, ()), ("B", INPUT, ()), ("C", AND, ("A", "B")), ("D", OR, ("A", "B")),
-         ("E", NOR, ("A", "B")), ("F", NAND, ("A", "B")), ("G", XOR, ("A", "B")),
-         ("H", NXOR, ("A", "B")), ("I", IFF, ("A",)), ("J", GEQ, ("A", "B")),
-         ("K", GT, ("A", "B")), ("L", LEQ, ("A", "B")), ("M", LT, ("A", "B")), ("N", NOT, ("A"))],
-
+        [
+            ("A", INPUT, ()),
+            ("B", INPUT, ()),
+            ("C", AND, ("A", "B")),
+            ("D", OR, ("A", "B")),
+            ("E", NOR, ("A", "B")),
+            ("F", NAND, ("A", "B")),
+            ("G", XOR, ("A", "B")),
+            ("H", NXOR, ("A", "B")),
+            ("I", IFF, ("A",)),
+            ("J", GEQ, ("A", "B")),
+            ("K", GT, ("A", "B")),
+            ("L", LEQ, ("A", "B")),
+            ("M", LT, ("A", "B")),
+            ("N", NOT, ("A")),
+        ],
         # Circuit with only AND and NOT gates (AIG basis)
-        [("A", INPUT, ()), ("B", NOT, ("A",)), ("C", AND, ("A", "B")),
-         ("D", NOT, ("C",)), ("E", AND, ("B", "D"))],
-    ]
+        [
+            ("A", INPUT, ()),
+            ("B", NOT, ("A",)),
+            ("C", AND, ("A", "B")),
+            ("D", NOT, ("C",)),
+            ("E", AND, ("B", "D")),
+        ],
+    ],
 )
 def test_encode_decode_circuit(gates):
     circuit = create_test_circuit(gates)
@@ -55,13 +85,30 @@ def test_encode_decode_circuit(gates):
         ([("A", INPUT, ()), ("B", AND, ("A", "A"))], 2),
         ([("A", INPUT, ()), ("B", AND, ("A", "A")), ("C", AND, ("A", "B"))], 2),
         ([("A", INPUT, ()), ("B", AND, ("A", "A")), ("C", OR, ("A", "B"))], 2),
-        ([("A", INPUT, ()), ("B", AND, ("A", "A")), ("C", XOR, ("A", "B")), ("D", LT, ("C", "B"))], 2),
-        ([("A", INPUT, ()), ("B", AND, ("A", "A")), ("C", XOR, ("A", "B")), ("D", LT, ("C", "B")),
-          ("E", LT, ("C", "D"))], 3),
-    ]
+        (
+            [
+                ("A", INPUT, ()),
+                ("B", AND, ("A", "A")),
+                ("C", XOR, ("A", "B")),
+                ("D", LT, ("C", "B")),
+            ],
+            2,
+        ),
+        (
+            [
+                ("A", INPUT, ()),
+                ("B", AND, ("A", "A")),
+                ("C", XOR, ("A", "B")),
+                ("D", LT, ("C", "B")),
+                ("E", LT, ("C", "D")),
+            ],
+            3,
+        ),
+    ],
 )
 def test_word_size_is_optimal(gates, expected_word_size):
     from boolean_circuit_tool.circuits_db.circuits_encoding import _get_word_size
+
     circuit = create_test_circuit(gates)
     encoded = encode_circuit(circuit)
     decoded = decode_circuit(encoded)

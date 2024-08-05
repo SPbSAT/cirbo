@@ -1,5 +1,5 @@
 import pytest
-from boolean_circuit_tool.circuits_db.bit_io import BitWriter, BitReader
+from boolean_circuit_tool.circuits_db.bit_io import BitReader, BitWriter
 from boolean_circuit_tool.circuits_db.exceptions import BitIOError
 
 
@@ -10,7 +10,7 @@ from boolean_circuit_tool.circuits_db.exceptions import BitIOError
         ([True, True, True, True, True, True, True, True], b'\xff'),
         ([False, False, False, False, False, False, False, False], b'\x00'),
         ([True, False], b'\x01'),
-    ]
+    ],
 )
 def test_bit_writer_write(bits, expected_bytes):
     writer = BitWriter()
@@ -28,7 +28,7 @@ def test_bit_writer_write(bits, expected_bytes):
         (255, 8, b'\xff'),
         (0b10101010, 8, b'\xaa'),
         (0b1100101, 7, b'\x65'),
-    ]
+    ],
 )
 def test_bit_writer_write_number(number, bit_length, expected_bytes):
     writer = BitWriter()
@@ -42,7 +42,7 @@ def test_bit_writer_write_number(number, bit_length, expected_bytes):
         (0b11001100, b'\xcc'),
         (0b10101010, b'\xaa'),
         (0b11110000, b'\xf0'),
-    ]
+    ],
 )
 def test_bit_writer_write_byte(byte_, expected_bytes):
     writer = BitWriter()
@@ -52,7 +52,9 @@ def test_bit_writer_write_byte(byte_, expected_bytes):
 
 def test_bit_writer_write_number_raises():
     writer = BitWriter()
-    with pytest.raises(BitIOError, match="Number 256 is too large to be encoded with 8 bits"):
+    with pytest.raises(
+        BitIOError, match="Number 256 is too large to be encoded with 8 bits"
+    ):
         writer.write_number(256, 8)
 
 
@@ -63,7 +65,7 @@ def test_bit_writer_write_number_raises():
         (b'\xff', [True, True, True, True, True, True, True, True]),
         (b'\x00', [False, False, False, False, False, False, False, False]),
         (b'\x01', [True, False]),
-    ]
+    ],
 )
 def test_bit_reader_read(data, expected_bits):
     reader = BitReader(data)
@@ -80,7 +82,7 @@ def test_bit_reader_read(data, expected_bits):
         (b'\xff', 8, 255),
         (b'\xaa', 8, 0b10101010),
         (b'\x65', 7, 0b1100101),
-    ]
+    ],
 )
 def test_bit_reader_read_number(data, bit_length, expected_number):
     reader = BitReader(data)
@@ -93,7 +95,7 @@ def test_bit_reader_read_number(data, bit_length, expected_number):
         (b'\xcc', 0b11001100),
         (b'\xaa', 0b10101010),
         (b'\xf0', 0b11110000),
-    ]
+    ],
 )
 def test_bit_reader_read_byte(data, expected_byte):
     reader = BitReader(data)

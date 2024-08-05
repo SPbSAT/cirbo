@@ -1,5 +1,4 @@
 import typing as tp
-from pathlib import Path
 
 from boolean_circuit_tool.circuits_db.exceptions import BinaryDictIOError
 
@@ -15,8 +14,8 @@ def read_binary_dict(stream: tp.BinaryIO) -> tp.Dict[str, bytes]:
     data_size = _read_unsigned_number(stream, DICT_SIZE_BYTE_SIZE)
     for i in range(data_size):
         key_len = _read_unsigned_number(stream, DICT_KEY_BYTE_SIZE)
-        key = _read_exact_number_of_bytes(stream, key_len)
-        key = key.decode(encoding='utf-8')
+        key_bytes = _read_exact_number_of_bytes(stream, key_len)
+        key = key_bytes.decode(encoding='utf-8')
         val_len = _read_unsigned_number(stream, DICT_VALUE_BYTE_SIZE)
         val = _read_exact_number_of_bytes(stream, val_len)
         data[key] = val

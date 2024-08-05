@@ -1,11 +1,10 @@
 import typing as tp
 
-from boolean_circuit_tool.core.circuit import gate
-from boolean_circuit_tool.core.circuit.gate import Label, Gate, GateType
-from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.circuits_db.bit_io import BitReader, BitWriter
-from boolean_circuit_tool.circuits_db.exceptions import CircuitCodingError
-from enum import Enum
+from boolean_circuit_tool.circuits_db.exceptions import CircuitEncodingError
+
+from boolean_circuit_tool.core.circuit import Circuit, gate
+from boolean_circuit_tool.core.circuit.gate import Gate, GateType, Label
 
 __all__ = ['encode_circuit', 'decode_circuit']
 
@@ -24,9 +23,13 @@ def encode_circuit(circuit: Circuit) -> bytes:
 def decode_circuit(bytes_: bytes) -> Circuit:
     bit_reader = BitReader(bytes_)
     word_size = _decode_header(bit_reader)
-    inputs_count, outputs_count, intermediates_count = _decode_circuit_parameters(bit_reader, word_size)
+    inputs_count, outputs_count, intermediates_count = _decode_circuit_parameters(
+        bit_reader, word_size
+    )
     circuit = Circuit()
-    _decode_circuit_body(bit_reader, word_size, inputs_count, outputs_count, intermediates_count, circuit)
+    _decode_circuit_body(
+        bit_reader, word_size, inputs_count, outputs_count, intermediates_count, circuit
+    )
     return circuit
 
 
@@ -39,28 +42,34 @@ def _decode_header(bit_reader: BitReader) -> int:
     return word_size
 
 
-def _ecode_circuit_parameters(bit_writer: BitWriter, word_size: int, circuit: Circuit) -> None:
+def _ecode_circuit_parameters(
+    bit_writer: BitWriter, word_size: int, circuit: Circuit
+) -> None:
     bit_writer.write_number(len(circuit.inputs), word_size)
     bit_writer.write_number(len(circuit.outputs), word_size)
     bit_writer.write_number(circuit.elements_number - len(circuit.inputs), word_size)
 
 
-def _decode_circuit_parameters(bit_reader: BitReader, word_size: int) -> tp.Tuple[int, int, int]:
+def _decode_circuit_parameters(
+    bit_reader: BitReader, word_size: int
+) -> tp.Tuple[int, int, int]:
     inputs_count = bit_reader.read_number(word_size)
     outputs_count = bit_reader.read_number(word_size)
     intermediates_count = bit_reader.read_number(word_size)
     return inputs_count, outputs_count, intermediates_count
 
 
-def _encode_gate(bit_writer: BitWriter,
-                 gate_: Gate,
-                 gate_identifiers: tp.Dict[str, int],
-                 word_size: int):
+def _encode_gate(
+    bit_writer: BitWriter,
+    gate_: Gate,
+    gate_identifiers: tp.Dict[str, int],
+    word_size: int,
+):
     if gate_.gate_type == gate.INPUT:
         return
     gate_type_id = _gate_type_to_int.get(gate_.gate_type)
     if gate_type_id is None:
-        raise CircuitCodingError("Tried to encode unsupported gate type")
+        raise CircuitEncodingError("Tried to encode unsupported gate type")
     bit_writer.write_number(gate_type_id, GATE_TYPE_BIT_SIZE)
     for operand_label in gate_.operands:
         bit_writer.write_number(gate_identifiers[operand_label], word_size)
@@ -70,12 +79,13 @@ def _generate_label(gate_id: int) -> Label:
     return f"gate_{gate_id}"
 
 
-def _decode_gate(bit_reader: BitReader, word_size: int, gates: tp.Dict[int, Gate],
-                 circuit: Circuit) -> None:
+def _decode_gate(
+    bit_reader: BitReader, word_size: int, gates: tp.Dict[int, Gate], circuit: Circuit
+) -> None:
     gate_type_id = bit_reader.read_number(GATE_TYPE_BIT_SIZE)
     gate_type = _int_to_gate_type.get(gate_type_id)
     if gate_type is None:
-        raise CircuitCodingError("Tried to decode undefined gate type")
+        raise CircuitEncodingError("Tried to decode undefined gate type")
     operands: tp.List[Label] = []
     gate_id = len(gates)
     label = _generate_label(gate_id)
@@ -83,29 +93,35 @@ def _decode_gate(bit_reader: BitReader, word_size: int, gates: tp.Dict[int, Gate
         arg_gate_id = bit_reader.read_number(word_size)
         arg_gate = gates.get(arg_gate_id)
         if arg_gate is None:
-            raise CircuitCodingError("Invalid argument gate identifier")
+            raise CircuitEncodingError("Invalid argument gate identifier")
         operands.append(arg_gate.label)
     gate = Gate(label, gate_type, tuple(operands))
     gates[gate_id] = gate
     circuit.add_gate(gate)
 
 
-def _encode_circuit_body(bit_writer: BitWriter, word_size: int, circuit: Circuit) -> None:
+def _encode_circuit_body(
+    bit_writer: BitWriter, word_size: int, circuit: Circuit
+) -> None:
     gate_identifiers = _enumerate_gates(circuit)
 
     for label in gate_identifiers.keys():
-        _encode_gate(bit_writer, circuit.get_element(label), gate_identifiers, word_size)
+        _encode_gate(
+            bit_writer, circuit.get_element(label), gate_identifiers, word_size
+        )
 
     for label in circuit.outputs:
         bit_writer.write_number(gate_identifiers[label], word_size)
 
 
-def _decode_circuit_body(bit_reader: BitReader,
-                         word_size: int,
-                         inputs_count: int,
-                         outputs_count: int,
-                         intermediates_count: int,
-                         circuit: Circuit) -> None:
+def _decode_circuit_body(
+    bit_reader: BitReader,
+    word_size: int,
+    inputs_count: int,
+    outputs_count: int,
+    intermediates_count: int,
+    circuit: Circuit,
+) -> None:
     gates: tp.Dict[int, Gate] = dict()
     for i in range(inputs_count):
         gate_ = Gate(_generate_label(i), gate.INPUT)
@@ -124,7 +140,9 @@ def _get_word_size(circuit: Circuit) -> int:
     if circuit.elements_number == 0:
         return 1
     else:
-        return max(len(circuit.inputs), len(circuit.outputs), circuit.elements_number - 1).bit_length()
+        return max(
+            len(circuit.inputs), len(circuit.outputs), circuit.elements_number - 1
+        ).bit_length()
 
 
 def _enumerate_gates(circuit: Circuit) -> tp.Dict[Label, int]:
@@ -162,4 +180,6 @@ _gate_type_to_int: tp.Dict[GateType, int] = {
     gate.ALWAYS_FALSE: 13,
 }
 
-_int_to_gate_type: tp.Dict[int, GateType] = {val: key for key, val in _gate_type_to_int.items()}
+_int_to_gate_type: tp.Dict[int, GateType] = {
+    val: key for key, val in _gate_type_to_int.items()
+}

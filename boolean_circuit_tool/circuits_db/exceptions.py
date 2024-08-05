@@ -5,7 +5,12 @@ __all__ = [
     'BitIOError',
     'CircuitsDatabaseError',
     'CircuitDatabaseOpenError',
-    'CircuitDatabaseCloseError'
+    'CircuitDatabaseCloseError',
+    'CircuitDatabaseNotOpenedError',
+    'NormalizationError',
+    'NormalizationParametersError',
+    'NormalizationParametersAreNotInitialized',
+    'CircuitIsNotCompatibleWithNormalizationParameters',
 ]
 
 
@@ -21,6 +26,10 @@ class CircuitDatabaseCloseError(CircuitsDatabaseError):
     pass
 
 
+class CircuitDatabaseNotOpenedError(CircuitsDatabaseError):
+    pass
+
+
 class BinaryDictIOError(CircuitsDatabaseError):
     pass
 
@@ -29,5 +38,21 @@ class BitIOError(CircuitsDatabaseError):
     pass
 
 
-class CircuitCodingError(CircuitsDatabaseError):
+class CircuitEncodingError(CircuitsDatabaseError):
+    pass
+
+
+class NormalizationError(CircuitsDatabaseError):
+    pass
+
+
+class NormalizationParametersError(NormalizationError):
+    pass
+
+
+class CircuitIsNotCompatibleWithNormalizationParameters(NormalizationParametersError):
+    pass
+
+
+class NormalizationParametersAreNotInitialized(NormalizationParametersError):
     pass

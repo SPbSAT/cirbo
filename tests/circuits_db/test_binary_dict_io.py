@@ -1,15 +1,14 @@
-import pytest
-import typing as tp
 from io import BytesIO
-from pathlib import Path
+
+import pytest
 from boolean_circuit_tool.circuits_db.binary_dict_io import (
+    _expect_eof,
+    _read_exact_number_of_bytes,
+    _read_unsigned_number,
+    _write_unsigned_number,
+    BinaryDictIOError,
     read_binary_dict,
     write_binary_dict,
-    BinaryDictIOError,
-    _read_unsigned_number,
-    _read_exact_number_of_bytes,
-    _expect_eof,
-    _write_unsigned_number
 )
 
 
@@ -17,21 +16,18 @@ from boolean_circuit_tool.circuits_db.binary_dict_io import (
     "data, expected",
     [
         (
-                {"key1": b"value1", "key2": b"value2"},
-                b'\x00\x00\x00\x00\x00\x00\x00\x02'  # 2 keys, 8 bytes
-                b'\x00\x04key1\x00\x06value1'  # key1 and value1
-                b'\x00\x04key2\x00\x06value2'  # key2 and value2
+            {"key1": b"value1", "key2": b"value2"},
+            b'\x00\x00\x00\x00\x00\x00\x00\x02'  # 2 keys, 8 bytes
+            b'\x00\x04key1\x00\x06value1'  # key1 and value1
+            b'\x00\x04key2\x00\x06value2',  # key2 and value2
         ),
+        ({}, b'\x00\x00\x00\x00\x00\x00\x00\x00'),  # No keys, 8 bytes
         (
-                {},
-                b'\x00\x00\x00\x00\x00\x00\x00\x00'  # No keys, 8 bytes
+            {"k": b"v"},
+            b'\x00\x00\x00\x00\x00\x00\x00\x01'  # 1 key, 8 bytes
+            b'\x00\x01k\x00\x01v',  # key and value
         ),
-        (
-                {"k": b"v"},
-                b'\x00\x00\x00\x00\x00\x00\x00\x01'  # 1 key, 8 bytes
-                b'\x00\x01k\x00\x01v'  # key and value
-        )
-    ]
+    ],
 )
 def test_write_binary_dict(data, expected):
     stream = BytesIO()
@@ -45,21 +41,18 @@ def test_write_binary_dict(data, expected):
     "data, expected",
     [
         (
-                b'\x00\x00\x00\x00\x00\x00\x00\x02'  # 2 keys, 8 bytes
-                b'\x00\x04key1\x00\x06value1'  # key1 and value1
-                b'\x00\x04key2\x00\x07val\x04ue2',  # key2 and value2
-                {"key1": b"value1", "key2": b"val\x04ue2"}
+            b'\x00\x00\x00\x00\x00\x00\x00\x02'  # 2 keys, 8 bytes
+            b'\x00\x04key1\x00\x06value1'  # key1 and value1
+            b'\x00\x04key2\x00\x07val\x04ue2',  # key2 and value2
+            {"key1": b"value1", "key2": b"val\x04ue2"},
         ),
+        (b'\x00\x00\x00\x00\x00\x00\x00\x00', {}),  # No keys, 8 bytes
         (
-                b'\x00\x00\x00\x00\x00\x00\x00\x00',  # No keys, 8 bytes
-                {}
+            b'\x00\x00\x00\x00\x00\x00\x00\x01'  # 1 key, 8 bytes
+            b'\x00\x01k\x00\x01v',  # key and value
+            {"k": b"v"},
         ),
-        (
-                b'\x00\x00\x00\x00\x00\x00\x00\x01'  # 1 key, 8 bytes
-                b'\x00\x01k\x00\x01v',  # key and value
-                {"k": b"v"}
-        )
-    ]
+    ],
 )
 def test_read_binary_dict(data, expected):
     stream = BytesIO(data)
@@ -77,17 +70,15 @@ def test_read_binary_dict_unexpected_eof():
 def test_expect_eof():
     data = b'\x00\x00\x00\x00\x00\x00\x00\x00extra'
     stream = BytesIO(data)
-    with pytest.raises(BinaryDictIOError, match="Expected end of file, but more data was found."):
+    with pytest.raises(
+        BinaryDictIOError, match="Expected end of file, but more data was found."
+    ):
         _expect_eof(stream)
 
 
 @pytest.mark.parametrize(
     "data, byte_len, expected",
-    [
-        (b'\x00\x01', 2, 1),
-        (b'\x00\xFF', 2, 255),
-        (b'\x01\x00', 2, 256)
-    ]
+    [(b'\x00\x01', 2, 1), (b'\x00\xFF', 2, 255), (b'\x01\x00', 2, 256)],
 )
 def test_read_unsigned_number(data, byte_len, expected):
     stream = BytesIO(data)
@@ -97,11 +88,7 @@ def test_read_unsigned_number(data, byte_len, expected):
 
 @pytest.mark.parametrize(
     "number, byte_len, expected",
-    [
-        (1, 2, b'\x00\x01'),
-        (255, 2, b'\x00\xFF'),
-        (256, 2, b'\x01\x00')
-    ]
+    [(1, 2, b'\x00\x01'), (255, 2, b'\x00\xFF'), (256, 2, b'\x01\x00')],
 )
 def test_write_unsigned_number(number, byte_len, expected):
     stream = BytesIO()
@@ -112,10 +99,7 @@ def test_write_unsigned_number(number, byte_len, expected):
 
 @pytest.mark.parametrize(
     "data, length, expected",
-    [
-        (b'\x01\x02\x03', 3, b'\x01\x02\x03'),
-        (b'\x01\x02\x03\x04', 2, b'\x01\x02')
-    ]
+    [(b'\x01\x02\x03', 3, b'\x01\x02\x03'), (b'\x01\x02\x03\x04', 2, b'\x01\x02')],
 )
 def test_read_exact_number_of_bytes(data, length, expected):
     stream = BytesIO(data)

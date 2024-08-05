@@ -1,12 +1,11 @@
-import pytest
-import typing as tp
 from io import BytesIO
-from boolean_circuit_tool.core.circuit import gate, GateType, Gate
-from boolean_circuit_tool.core.circuit import Circuit
+
+import pytest
 from boolean_circuit_tool.circuits_db.db import CircuitsDatabase
-from boolean_circuit_tool.core.logic import DontCare
 from boolean_circuit_tool.circuits_db.exceptions import CircuitsDatabaseError
 from boolean_circuit_tool.core.boolean_function import RawTruthTableModel
+from boolean_circuit_tool.core.circuit import Circuit, gate, Gate, GateType
+from boolean_circuit_tool.core.logic import DontCare
 
 _gate_types = [
     gate.NOT,
@@ -24,7 +23,6 @@ _gate_types = [
     gate.ALWAYS_TRUE,
     gate.ALWAYS_FALSE,
 ]
-
 
 
 def create_one_gate_circuit(gate_type: GateType) -> Circuit:
@@ -66,11 +64,13 @@ def create_all_gates_db(use_label: bool) -> CircuitsDatabase:
     return db
 
 
-@pytest.mark.parametrize("use_label",
-                         [
-                             (False,),
-                             (True,),
-                         ])
+@pytest.mark.parametrize(
+    "use_label",
+    [
+        (False,),
+        (True,),
+    ],
+)
 def test_one_gate_db_queries(use_label):
     db = create_all_gates_db(use_label)
     for gate_type in _gate_types:
@@ -119,11 +119,13 @@ def test_get_by_raw_truth_table_model_returns_minimal_size():
         assert retrieved_circuit.get_truth_table() == [[False, True, True, True]]
 
 
-@pytest.mark.parametrize("use_label",
-                         [
-                             (False,),
-                             (True,),
-                         ])
+@pytest.mark.parametrize(
+    "use_label",
+    [
+        (False,),
+        (True,),
+    ],
+)
 def test_save_and_load_database(use_label):
     db = create_all_gates_db(use_label)
     stream = BytesIO()

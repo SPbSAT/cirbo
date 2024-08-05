@@ -20,7 +20,9 @@ class BitWriter:
 
     def write_number(self, number: int, bit_length: int) -> None:
         if (number >> bit_length) != 0:
-            raise BitIOError(f"Number {number} is too large to be encoded with {bit_length} bits")
+            raise BitIOError(
+                f"Number {number} is too large to be encoded with {bit_length} bits"
+            )
         for i in range(bit_length):
             self.write(bool((number >> i) & 1))
 
