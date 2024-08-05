@@ -187,14 +187,14 @@ def test_traverse_circuit_circuit():
     file_path = get_file_path('test_top_sort_several_output.bench')
     instance = Circuit().from_bench(file_path)
 
-    assert [elem.label for elem in instance.dfs(inversed=False)] == [
+    assert [elem.label for elem in instance.dfs(inverse=False)] == [
         '4',
         '6',
         '3',
         '1',
         '2',
     ]
-    assert [elem.label for elem in instance.dfs(inversed=True)] == [
+    assert [elem.label for elem in instance.dfs(inverse=True)] == [
         '2',
         '6',
         '4',
@@ -202,16 +202,23 @@ def test_traverse_circuit_circuit():
         '1',
         '3',
     ]
-    assert [elem.label for elem in instance.bfs(inversed=False)] == [
+    assert [elem.label for elem in instance.bfs(inverse=False)] == [
         '6',
         '4',
         '2',
         '3',
         '1',
     ]
-    assert [elem.label for elem in instance.bfs(inversed=True)] == [
+    assert [elem.label for elem in instance.bfs(inverse=True)] == [
         '1',
         '2',
+        '3',
+        '5',
+        '4',
+        '6',
+    ]
+    assert [elem.label for elem in instance.bfs(['1'], inverse=True)] == [
+        '1',
         '3',
         '5',
         '4',
@@ -224,7 +231,7 @@ def test_traverse_circuit_circuit():
     assert [
         elem.label
         for elem in instance.dfs(
-            inversed=False,
+            inverse=False,
             on_enter_hook=dfs_mock_on_enter_hook,
             on_exit_hook=dfs_mock_on_exit_hook,
             unvisited_hook=dfs_mock_unvisited_hook,
@@ -245,7 +252,7 @@ def test_traverse_circuit_circuit():
     assert [
         elem.label
         for elem in instance.bfs(
-            inversed=False,
+            inverse=False,
             on_enter_hook=bfs_mock_on_enter_hook,
             unvisited_hook=bfs_mock_unvisited_hook,
         )
