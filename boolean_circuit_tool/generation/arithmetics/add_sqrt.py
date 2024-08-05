@@ -1,7 +1,10 @@
 from boolean_circuit_tool.generation.arithmetics.add_n_bits_sum import add_sub2, add_sub3, add_sum_two_numbers
 from boolean_circuit_tool.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
+from boolean_circuit_tool.core.circuit import Circuit
 
-def add_sub_with_per_equal_size(circuit, input_labels_a, input_labels_b):
+
+def add_sub_with_per_equal_size(circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]) -> (
+        list[str], str):
     n = len(input_labels_a)
     assert n == len(input_labels_b)
     for input_label in input_labels_a:
@@ -17,7 +20,13 @@ def add_sub_with_per_equal_size(circuit, input_labels_a, input_labels_b):
     return res, bal[n - 1]
 
 
-def add_sqrt(circuit, input_labels):
+def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
+    """
+        Function find sqrt of integer.
+
+        :param circuit: The general circuit.
+        :param input_labels: the bits of the integer we want to find the sqrt for.
+        """
     n = len(input_labels)
     half = n // 2
     for input_label in input_labels:
@@ -46,3 +55,8 @@ def add_sqrt(circuit, input_labels):
             c[i] = add_gate_with_TT(circuit, add_gate_with_TT(circuit, per, sm[i - 2 * st], "0100"),
                                     add_gate_with_TT(circuit, c[i], per, "0001"), "0111")
     return c[:half]
+
+
+__all__ = [
+    'add_sqrt',
+]

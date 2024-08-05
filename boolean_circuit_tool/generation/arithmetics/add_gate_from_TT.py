@@ -1,3 +1,5 @@
+import uuid
+
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import Gate
 from boolean_circuit_tool.core.circuit.gate import (
@@ -40,14 +42,28 @@ TT_to_type = {
 }
 
 
-def get_new_label(circuit: Circuit):
-    ans = "new_" + str(random.randint(1, 1000000))
+def get_new_label(circuit: Circuit) -> str:
+    ans = "new_" + uuid.uuid4().hex
     while circuit.has_element(ans):
-        ans = "new_" + str(random.randint(1, 100000000))
+        ans = "new_" + uuid.uuid4().hex
     return ans
 
 
-def add_gate_with_TT(circuit, label1, label2, operation):
+def add_gate_with_TT(circuit: Circuit, label1: str, label2: str, operation: str) -> str:
+    """
+    Function add new gate with truth table format.
+
+    :param circuit: The general circuit.
+    :param label1: name of first gate.
+    :param label2: name of second gate.
+    :param operation: type of gate like TT format. In example '0101' or '0010'.
+    :return: name of new gate.
+    """
     label = get_new_label(circuit)
     circuit.add_gate(Gate(label, TT_to_type[operation], (label1, label2)))
     return label
+
+
+__all__ = [
+    "add_gate_with_TT",
+]

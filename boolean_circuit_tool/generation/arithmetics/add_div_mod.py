@@ -1,11 +1,10 @@
 from boolean_circuit_tool.generation.arithmetics.add_n_bits_sum import add_sub2, add_sub3
 from boolean_circuit_tool.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
-from boolean_circuit_tool.core.circuit import Circuit, Gate
-from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
+from boolean_circuit_tool.core.circuit import Circuit
 
 
 def add_sub_with_per_equal_size(circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]) -> (
-        list[int], int):
+        list[str], str):
     n = len(input_labels_a)
     assert n == len(input_labels_b)
     for input_label in input_labels_a:
@@ -21,7 +20,7 @@ def add_sub_with_per_equal_size(circuit: Circuit, input_labels_a: list[str], inp
     return res, bal[n - 1]
 
 
-def add_div_mod(circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]) -> (list[int], list[int]):
+def add_div_mod(circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]) -> (list[str], list[str]):
     """
     Function make div two integers with equal size.
 
@@ -69,4 +68,6 @@ def add_div_mod(circuit: Circuit, input_labels_a: list[str], input_labels_b: lis
     return result, now
 
 
-__all__ = ['add_div_mod']
+__all__ = [
+    'add_div_mod',
+]
