@@ -914,10 +914,12 @@ class Circuit(BooleanFunction):
             lambda: TraverseState.UNVISITED
         )
 
-        if mode == TraverseMode.BFS:
-            bfs_remove = lambda: queue.pop(pop_index)
-        else:
-            bfs_remove = lambda: ''
+        def _bfs_remove(label):
+            nonlocal pop_index
+            if mode == TraverseMode.BFS:
+                gate_states[label] = TraverseState.VISITED
+                queue.pop(pop_index)
+            return
 
         while queue:
 
@@ -933,7 +935,7 @@ class Circuit(BooleanFunction):
 
                 # in case of bfs we don't need to process the gate after passing
                 # all its children, so we can immediately remove it from the queue
-                bfs_remove()
+                _bfs_remove(current_elem.label)
 
                 yield current_elem
 
