@@ -2,6 +2,7 @@
 
 import collections
 import copy
+import enum
 import itertools
 import logging
 import pathlib
@@ -16,7 +17,7 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitElementIsAbsentError,
     CircuitIsCyclicalError,
 )
-from boolean_circuit_tool.core.circuit.gate import Gate, GateType, INPUT, Label
+from boolean_circuit_tool.core.circuit.gate import Gate, GateType, INPUT, Label, NOT
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
 from boolean_circuit_tool.core.circuit.utils import (
     input_iterator_with_fixed_sum,
@@ -30,6 +31,17 @@ from boolean_circuit_tool.core.circuit.validation import (
 logger = logging.getLogger(__name__)
 
 __all__ = ['Circuit']
+
+
+class TraverseMode(enum.Enum):
+    DFS = False
+    BFS = True
+
+
+class TraverseState(enum.Enum):
+    UNVISITED = 0
+    ENTERED = 1
+    VISITED = 2
 
 
 class Circuit(BooleanFunction):
@@ -110,12 +122,26 @@ class Circuit(BooleanFunction):
         return self._elements
 
     @property
-    def elements_number(self) -> int:
+    def size(self) -> int:
         """
         :return: number of elements into the circuit.
 
         """
         return len(self._elements)
+
+    @property
+    def elements_number(self, exclusion_list: list[GateType] = [INPUT, NOT]) -> int:
+        """
+        :return: number of gates that are not included in the exclusion list in the circuit.
+
+        """
+        return len(
+            [
+                gate
+                for gate in self._elements.values()
+                if gate.gate_type not in exclusion_list
+            ]
+        )
 
     def input_at_index(self, idx: int) -> Label:
         """
@@ -303,7 +329,7 @@ class Circuit(BooleanFunction):
 
         """
 
-        if self.elements_number == 0:
+        if self.size == 0:
             return
 
         _predecessors_getter = (
@@ -337,66 +363,77 @@ class Circuit(BooleanFunction):
                     queue.append(succ)
             yield current_elem
 
-    def bypass_circuit(
+    def dfs(
         self,
-        *,
-        type: bool = False,
+        start_of_traverse: tp.Optional[list[Label]] = None,
+        *args,
         inversed: bool = False,
-        pre_enter: tp.Optional[tp.Callable[[Gate], None]] = None,
-        post_enter: tp.Optional[tp.Callable[[Gate], None]] = None,
-        for_unvisited: tp.Optional[tp.Callable[[Gate], None]] = None,
+        on_enter_hook: tp.Optional[
+            tp.Callable[[Gate, tp.Mapping[Label, TraverseState]], None]
+        ] = lambda _, __: None,
+        on_exit_hook: tp.Optional[
+            tp.Callable[[Gate, tp.Mapping[Label, TraverseState]], None]
+        ] = lambda _, __: None,
+        unvisited_hook: tp.Optional[
+            tp.Callable[[Gate, tp.Mapping[Label, TraverseState]], None]
+        ] = lambda _, __: None,
     ) -> tp.Iterable[Gate]:
         """
-        :param type: a boolean value specifying the type bypass the circuit.
-            If type == False, type bypass will be dfs, otherwise - bfs;
-        :param inversed: a boolean value specifying the sort order.
-            If inversed == True, Iterator will start from inputs, otherwise from outputs.
-        :param pre_enter: сallable function which applies before visiting the gate
-        :param post_enter: сallable function which applies after visiting the gate
-        :param for_unvisited: сallable function which applies for unvisited gates
-        :return: Iterator of gates, which bypass the circuit in dfs/bfs order.
+        Performs a depth-first traversal the circuit (DFS) from a list of given starting
+        nodes or inputs if inversed=True, and outputs if inversed=False.
+
+        :param start_of_traverse: initial list of gates to traverse
+        :param inversed: a boolean value specifying the sort order. If inversed == True,
+            Iterator will start from inputs, otherwise from outputs.
+        :param pre_enter_hook: callable function which applies before visiting the gate
+        :param post_exit_hook: callable function which applies after visiting the gate
+        :param unvisited_hook: callable function which applies for unvisited gates
+        :return: Iterator of gates, which bypass the circuit in bfs order.
 
         """
-
-        if self.elements_number == 0:
-            return
-
-        pop_index: int = 0 if type else -1
-
-        _next_getter = (
-            (lambda elem: self.get_element_users(elem.label))
-            if inversed
-            else (lambda elem: elem.operands)
+        return self._traverse_circuit(
+            TraverseMode.DFS,
+            start_of_traverse,
+            *args,
+            inversed=inversed,
+            on_enter_hook=on_enter_hook,
+            on_exit_hook=on_exit_hook,
+            unvisited_hook=unvisited_hook,
         )
 
-        if inversed:
-            queue: list[Label] = copy.copy(self.inputs)
-        else:
-            queue = copy.copy(self.outputs)
+    def bfs(
+        self,
+        start_of_traverse: tp.Optional[list[Label]] = None,
+        *args,
+        inversed: bool = False,
+        on_enter_hook: tp.Optional[
+            tp.Callable[[Gate, tp.Mapping[Label, TraverseState]], None]
+        ] = lambda _, __: None,
+        unvisited_hook: tp.Optional[
+            tp.Callable[[Gate, tp.Mapping[Label, TraverseState]], None]
+        ] = lambda _, __: None,
+    ) -> tp.Iterable[Gate]:
+        """
+        Performs a breadth-first traversal the circuit (BFS) from a list of given
+        starting nodes or inputs if inversed=True, and outputs if inversed=False.
 
-        dict_of_visits: dict[Label, bool] = {elem: False for elem in self.elements}
+        :param start_of_traverse: initial list of gates to traverse
+        :param inversed: a boolean value specifying the sort order. If inversed == True,
+            Iterator will start from inputs, otherwise from outputs.
+        :param pre_enter_hook: callable function which applies before visiting the gate
+        :param post_exit_hook: callable function which applies after visiting the gate
+        :param unvisited_hook: callable function which applies for unvisited gates
+        :return: Iterator of gates, which bypass the circuit in dfs order.
 
-        while queue:
-
-            current_elem = self.get_element(queue.pop(pop_index))
-            if dict_of_visits[current_elem.label]:
-                continue
-
-            if pre_enter is not None:
-                pre_enter(current_elem)
-
-            dict_of_visits[current_elem.label] = True
-            queue.extend(_next_getter(current_elem))
-            yield current_elem
-
-            if post_enter is not None:
-                post_enter(current_elem)
-
-        for label, visited in dict_of_visits.items():
-            if visited:
-                continue
-            if for_unvisited is not None:
-                for_unvisited(self.get_element(label))
+        """
+        return self._traverse_circuit(
+            TraverseMode.BFS,
+            start_of_traverse,
+            *args,
+            inversed=inversed,
+            on_enter_hook=on_enter_hook,
+            unvisited_hook=unvisited_hook,
+        )
 
     def evaluate_circuit(
         self,
@@ -473,9 +510,8 @@ class Circuit(BooleanFunction):
             dict_inputs[input] = inputs[i]
 
         # because of the complete assignment we know that Undefined will not appear
-        return tp.cast(
-            list[bool], list(self.evaluate_circuit_outputs(dict_inputs).values())
-        )
+        answer = self.evaluate_circuit_outputs(dict_inputs)
+        return tp.cast(list[bool], [answer[output] for output in self._outputs])
 
     def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
         """
@@ -825,6 +861,93 @@ class Circuit(BooleanFunction):
     def _add_user(self, element: Label, user: Label):
         """Adds user for `element`."""
         self._element_to_users[element].append(user)
+
+    def _traverse_circuit(
+        self,
+        mode: TraverseMode,
+        start_of_traverse: tp.Optional[list[Label]] = None,
+        *,
+        inversed: bool = False,
+        on_enter_hook: tp.Optional[
+            tp.Callable[[Gate, tp.Mapping[Label, TraverseState]], None]
+        ] = lambda _, __: None,
+        on_exit_hook: tp.Optional[
+            tp.Callable[[Gate, tp.Mapping[Label, TraverseState]], None]
+        ] = lambda _, __: None,
+        unvisited_hook: tp.Optional[
+            tp.Callable[[Gate, tp.Mapping[Label, TraverseState]], None]
+        ] = lambda _, __: None,
+    ) -> tp.Iterable[Gate]:
+        """
+        Performs a traversal the circuit from a list of given starting nodes or inputs
+        if inversed=True, and outputs if inversed=False.
+
+        :param mode: type of the traversal the circuit (dfs/bfs).
+        :param start_of_traverse: initial list of gates to traverse
+        :param inversed: a boolean value specifying the sort order. If inversed == True,
+            Iterator will start from inputs, otherwise from outputs.
+        :param on_enter_hook: callable function which applies before visiting the gate
+        :param on_exit_hook: callable function which applies after visiting all children
+            of the gate
+        :param unvisited_hook: callable function which applies for unvisited gates
+        :return: Iterator of gates, which bypass the circuit in dfs/bfs order.
+
+        """
+
+        if self.size == 0:
+            return
+
+        pop_index: int = 0 if mode == TraverseMode.BFS else -1
+
+        _next_getter = (
+            (lambda elem: self.get_element_users(elem.label))
+            if inversed
+            else (lambda elem: elem.operands)
+        )
+
+        if start_of_traverse is not None:
+            queue: list[Label] = copy.copy(start_of_traverse)
+        elif inversed:
+            queue = copy.copy(self.inputs)
+        else:
+            queue = copy.copy(self.outputs)
+
+        gate_states: dict[Label, TraverseState] = collections.defaultdict(
+            lambda: TraverseState.UNVISITED
+        )
+
+        if on_enter_hook is None:
+            on_enter_hook = lambda _, __: None
+        if on_exit_hook is None:
+            on_exit_hook = lambda _, __: None
+        if unvisited_hook is None:
+            unvisited_hook = lambda _, __: None
+
+        while queue:
+
+            current_elem = self.get_element(queue[pop_index])
+
+            if gate_states[current_elem.label] == TraverseState.UNVISITED:
+                on_enter_hook(current_elem, gate_states)
+                gate_states[current_elem.label] = TraverseState.ENTERED
+
+                for child in _next_getter(current_elem):
+                    if gate_states[child] == TraverseState.UNVISITED:
+                        queue.append(child)
+
+                yield current_elem
+
+            elif gate_states[current_elem.label] == TraverseState.ENTERED:
+                on_exit_hook(current_elem, gate_states)
+                gate_states[current_elem.label] = TraverseState.VISITED
+                queue.pop(pop_index)
+
+            else:
+                queue.pop(pop_index)
+
+        for label in self._elements:
+            if gate_states[label] == TraverseState.UNVISITED:
+                unvisited_hook(self.get_element(label), gate_states)
 
     def __str__(self):
         input_str = textwrap.shorten(
