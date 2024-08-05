@@ -6,7 +6,7 @@ import typing_extensions as tp_ext
 from pathlib import Path
 
 from boolean_circuit_tool.circuits_db.binary_dict_io import read_binary_dict, write_binary_dict
-from boolean_circuit_tool.circuits_db.circuits_coding import encode_circuit, decode_circuit, Basis
+from boolean_circuit_tool.circuits_db.circuits_encoding import encode_circuit, decode_circuit
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.circuits_db.exceptions import (CircuitsDatabaseError,
                                                          CircuitDatabaseOpenError,
@@ -69,9 +69,7 @@ class CircuitsDatabase:
         normalization.denormalize(circuit)
         return circuit
 
-    def add_circuit(self, circuit: Circuit, label: tp.Optional[str] = None,
-                    basis: tp.Union[Basis, str] = Basis.XAIG) -> None:
-        basis = Basis(basis)
+    def add_circuit(self, circuit: Circuit, label: tp.Optional[str] = None) -> None:
         if label is None:
             truth_table = circuit.get_truth_table()
             normalization = NormalizationInfo()
@@ -82,7 +80,7 @@ class CircuitsDatabase:
             label = _truth_table_to_label(normalized_truth_table)
         if label in self._dict.keys():
             raise CircuitsDatabaseError(f"Label: {label} is already in Circuits Database")
-        encoded_circuit = encode_circuit(circuit, basis)
+        encoded_circuit = encode_circuit(circuit)
         self._dict[label] = encoded_circuit
 
     def get_by_raw_truth_table_model(self, truth_table: RawTruthTableModel) -> tp.Optional[Circuit]:

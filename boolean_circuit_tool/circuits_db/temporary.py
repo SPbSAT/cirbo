@@ -4,10 +4,10 @@
 import random
 import time
 
+from boolean_circuit_tool.circuits_db.exceptions import CircuitsDatabaseError
 from boolean_circuit_tool.core.circuit import Circuit, Gate, Label, AND, OR, NOT, INPUT, IFF, GEQ, GT, LEQ, LT, NAND, \
     NOR, NXOR, XOR
 from boolean_circuit_tool.circuits_db.db import CircuitsDatabase
-from boolean_circuit_tool.circuits_db.circuits_coding import Basis
 from pathlib import Path
 import typing as tp
 
@@ -92,14 +92,29 @@ def read_circuit_from_string(string: str) -> tp.Optional[Circuit]:
     return circuit
 
 
-def txt_db_to_bin_db(txt_file: Path, bin_file: Path, basis: Basis) -> None:
+def sort_outputs(circuit: Circuit) -> None:
+    tt = circuit.get_truth_table()
+    ordered_tt = list(enumerate(tt))
+    ordered_tt.sort(key=lambda x: x[1])
+    new_outputs = [circuit.outputs[i[0]] for i in ordered_tt]
+    circuit.order_outputs(new_outputs)
+
+
+def txt_db_to_bin_db(txt_file: Path, bin_file: Path) -> None:
     with CircuitsDatabase() as db:
         with txt_file.open("r") as in_stream:
             for i, aig_string in enumerate(in_stream.readlines()):
                 circuit = read_circuit_from_string(aig_string)
                 if circuit is None:
                     continue
-                db.add_circuit(circuit, basis=basis)
+                sort_outputs(circuit)
+                tt = circuit.get_truth_table()
+                assert list(sorted(tt)) == tt
+                try:
+                    db.add_circuit(circuit)
+                except CircuitsDatabaseError as e:
+                    pass
+                    # print(f"Skipped: {aig_string}: {e}")
                 if i > 0 and i % 10000 == 0:
                     print(f"Processed {i} circuits")
             print("Finished")
@@ -121,19 +136,20 @@ def _topology_sort(gate: Gate, used: tp.Set[Gate], gates: tp.Dict[Label, Gate], 
 
 
 if __name__ == "__main__":
-    txt_db_to_bin_db(Path("/home/vsevolod/sat/boolean-circuit-tool/xaig_db_2_2.txt"),
-                     Path("/home/vsevolod/sat/boolean-circuit-tool/xaig_db_2_2.bin"),
-                     Basis.XAIG)
+    txt_db_to_bin_db(Path("/home/vsevolod/sat/boolean-circuit-tool/aig_db.txt"),
+                     Path("/home/vsevolod/sat/boolean-circuit-tool/aig_db_compressed.bin"))
+    exit(0)
 
-    # with CircuitsDatabase("/home/vsevolod/sat/boolean-circuit-tool/xaig_db_2_2.bin") as db:
-    #     for i in range(10000000):
-    #         if i % 1000 == 0:
-    #             print(i)
-    #         inputs = random.randint(2, 2)
-    #         outputs = random.randint(1, 2)
-    #         tt = [[random.choice([True, False]) for _ in range(1 << inputs)] for _ in range(outputs)]
-    #         if len(set(map(tuple, tt))) < len(tt):
-    #             continue
-    #         circuit = db.get_by_raw_truth_table(tt)
-    #         assert circuit is not None
-    #         assert circuit.get_truth_table() == tt
+    random.seed(0)
+    with CircuitsDatabase("/home/vsevolod/sat/boolean-circuit-tool/xaig_db_2_2.bin") as db:
+        for i in range(10000000):
+            if i % 1000 == 0:
+                print(i)
+            inputs = random.randint(2, 2)
+            outputs = random.randint(1, 2)
+            tt = [[random.choice([True, False]) for _ in range(1 << inputs)] for _ in range(outputs)]
+            if len(set(map(tuple, tt))) < len(tt):
+                continue
+            circuit = db.get_by_raw_truth_table(tt)
+            assert circuit is not None
+            assert circuit.get_truth_table() == tt
