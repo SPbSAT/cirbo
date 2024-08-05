@@ -89,13 +89,14 @@ Read more about submodules in
 `C/C++` extensions are written using `pybind11`. To create new extension one should:
 
 1. Put source files to `extensions/<extension name>/src/`.
-2. Add extension specification to `build.py`, to `ext_modules` variable.
-3. Locally compile and install extensions
+2. Add extension build specification to `CMakeLists.txt`.
+3. Add extension module specification to `build.py`, to `ext_modules` variable.
+4. Locally compile and install extensions
    ```sh
    poetry build
    poetry run
    ```
-4. Add python tests to `tests/<extension name>` package.
+5. Add python tests to `tests/<extension name>` package.
 
 Note: there is an `dummy_extension` needed solely to demonstrate a minimal
 configuration extension should have.
