@@ -13,6 +13,7 @@ from boolean_circuit_tool.core.boolean_function import BooleanFunction, RawTruth
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitElementAlreadyExistsError,
     CircuitElementIsAbsentError,
+    CircuitIsCyclicalError,
 )
 from boolean_circuit_tool.core.circuit.gate import Gate, GateType, INPUT, Label
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
@@ -30,22 +31,6 @@ logger = logging.getLogger(__name__)
 __all__ = ['Circuit']
 
 
-def top_sort(circuit):
-    vis = collections.defaultdict(bool)
-    sorted_gates = []
-    def dfs(gate):
-        vis[gate] = True
-        for next_gate in circuit.get_element(gate).operands:
-            if not vis[next_gate]:
-                dfs(next_gate)
-        sorted_gates.append(gate)
-
-    for output in circuit.outputs:
-        if not vis[output]:
-            dfs(output)
-    return sorted_gates
-
-
 class Circuit(BooleanFunction):
     """
     Structure to carry boolean circuit.
@@ -56,10 +41,6 @@ class Circuit(BooleanFunction):
     Circuit may be constructed manually, gate by gate, using methods
     `add_gate` and `emplace_gate`, or can be parsed from .bench file
     using static method `from_bench`.
-
-    TODO: Circuit also implements BooleanFunction protocol, allowing
-    it to be used as boolean function and providing related checks.
-    TODO def rsort
 
     """
 
@@ -120,6 +101,14 @@ class Circuit(BooleanFunction):
         return len(self._outputs)
 
     @property
+    def elements(self) -> dict[Label, Gate]:
+        """
+        :return: dict of elements into the circuit.
+
+        """
+        return self._elements
+
+    @property
     def elements_number(self) -> int:
         """
         :return: number of elements into the circuit.
@@ -154,10 +143,18 @@ class Circuit(BooleanFunction):
     def index_of_output(self, label: Label) -> int:
         """
         :param idx: output label
-        :return: outputs index which corresponds to the label
+        :return: first outputs index which corresponds to the label
 
         """
         return self._outputs.index(label)
+
+    def all_indexes_of_output(self, label: Label) -> list[int]:
+        """
+        :param idx: output label
+        :return: all outputs indexes which corresponds to the label
+
+        """
+        return [idx for idx, output in enumerate(self._outputs) if output == label]
 
     def get_element(self, label: Label) -> Gate:
         """
@@ -258,7 +255,8 @@ class Circuit(BooleanFunction):
             subcircuit.rename_element(old_label=label2, new_label=label1)
         for label1, label2 in outputs_mapping.items():
             subcircuit.rename_element(old_label=label2, new_label=label1)
-        for label in top_sort(subcircuit):
+        for node in subcircuit.top_sort(inversed=True):
+            label = node.label
             if label not in inputs_mapping and label not in outputs_mapping:
                 self.add_gate(subcircuit.get_element(label))
         for label in outputs_mapping:
@@ -286,12 +284,10 @@ class Circuit(BooleanFunction):
             raise CircuitElementAlreadyExistsError()
 
         if old_label in self._inputs:
-            self._inputs.remove(old_label)
-            self._inputs.append(new_label)
+            self._inputs[self.index_of_input(old_label)] = new_label
 
-        if old_label in self._outputs:
-            self._outputs.remove(old_label)
-            self._outputs.append(new_label)
+        for idx in self.all_indexes_of_output(old_label):
+            self._outputs[idx] = new_label
 
         self._elements[new_label] = Gate(
             new_label,
@@ -320,10 +316,9 @@ class Circuit(BooleanFunction):
         return self
 
     def mark_as_output(self, label: Label) -> None:
-        """Mark as output a gate."""
-        if label not in self._outputs:
-            check_elements_exist((label,), self)
-            self._outputs.append(label)
+        """Mark as output a gate and append it to the end of `self._outputs`."""
+        check_elements_exist((label,), self)
+        self._outputs.append(label)
 
     def order_inputs(self, inputs: list[Label]) -> tp_ext.Self:
         """
@@ -355,6 +350,48 @@ class Circuit(BooleanFunction):
         self._outputs = order_list(outputs, self._outputs)
         return self
 
+    def top_sort(self, *, inversed: bool = False) -> tp.Iterable[Gate]:
+        """
+        :param inversed: a boolean value specifying the sort order.
+            If inversed == True, Iterator will start from inputs, otherwise from outputs.
+        :return: Iterator of gates, which sorted in topological order according Kana algorithm.
+
+        """
+
+        if self.elements_number == 0:
+            return
+
+        _predecessors_getter = (
+            (lambda elem: len(elem.operands))
+            if inversed
+            else (lambda elem: len(self.get_element_users(elem.label)))
+        )
+
+        _successors_getter = (
+            (lambda elem: self.get_element_users(elem.label))
+            if inversed
+            else (lambda elem: elem.operands)
+        )
+
+        indegree_map: dict[Label, int] = {
+            elem.label: _predecessors_getter(elem) for elem in self._elements.values()
+        }
+
+        queue: list[Label] = [
+            label for label, value in indegree_map.items() if value == 0
+        ]
+
+        if not queue:
+            raise CircuitIsCyclicalError()
+
+        while queue:
+            current_elem = self.get_element(queue.pop())
+            for succ in _successors_getter(current_elem):
+                indegree_map[succ] -= 1
+                if indegree_map[succ] == 0:
+                    queue.append(succ)
+            yield current_elem
+
     def evaluate_circuit(
         self,
         assigment: dict[str, GateState],
@@ -364,7 +401,9 @@ class Circuit(BooleanFunction):
         """
         Evaluate the circuit with the given input values and return full assigment.
 
-        :param assigment: full or partually assigment for inputs.
+        :param assigment: full or partial assigment for inputs.
+        :param outputs: set of outputs which need to be evaluated. Those outputs will
+               be used to initialise depth-first iteration across the circuit.
         :return: outputs dictionary with the obtained values.
 
         `assignment` can be on any element of the circuit.
@@ -407,7 +446,7 @@ class Circuit(BooleanFunction):
         """
         Evaluate the circuit with the given input values and return outputs assigment.
 
-        :param assigment: full or partually assigment for inputs.
+        :param assigment: full or partial assigment for inputs.
         :return: outputs dictionary with the obtained values.
 
         `assignment` can be on any element of the circuit.
@@ -762,8 +801,6 @@ class Circuit(BooleanFunction):
 
         """
         for operand in gate.operands:
-            print(f'Removing operand: {operand}')
-            # print(self._element_to_users[operand])
             self._remove_user(operand, gate.label)
 
         self._elements.pop(gate.label, None)

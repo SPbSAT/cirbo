@@ -1,0 +1,3 @@
+[submodule "third_party/mockturtle"]
+	path = third_party/mockturtle
+	url = https://github.com/lsils/mockturtle.git

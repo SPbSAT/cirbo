@@ -119,23 +119,8 @@ def generate_inputs_tt(sizes: list[int]):
     return inputs_tt
 
 
-def top_sort(circuit):
-    vis = collections.defaultdict(bool)
-    sorted_gates = []
-    def dfs(gate):
-        vis[gate] = True
-        for next_gate in circuit.get_element(gate).operands:
-            if not vis[next_gate]:
-                dfs(next_gate)
-        sorted_gates.append(gate)
-
-    for output in circuit.outputs:
-        if not vis[output]:
-            dfs(output)
-    return sorted_gates
-
 def is_cyclic(circuit):
-    sorted_gates = top_sort(circuit)
+    sorted_gates = [node.label for node in circuit.top_sort(inversed=True)]
     gate_position = {gate: i for i, gate in enumerate(sorted_gates)}
     for gate in sorted_gates:
         for operand in circuit.get_element(gate).operands:
@@ -210,8 +195,7 @@ def get_subcircuits(circuit, cuts_path):
         for subcut in powerset(cut):
             cut_nodes[cut].update(cut_nodes[subcut])
 
-    sorted_gates = top_sort(circuit)
-    node_pos = {node: i for i, node in enumerate(sorted_gates)}
+    node_pos = {node.label: i for i, node in enumerate(circuit.top_sort(inversed=True))}
     subcircuits = []
     good_cuts = [cut for cut in good_cuts if len(cut) > 2] # skip small cuts
 

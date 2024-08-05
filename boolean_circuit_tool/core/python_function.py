@@ -1,94 +1,39 @@
-import copy
+import inspect
 import itertools
-import math
 import typing as tp
 
-from boolean_circuit_tool.core.boolean_function import (
-    BooleanFunction,
-    BooleanFunctionModel,
-    RawTruthTable,
-    RawTruthTableModel,
-)
+from boolean_circuit_tool.core.boolean_function import BooleanFunction, RawTruthTable
 from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
-from boolean_circuit_tool.core.exceptions import (
-    BadBooleanValue,
-    TruthTableBadShapeError,
-)
-from boolean_circuit_tool.core.logic import DontCare, TriValue
-from boolean_circuit_tool.core.utils import get_bit_value, input_to_canonical_index
 
 
 __all__ = [
-    'TruthTableModel',
-    'TruthTable',
+    'PythonFunction',
+    'FunctionType',
 ]
 
 
-# Types to represent valid constructor argument for TruthTableModel and TruthTable.
-TruthTableArg = tp.Sequence[tp.Sequence[tp.Union[bool, str]]]
-TruthTableModelArg = tp.Sequence[tp.Sequence[tp.Union[TriValue, str]]]
+FunctionType = tp.Callable[..., tp.Sequence[bool]]
 
 
-def _str_to_bool(x: str) -> bool:
-    if x == '1':
-        return True
-    if x == '0':
-        return False
-    raise BadBooleanValue()
+class PythonFunction(BooleanFunction):
+    """Boolean function given as a python function."""
 
-
-def _str_to_trival(x: str) -> TriValue:
-    if x == '*':
-        return DontCare
-    if x == '1':
-        return True
-    if x == '0':
-        return False
-    raise BadBooleanValue()
-
-
-def _parse_bool(x: tp.Union[str, bool, tp.Literal[0, 1]]) -> bool:
-    if isinstance(x, str):
-        return _str_to_bool(x)
-    if x == 1:
-        return True
-    if x == 0:
-        return False
-    raise BadBooleanValue()
-
-
-def _parse_trival(x: tp.Union[str, TriValue, tp.Literal[0, 1]]) -> TriValue:
-    if isinstance(x, str):
-        return _str_to_trival(x)
-    if x == DontCare:
-        return DontCare
-    if x == 1:
-        return True
-    if x == 0:
-        return False
-    raise BadBooleanValue()
-
-
-class TruthTableModel(BooleanFunctionModel):
-    """Boolean function model given as a truth table with don't care outputs."""
-
-    def __init__(self, table: TruthTableModelArg):
+    def __init__(self, func: FunctionType, *, output_size: tp.Optional[int] = None):
         """
-        :param table: truth table given as a list of lists of bools. `i`th list
-        is a truth table for output number `i`, trimmed to contain only output
-        values. Element `j` of list `i` is value for output `i` for input which
-        is a binary encoding of a number `j` (e.g. 9 -> [..., 1, 0, 0, 1]).
+
+        :param func: python callable. This callable will be invoked once
+        on false input set if output_size is None.
+        :param output_size: optional size of func output.
 
         """
-        self._input_size = resolve_input_size(table)
-        self._output_size = len(table)
-
-        self._table: RawTruthTableModel = [
-            list(map(_parse_trival, output_tt)) for output_tt in table
-        ]
-        # Transposed truth table, element (i, j) of which is a value
-        # of the output `j` when evaluated at input number `i`.
-        self._table_t: RawTruthTableModel = [list(i) for i in zip(*self._table)]
+        s = inspect.signature(func)
+        self._func = func
+        self._input_size = len(s.parameters)
+        if output_size is None:
+            result = func(*([0] * self.input_size))
+            self._output_size = len(result)
+        else:
+            self._output_size = output_size
 
     @property
     def input_size(self) -> int:
@@ -104,99 +49,7 @@ class TruthTableModel(BooleanFunctionModel):
         """
         return self._output_size
 
-    def check(self, inputs: list[bool]) -> tp.Sequence[TriValue]:
-        """
-        Get model output values that correspond to provided `inputs`.
-
-        :param inputs: values of input gates.
-        :return: value of outputs evaluated for input values `inputs`.
-
-        """
-        idx = input_to_canonical_index(inputs)
-        return self._table_t[idx]
-
-    def check_at(self, inputs: list[bool], output_index: int) -> TriValue:
-        """
-        Get model value of `output_index`th output that corresponds to provided
-        `inputs`.
-
-        :param inputs: values of input gates.
-        :param output_index: index of desired output.
-        :return: value of `output_index` evaluated for input values `inputs`.
-
-        """
-        idx = input_to_canonical_index(inputs)
-        return self._table_t[idx][output_index]
-
-    def get_model_truth_table(self) -> RawTruthTableModel:
-        """
-        Get truth table of a boolean function, which is a matrix, `i`th row of which
-        contains values of `i`th output, which may contain bool or DontCare values, and
-        `j`th column corresponds to the input which is a binary encoding of a number `j`
-        (for example j=9 corresponds to [..., 1, 0, 0, 1])
-
-        :return: truth table describing this model.
-
-        """
-        return self._table
-
-    def define(
-        self,
-        definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
-    ) -> 'TruthTable':
-        """
-        Defines this model by defining ambiguous output values.
-
-        :param definition: mapping of pairs (input value set, output index) to
-        output values, required to completely define this boolean function model.
-        :return: new object of `BooleanFunctionT` type.
-
-        """
-        _table_cp = copy.deepcopy(self._table)
-        for (input_value, output_idx), output_value in definition.items():
-            _table_cp[output_idx][input_to_canonical_index(input_value)] = output_value
-
-        return TruthTable(
-            table=tp.cast(RawTruthTable, _table_cp),
-        )
-
-
-class TruthTable(BooleanFunction):
-    """Boolean function given as a truth table."""
-
-    def __init__(self, table: TruthTableArg):
-        """
-        :param table: truth table given as a list of lists of bools. `i`th list
-        is a truth table for output number `i`, trimmed to contain only output
-        values. Element `j` of list `i` is value for output `i` for input which
-        is a binary encoding of a number `j` (e.g. 9 -> [..., 1, 0, 0, 1]).
-
-        """
-        self._input_size = resolve_input_size(table)
-        self._output_size = len(table)
-
-        self._table: RawTruthTable = [
-            list(map(_parse_bool, output_tt)) for output_tt in table
-        ]
-        # Transposed truth table, element (i, j) of which is a value
-        # of the output `j` when evaluated at input number `i`.
-        self._table_t: RawTruthTable = [list(i) for i in zip(*self._table)]
-
-    @property
-    def input_size(self) -> int:
-        """
-        :return: number of inputs.
-        """
-        return self._input_size
-
-    @property
-    def output_size(self) -> int:
-        """
-        :return: number of outputs.
-        """
-        return self._output_size
-
-    def evaluate(self, inputs: list[bool]) -> tp.Sequence[bool]:
+    def evaluate(self, inputs: tp.Sequence[bool]) -> tp.Sequence[bool]:
         """
         Get output values that correspond to provided `inputs`.
 
@@ -204,10 +57,9 @@ class TruthTable(BooleanFunction):
         :return: value of outputs evaluated for input values `inputs`.
 
         """
-        idx = input_to_canonical_index(inputs)
-        return self._table_t[idx]
+        return self._func(*inputs)
 
-    def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
+    def evaluate_at(self, inputs: tp.Sequence[bool], output_index: int) -> bool:
         """
         Get value of `output_index`th output that corresponds to provided `inputs`.
 
@@ -216,8 +68,7 @@ class TruthTable(BooleanFunction):
         :return: value of `output_index` evaluated for input values `inputs`.
 
         """
-        idx = input_to_canonical_index(inputs)
-        return self._table_t[idx][output_index]
+        return self.evaluate(inputs)[output_index]
 
     def is_constant(self) -> bool:
         """
@@ -226,7 +77,13 @@ class TruthTable(BooleanFunction):
         :return: True iff this function is constant.
 
         """
-        return all(self.is_constant_at(i) for i in range(self.output_size))
+        input_iter = itertools.product((False, True), repeat=self.input_size)
+        first_value = self.evaluate(next(input_iter))
+        for x in input_iter:
+            value = self.evaluate(x)
+            if value != first_value:
+                return False
+        return True
 
     def is_constant_at(self, output_index: int) -> bool:
         """
@@ -236,9 +93,10 @@ class TruthTable(BooleanFunction):
         :return: True iff output `output_index` is constant.
 
         """
-
-        first_value = self._table[output_index][0]
-        for value in self._table[output_index]:
+        input_iter = itertools.product((False, True), repeat=self.input_size)
+        first_value = self.evaluate_at(next(input_iter), output_index)
+        for x in input_iter:
+            value = self.evaluate_at(x, output_index)
             if value != first_value:
                 return False
         return True
@@ -253,10 +111,15 @@ class TruthTable(BooleanFunction):
         :return: True iff this function is monotonic.
 
         """
-
-        return all(
-            self.is_monotonic_at(i, inverse=inverse) for i in range(self.output_size)
-        )
+        input_iter = itertools.product((False, True), repeat=self.input_size)
+        old_value = self.evaluate(next(input_iter))
+        for x in input_iter:
+            value = self.evaluate(x)
+            if not inverse and any(a < b for a, b in zip(value, old_value)):
+                return False
+            elif inverse and any(a > b for a, b in zip(value, old_value)):
+                return False
+        return True
 
     def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
         """
@@ -271,7 +134,8 @@ class TruthTable(BooleanFunction):
 
         """
         ones_started = False
-        for value in self._table[output_index]:
+        for x in itertools.product((False, True), repeat=self.input_size):
+            value = self.evaluate_at(x, output_index)
             if not ones_started and (value != inverse):
                 ones_started = True
             elif ones_started and (value == inverse):
@@ -350,10 +214,9 @@ class TruthTable(BooleanFunction):
         `input_index`.
 
         """
-        for idx, output_value in enumerate(self._table[output_index]):
-            input_value = get_bit_value(
-                idx, bit_idx=input_index, bit_size=self.input_size
-            )
+        for x in itertools.product((False, True), repeat=self.input_size):
+            output_value = self.evaluate_at(x, output_index)
+            input_value = x[input_index]
             if output_value != input_value:
                 return False
         return True
@@ -372,10 +235,9 @@ class TruthTable(BooleanFunction):
         `input_index`.
 
         """
-        for idx, output_value in enumerate(self._table[output_index]):
-            input_value = not get_bit_value(
-                idx, bit_idx=input_index, bit_size=self.input_size
-            )
+        for x in itertools.product((False, True), repeat=self.input_size):
+            output_value = self.evaluate_at(x, output_index)
+            input_value = not x[input_index]
             if output_value != input_value:
                 return False
         return True
@@ -449,21 +311,8 @@ class TruthTable(BooleanFunction):
         :return: truth table describing this function.
 
         """
-        return self._table
-
-
-def resolve_input_size(table: tp.Sequence[tp.Sequence[tp.Any]]) -> int:
-    """
-    Calculates number of inputs based on provided raw truth table.
-
-    :param table: raw truth table.
-    :return: number of inputs of function described by a truth table.
-
-    """
-    log = math.log2(len(table[0]))
-    if not log.is_integer():
-        raise TruthTableBadShapeError(
-            "Truth table got truth table with number "
-            "of rows not equal to a power of two."
-        )
-    return int(log)
+        table = [
+            self.evaluate(x)
+            for x in itertools.product((False, True), repeat=self.input_size)
+        ]
+        return [list(i) for i in zip(*table)]
