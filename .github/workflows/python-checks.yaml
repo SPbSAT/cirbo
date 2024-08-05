@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - '**.py'
+      - '**.c'
+      - '**.h'
+      - '**.cpp'
+      - '**.hpp'
       - '**.lock'
       - '**.toml'
       - '**.yaml'
@@ -13,6 +17,10 @@ on:
   pull_request:
     paths:
       - '**.py'
+      - '**.c'
+      - '**.h'
+      - '**.cpp'
+      - '**.hpp'
       - '**.lock'
       - '**.toml'
       - '**.yaml'
@@ -54,11 +62,13 @@ jobs:
       - name: Install poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.3
+          version: ${{ matrix.poetry-version }}
           virtualenvs-create: true
           virtualenvs-in-project: true
       - run: poetry build --no-interaction
         if: steps.changes.outputs.extensions == 'true'
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: 8
       - run: poetry install --no-interaction
       - name: mypy
         if: always()
