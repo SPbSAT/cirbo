@@ -2,13 +2,15 @@ import collections
 import copy
 import itertools
 import json
+import logging
 
 from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import Gate
+from boolean_circuit_tool.core.circuit.gate import Gate, GateType
 from boolean_circuit_tool.core.truth_table import TruthTableModel
 from boolean_circuit_tool.synthesis.circuit_search import CircuitFinderSat, Basis, get_tt_by_str
 from boolean_circuit_tool.synthesis.exception import NoSolutionError
 
+logger = logging.getLogger(__name__)
 
 class Subcircuit():
     def __init__(self, inputs = None, gates = None, outputs = None, size = 0, inputs_tt = None, patterns = None):
@@ -26,6 +28,9 @@ class Subcircuit():
     def evaluate_truth_table_with_dont_cares(self):
         """
         Returns truth table with don't cares based on possible inputs assignments (stored in `inputs_tt` field)
+
+        :return: truth table for outputs
+
         """
         inputs_tt = self.inputs_tt
         output_patterns = [self.patterns[gate] for gate in self.outputs]
@@ -75,11 +80,7 @@ class Subcircuit():
     def deserialize_array_from_file(filename):
         with open(filename, 'r') as f:
             data = json.load(f)
-
-        subcircuits = []
-        for subcircuit_raw in data:
-            subcircuits.append(Subcircuit.deserialize(subcircuit_raw))
-        return subcircuits
+        return [Subcircuit.deserialize(raw_subcircuit) for raw_subcircuit in data]
     
     @staticmethod
     def dump_list_to_file(subcircuits, filename):
@@ -142,15 +143,29 @@ def is_cyclic(circuit):
                 return True
     return False
 
-def process_cuts(circuit, cuts_path):
+def get_subcircuits(circuit, cuts_path):
+    """
+    Get subcircuits for simplification.
+    Function processes given cuts and gets the most probable subcircuits for simplification.
+
+    :param circuit: given circuit.
+    :param cuts: cuts for the circuit.
+    :return: list with subcircuits from the given circuit.
+
+    """
     cut_nodes = read_cuts(cuts_path)
     cuts = sorted(cut_nodes.keys(), key=lambda x: len(x))
 
-    print(f'Found {len(cuts)} cuts')
+    logger.info(f"Found {len(cuts)} cuts")
 
     def is_nested_cut(cut1, cut2) -> bool:
         """
-        Returns: `True` if `cut1` is nested in `cut2, otherwise: `False`
+        Check whether `cut1` is nesten in `cut2`
+
+        :param cut1:
+        :param cut2:
+        :return: `True` if `cut1` is nested in `cut2, otherwise: `False`
+
         """
         for gate in cut1:
             in_cut = False
@@ -188,7 +203,7 @@ def process_cuts(circuit, cuts_path):
             continue
         good_cuts.append(cut)
 
-    print(f'Removed {len(cuts) - len(good_cuts)} nested cuts')
+    logger.info(f"Removed {len(cuts) - len(good_cuts)} nested cuts")
 
     # Fill cuts with all its gates
     for cut in good_cuts:
@@ -200,7 +215,7 @@ def process_cuts(circuit, cuts_path):
     subcircuits = []
     good_cuts = [cut for cut in good_cuts if len(cut) > 2] # skip small cuts
 
-    print(f'Process: {len(good_cuts)} cuts')
+    logger.info(f"Process: {len(good_cuts)} cuts")
 
     outputs_set = set(circuit.outputs)
 
@@ -294,12 +309,6 @@ def eval_dont_cares(circuit, subcircuits):
 
 
 if __name__ == '__main__':
-    # circuit = Circuit.from_bench('./core/synthesis/ex20.bench')
-    # cuts_path = './core/synthesis/cuts20.txt'
-
-    # circuit = Circuit.from_bench('./core/synthesis/my_ex.bench')
-    # cuts_path = './core/synthesis/my_cuts.txt'
-
     circuit = Circuit.from_bench('./core/synthesis/test/sum5_size12.bench')
     cuts_path = './core/synthesis/test/sum5_cuts.txt'
 
@@ -307,7 +316,7 @@ if __name__ == '__main__':
     basis = Basis.XAIG
 
     inputs_tt = generate_inputs_tt([3, 4, 5])
-    subcircuits = process_cuts(circuit, cuts_path)
+    subcircuits = get_subcircuits(circuit, cuts_path)
     subcircuits = eval_dont_cares(circuit, subcircuits)
 
     gate_status = collections.defaultdict(str)
@@ -329,7 +338,6 @@ if __name__ == '__main__':
             if gate_status[gate] == 'modified' and gate not in inputs_set:
                 skip_subcircuit = True
                 break
-
         if skip_subcircuit:
             continue
 
@@ -354,108 +362,51 @@ if __name__ == '__main__':
                 filtered_outputs_lst.append(output)
                 found_patterns[pattern] = output
 
-        outputs_tt = []
-        for i, row in enumerate(subcircuit.evaluate_truth_table_with_dont_cares()):
-            if subcircuit.outputs[i] in filtered_outputs:
-                outputs_tt.append(row)
-
+        outputs_tt = [
+            row for i, row in enumerate(subcircuit.evaluate_truth_table_with_dont_cares())
+            if subcircuit.outputs[i] in filtered_outputs
+        ]
         new_subcircuit = None
         try:
             new_subcircuit = CircuitFinderSat(
                 TruthTableModel(get_tt_by_str(outputs_tt)), size - 1, basis=basis
             ).find_circuit()
         except NoSolutionError:
-            pass
-
-        if new_subcircuit is None:
             continue
 
-        print(outputs_tt)
-        print(f'Inputs: {inputs}')
-        print(f'Outputs: {subcircuit.outputs}')
-
-        new_subcircuit.save_to_file('check_subcircuit.bench')
-
-        old_gates_to_new_mapping = {}
-        new_gates_to_old_mapping = {}
-
-        # print(inputs)
-        # print(filtered_outputs)
-        # print('checking this ==========')
+        input_labels_mapping = {}
+        output_labels_mapping = {}
 
         for i, old_gate in enumerate(inputs):
             new_gate = new_subcircuit.inputs[i]
-            old_gates_to_new_mapping[old_gate] = new_gate
-            new_gates_to_old_mapping[new_gate] = old_gate
+            input_labels_mapping[old_gate] = new_gate
 
         for i, old_gate in enumerate(filtered_outputs_lst):
             new_gate = new_subcircuit.outputs[i]
-            old_gates_to_new_mapping[old_gate] = new_gate
-            new_gates_to_old_mapping[new_gate] = old_gate
+            output_labels_mapping[old_gate] = new_gate
+
+        for output in subcircuit.outputs:
+            if output not in filtered_outputs:
+                negation_gate = outputs_negation_mapping[output]
+                new_gate = output_labels_mapping[negation_gate]
+                found_negation = False
+                for user in new_subcircuit.get_element_users(new_gate):
+                    if new_subcircuit.get_element(user).gate_type.name == 'NOT':
+                        output_labels_mapping[output] = user
+                        found_negation = True
+                        new_subcircuit.mark_as_output(user)
+                        break
 
         # Changing initial circuit
         new_circuit = copy.deepcopy(circuit)
-        new_gate_counter = 0
+        new_circuit.replace_subcircuit(new_subcircuit, input_labels_mapping, output_labels_mapping) 
 
-        # Add new gates
-        new_inputs = set(new_subcircuit.inputs)
-        new_outputs = set(new_subcircuit.outputs)
-
-        # new_gate_mapping = {}
-        # for i, new_gate in enumerate(new_subcircuit.inputs):
-            # new_gate_mapping[new_gate] = inputs[i]
-
-        for new_gate in top_sort(new_subcircuit):
-            if new_gate in new_inputs:
-                continue
-            elif new_gate in new_outputs:
-                old_gate = new_gates_to_old_mapping[new_gate]
-
-                gate_type = new_subcircuit.get_element(new_gate).gate_type
-                operands = new_subcircuit.get_element(new_gate).operands
-                new_circuit.get_element(old_gate)._gate_type = gate_type
-                new_circuit.get_element(old_gate)._operands = tuple([new_gates_to_old_mapping[x] for x in operands])
-                for x in operands:
-                    new_circuit._add_user(new_gates_to_old_mapping[x], gate)
-            else:
-                gate_type = new_subcircuit.get_element(new_gate).gate_type
-                operands = new_subcircuit.get_element(new_gate).operands
-                new_gates_to_old_mapping[new_gate] = f'x{iter}_{new_gate_counter}'
-                new_gate_counter += 1
-
-                gate_to_add = Gate(
-                    label=new_gates_to_old_mapping[new_gate],
-                    gate_type=gate_type,
-                    operands=tuple([new_gates_to_old_mapping[x] for x in operands])
-                )
-                new_circuit.add_gate(gate_to_add)
-
-        for output, mapped_gate in outputs_mapping.items():
-            if output != mapped_gate:
-                print('BAD CASE 1')
-
-        for output, mapped_gate in outputs_negation_mapping.items():
-            gate_type = new_subcircuit.get_element(output).gate_type
-            operands = new_subcircuit.get_element(output).operands
-
-            if gate_type.name != 'NOT' or operands[0] != mapped_gate:
-                print('BAD CASE 2')
-
-        # Remove old gates
-        for gate in subcircuit.gates:
-            if gate in inputs_set or gate in outputs_set:
-                continue
-            # print(gate, new_circuit.has_element(gate))
-            # print(new_circuit.get_element(gate))
-            new_circuit.remove_gate(new_circuit.get_element(gate))
-        
         if is_cyclic(new_circuit):
             continue
 
         circuit = new_circuit
-        print('Improved circuit by 1 gate')
+        logger.info("Improved circuit size")
 
-        # print(inputs_set, 'check')
         for output in filtered_outputs:
             gate_status[output] = 'modified'
     
@@ -463,8 +414,6 @@ if __name__ == '__main__':
             if gate in inputs_set or gate in outputs_set:
                 continue
             gate_status[gate] = 'removed'
-
-        circuit.save_to_file(f'circuit_v{iter}.txt')
 
     # Sanity check
     assignment = {input: False for input in initial_circuit.inputs}
@@ -478,5 +427,5 @@ if __name__ == '__main__':
             assignment[inputs[idx]] = True
         assert circuit.evaluate_circuit_outputs(assignment) == initial_circuit.evaluate_circuit_outputs(assignment), "Initial circuit and circuit after impovement differ"
 
-    print('Check passed')
+    logger.info("Check passed")
     # circuit.save_to_file('new_circuit.bench')

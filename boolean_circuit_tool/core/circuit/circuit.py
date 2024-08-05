@@ -30,6 +30,22 @@ logger = logging.getLogger(__name__)
 __all__ = ['Circuit']
 
 
+def top_sort(circuit):
+    vis = collections.defaultdict(bool)
+    sorted_gates = []
+    def dfs(gate):
+        vis[gate] = True
+        for next_gate in circuit.get_element(gate).operands:
+            if not vis[next_gate]:
+                dfs(next_gate)
+        sorted_gates.append(gate)
+
+    for output in circuit.outputs:
+        if not vis[output]:
+            dfs(output)
+    return sorted_gates
+
+
 class Circuit(BooleanFunction):
     """
     Structure to carry boolean circuit.
@@ -43,7 +59,7 @@ class Circuit(BooleanFunction):
 
     TODO: Circuit also implements BooleanFunction protocol, allowing
     it to be used as boolean function and providing related checks.
-    TODO def top_sort
+    TODO def rsort
 
     """
 
@@ -211,6 +227,48 @@ class Circuit(BooleanFunction):
         check_elements_exist(operands, self)
 
         return self._emplace_gate(label, gate_type, operands, **kwargs)
+    
+    def replace_subcircuit(
+        self,
+        subcircuit: tp_ext.Self,
+        inputs_mapping: dict[Label, Label],
+        outputs_mapping: dict[Label, Label]
+    ) -> tp_ext.Self:
+        labels_to_remove = []
+        label_is_visited = collections.defaultdict(bool)
+        for output_label in outputs_mapping:
+            queue = collections.deque()
+            if not label_is_visited[output_label]:
+                label_is_visited[output_label]
+                queue.append(output_label)
+            while queue:
+                label = queue.popleft()
+                if label not in inputs_mapping and label not in outputs_mapping:
+                    labels_to_remove.append(label)
+                if label not in inputs_mapping:
+                    for operand in self.get_element(label).operands:
+                        if not label_is_visited[operand]:
+                            label_is_visited[operand] = True
+                            queue.append(operand)
+                            if label in outputs_mapping and (operand in inputs_mapping or operand in outputs_mapping):
+                                self._remove_user(operand, label)
+        for label in labels_to_remove:
+            self._remove_gate(self.get_element(label))
+        for label1, label2 in inputs_mapping.items():
+            subcircuit.rename_element(old_label=label2, new_label=label1)
+        for label1, label2 in outputs_mapping.items():
+            subcircuit.rename_element(old_label=label2, new_label=label1)
+        for label in top_sort(subcircuit):
+            if label not in inputs_mapping and label not in outputs_mapping:
+                self.add_gate(subcircuit.get_element(label))
+        for label in outputs_mapping:
+            self.get_element(label)._operands = subcircuit.get_element(label)._operands
+            self.get_element(label)._gate_type = subcircuit.get_element(label)._gate_type
+            for operand in self.get_element(label)._operands:
+                if operand in inputs_mapping or operand in outputs_mapping:
+                    self._add_user(operand, label)
+        return self            
+
 
     def rename_element(self, old_label: Label, new_label: Label) -> tp_ext.Self:
         """
@@ -704,6 +762,8 @@ class Circuit(BooleanFunction):
 
         """
         for operand in gate.operands:
+            print(f'Removing operand: {operand}')
+            # print(self._element_to_users[operand])
             self._remove_user(operand, gate.label)
 
         self._elements.pop(gate.label, None)
