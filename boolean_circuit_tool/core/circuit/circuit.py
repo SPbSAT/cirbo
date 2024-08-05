@@ -914,12 +914,18 @@ class Circuit(BooleanFunction):
             lambda: TraverseState.UNVISITED
         )
 
-        def _bfs_remove(label):
-            nonlocal pop_index
-            if mode == TraverseMode.BFS:
+        if mode == TraverseMode.BFS:
+
+            def _bfs_remove(label):
+                nonlocal pop_index, queue
                 gate_states[label] = TraverseState.VISITED
                 queue.pop(pop_index)
-            return
+                return
+
+        else:
+
+            def _bfs_remove(_):
+                return
 
         while queue:
 
