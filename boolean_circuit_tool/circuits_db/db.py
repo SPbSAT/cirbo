@@ -11,6 +11,7 @@ from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.circuits_db.exceptions import (CircuitsDatabaseError,
                                                          CircuitDatabaseOpenError,
                                                          CircuitDatabaseCloseError)
+from boolean_circuit_tool.circuits_db.normalization import NormalizationInfo
 from boolean_circuit_tool.core.boolean_function import RawTruthTable, RawTruthTableModel
 from boolean_circuit_tool.core.circuit.gate import NOT, INPUT, IFF
 from boolean_circuit_tool.core.logic import DontCare
@@ -59,12 +60,13 @@ class CircuitsDatabase:
         return decode_circuit(encoded_circuit)
 
     def get_by_raw_truth_table(self, truth_table: RawTruthTable) -> tp.Optional[Circuit]:
-        ordered_truth_table, outputs_permutation = _normalize_outputs_order(truth_table)
-        label = _truth_table_to_label(ordered_truth_table)
+        normalization = NormalizationInfo()
+        normalized_truth_table = normalization.normalize(truth_table)
+        label = _truth_table_to_label(normalized_truth_table)
         circuit = self.get_by_label(label)
         if circuit is None:
             return None
-        _permute_circuit_outputs(circuit, _invert_permutation(outputs_permutation))
+        normalization.denormalize(circuit)
         return circuit
 
     def add_circuit(self, circuit: Circuit, label: tp.Optional[str] = None,
@@ -72,13 +74,15 @@ class CircuitsDatabase:
         basis = Basis(basis)
         if label is None:
             truth_table = circuit.get_truth_table()
-            ordered_truth_table, outputs_permutation = _normalize_outputs_order(truth_table)
-            label = _truth_table_to_label(ordered_truth_table)
-            circuit = copy.deepcopy(circuit)  # TODO: should I copy circuit to avoid damage of input object?
-            _permute_circuit_outputs(circuit, outputs_permutation)
-        encoded_circuit = encode_circuit(circuit, basis)
+            normalization = NormalizationInfo()
+            normalized_truth_table = normalization.normalize(truth_table)
+            if normalized_truth_table != truth_table:
+                raise CircuitsDatabaseError(f"Cannot add not normalized circuit")
+                # TODO: For our goals support of all circuits is not needed. Do we need to maintain any type of circuit?
+            label = _truth_table_to_label(normalized_truth_table)
         if label in self._dict.keys():
             raise CircuitsDatabaseError(f"Label: {label} is already in Circuits Database")
+        encoded_circuit = encode_circuit(circuit, basis)
         self._dict[label] = encoded_circuit
 
     def get_by_raw_truth_table_model(self, truth_table: RawTruthTableModel) -> tp.Optional[Circuit]:
@@ -88,14 +92,17 @@ class CircuitsDatabase:
             for j, value in enumerate(table):
                 if value is not DontCare:
                     continue
-                undefined_positions[len(undefined_positions)] = (i, j)
-
+                if j == 0:
+                    # Database has only normalized circuits => no need to query truth tables with first bit = 1
+                    defined_truth_table[i][j] = False
+                else:
+                    undefined_positions[len(undefined_positions)] = (i, j)
         result: tp.Optional[Circuit] = None
         result_size: tp.Optional[int] = None
         for substitution in itertools.product((False, True), repeat=len(undefined_positions)):
             for i, val in enumerate(substitution):
-                pos = undefined_positions[i]
-                defined_truth_table[pos[0]][pos[1]] = val
+                j, k = undefined_positions[i]
+                defined_truth_table[j][k] = val
             circuit = self.get_by_raw_truth_table(defined_truth_table)
             if circuit is None:
                 continue

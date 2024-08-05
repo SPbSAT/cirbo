@@ -50,6 +50,9 @@ def create_all_gates_db(basis: Basis, use_label: bool) -> CircuitsDatabase:
     db.open()
     for gate_type in all_gate_types(basis):
         circuit = create_one_gate_circuit(gate_type)
+        if circuit.get_truth_table()[0][0]:
+            # Skip not normalized circuits, as db needs ony normalized circuits
+            continue
         if use_label:
             db.add_circuit(circuit, gate_type.name, basis)
         else:
@@ -72,7 +75,7 @@ def test_one_gate_db_queries(basis, use_label):
             retrieved = db.get_by_label(gate_type.name)
         else:
             retrieved = db.get_by_raw_truth_table(original.get_truth_table())
-        assert original.elements_number == retrieved.elements_number
+        assert retrieved is not None
         assert len(original.inputs) == len(retrieved.inputs)
         assert len(original.outputs) == len(retrieved.outputs)
         assert original.get_truth_table() == retrieved.get_truth_table()
