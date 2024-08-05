@@ -11,6 +11,7 @@ __all__ = [
     'NormalizationParametersError',
     'NormalizationParametersAreNotInitialized',
     'CircuitIsNotCompatibleWithNormalizationParameters',
+    'CircuitEncodingError',
 ]
 
 

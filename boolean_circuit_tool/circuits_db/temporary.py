@@ -2,7 +2,8 @@
 #  This file is needed for intermediate representations only.
 #  It is not gonna be used in the production.
 #  Where to place it? How to format it? Should it be deleted?
-# import random
+import random
+
 # import time
 import typing as tp
 from pathlib import Path
@@ -181,29 +182,29 @@ if __name__ == "__main__":
     # )
     # exit(0)
 
-    # XAIG
-    txt_db_to_bin_db(
-        Path("/home/vsevolod/sat/circuit_improvement_my/xaig_db_aig_str.txt"),
-        Path("/home/vsevolod/sat/boolean-circuit-tool/xaig_db.bin"),
-    )
-    exit(0)
+    # # XAIG
+    # txt_db_to_bin_db(
+    #     Path("/home/vsevolod/sat/circuit_improvement_my/xaig_db_aig_str.txt"),
+    #     Path("/home/vsevolod/sat/boolean-circuit-tool/xaig_db.bin"),
+    # )
+    # exit(0)
 
-    # # test
-    # random.seed(0)
-    # with CircuitsDatabase(
-    #     "/home/vsevolod/sat/boolean-circuit-tool/xaig_db_2_2.bin"
-    # ) as db:
-    #     for i in range(10000000):
-    #         if i % 1000 == 0:
-    #             print(i)
-    #         inputs = random.randint(2, 2)
-    #         outputs = random.randint(1, 2)
-    #         tt = [
-    #             [random.choice([True, False]) for _ in range(1 << inputs)]
-    #             for _ in range(outputs)
-    #         ]
-    #         if len(set(map(tuple, tt))) < len(tt):
-    #             continue
-    #         circuit = db.get_by_raw_truth_table(tt)
-    #         assert circuit is not None
-    #         assert circuit.get_truth_table() == tt
+    # test
+    random.seed(0)
+    with CircuitsDatabase(
+        "/home/vsevolod/sat/boolean-circuit-tool/aig_db_compressed.bin"
+    ) as db:
+        for i in range(10000000):
+            if i % 1000 == 0:
+                print(i)
+            inputs = random.randint(2, 3)
+            outputs = random.randint(1, 3)
+            tt = [
+                [random.choice([True, False]) for _ in range(1 << inputs)]
+                for _ in range(outputs)
+            ]
+            if len(set(map(tuple, tt))) < len(tt):
+                continue
+            circuit = db.get_by_raw_truth_table(tt)
+            assert circuit is not None
+            assert circuit.get_truth_table() == tt

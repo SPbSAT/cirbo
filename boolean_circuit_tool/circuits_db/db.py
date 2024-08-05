@@ -29,11 +29,27 @@ __all__ = ['CircuitsDatabase']
 
 
 class CircuitsDatabase:
+    """
+    A class to manage a database of circuits.
+
+    The CircuitsDatabase class allows for storing, retrieving, and manipulating boolean
+    circuits. It supports operations such as opening and closing the database, adding
+    circuits, and querying circuits based on labels and truth tables.
+
+    """
+
     def __init__(self, db_source: tp.Optional[tp.Union[tp.BinaryIO, Path, str]] = None):
         self._db_source = db_source
         self._dict: tp.Optional[tp.Dict[str, bytes]] = None
 
     def open(self) -> None:
+        """
+        Open the database for operations.
+
+        :raises CircuitDatabaseOpenError: If the database is already opened or the
+            source type is unsupported.
+
+        """
         if self._dict is not None:
             raise CircuitDatabaseOpenError("Try to open already opened database")
         if isinstance(self._db_source, str):
@@ -50,18 +66,46 @@ class CircuitsDatabase:
             raise CircuitDatabaseOpenError("Unsupported db source type")
 
     def close(self) -> None:
+        """
+        Close the database, releasing any resources.
+
+        :raises CircuitDatabaseCloseError: If the database is already closed.
+
+        """
         if self._dict is None:
             raise CircuitDatabaseCloseError("Try to close already closed database")
         self._dict = None
 
     def __enter__(self) -> tp_ext.Self:
+        """
+        Enter the runtime context related to this object.
+
+        :return: The opened database instance.
+
+        """
         self.open()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """
+        Exit the runtime context related to this object.
+
+        :param exc_type: The exception type.
+        :param exc_val: The exception value.
+        :param exc_tb: The traceback object.
+
+        """
         self.close()
 
     def get_by_label(self, label: str) -> tp.Optional[Circuit]:
+        """
+        Retrieve a circuit by its label.
+
+        :param label: The label of the circuit.
+        :return: The circuit if found, otherwise None.
+        :raises CircuitDatabaseNotOpenedError: If the database is not opened.
+
+        """
         if self._dict is None:
             raise CircuitDatabaseNotOpenedError()
         encoded_circuit = self._dict.get(label)
@@ -72,6 +116,13 @@ class CircuitsDatabase:
     def get_by_raw_truth_table(
         self, truth_table: RawTruthTable
     ) -> tp.Optional[Circuit]:
+        """
+        Retrieve a circuit by its raw truth table.
+
+        :param truth_table: The raw truth table of the circuit.
+        :return: The circuit if found, otherwise None.
+
+        """
         normalization = NormalizationInfo(truth_table)
         normalized_truth_table = normalization.truth_table
         label = _truth_table_to_label(normalized_truth_table)
@@ -82,6 +133,16 @@ class CircuitsDatabase:
         return circuit
 
     def add_circuit(self, circuit: Circuit, label: tp.Optional[str] = None) -> None:
+        """
+        Add a circuit to the database.
+
+        :param circuit: The circuit to add.
+        :param label: An optional label for the circuit.
+        :raises CircuitDatabaseNotOpenedError: If the database is not opened.
+        :raises CircuitsDatabaseError: If the circuit is not normalized or the label
+            already exists.
+
+        """
         if self._dict is None:
             raise CircuitDatabaseNotOpenedError()
         if label is None:
@@ -103,6 +164,13 @@ class CircuitsDatabase:
     def get_by_raw_truth_table_model(
         self, truth_table: RawTruthTableModel
     ) -> tp.Optional[Circuit]:
+        """
+        Retrieve a circuit by its raw truth table model.
+
+        :param truth_table: The raw truth table model of the circuit.
+        :return: The circuit if found, otherwise None.
+
+        """
         undefined_positions: tp.Dict[int, tp.Tuple[int, int]] = dict()
         defined_truth_table: tp.List[tp.List[bool]] = [
             [False if val in [DontCare, False] else True for val in table]
@@ -136,46 +204,38 @@ class CircuitsDatabase:
         return result
 
     def save(self, stream: tp.BinaryIO) -> None:
+        """
+        Save the database to a binary stream.
+
+        :param stream: The binary stream to save the database to.
+        :raises CircuitDatabaseNotOpenedError: If the database is not opened.
+
+        """
         if self._dict is None:
             raise CircuitDatabaseNotOpenedError()
         write_binary_dict(self._dict, stream)
 
 
-def _normalize_outputs_order(
-    truth_table: RawTruthTable,
-) -> tuple[RawTruthTable, list[int]]:
-    numbered_truth_tables = [(table, i) for i, table in enumerate(truth_table)]
-    numbered_truth_tables.sort()
-    result_truth_tables = list(table for table, _ in numbered_truth_tables)
-    result_permutation = list(i for _, i in numbered_truth_tables)
-    return result_truth_tables, result_permutation
-
-
-def _permute_circuit_outputs(circuit: Circuit, permutation: tp.List[int]) -> None:
-    new_outputs = _apply_permutation(circuit.outputs, permutation)
-    circuit.order_outputs(new_outputs)
-
-
-def _invert_permutation(permutation: tp.List[int]) -> tp.List[int]:
-    inverse = [0] * len(permutation)
-    for i, p in enumerate(permutation):
-        inverse[p] = i
-    return inverse
-
-
-T = tp.TypeVar('T')
-
-
-def _apply_permutation(data: tp.List[T], permutation: tp.List[int]) -> tp.List[T]:
-    return [data[i] for i in permutation]
-
-
 def _truth_table_to_label(truth_table: RawTruthTable) -> str:
+    """
+    Convert a truth table to a label.
+
+    :param truth_table: The raw truth table.
+    :return: The label as a string.
+
+    """
     str_truth_tables = [''.join(str(int(i)) for i in table) for table in truth_table]
     return '_'.join(str_truth_tables)
 
 
 def _get_circuit_size(circuit: Circuit) -> int:
+    """
+    Calculate the size of a circuit based on the number of non-trivial gates.
+
+    :param circuit: The circuit whose size is to be calculated.
+    :return: The size of the circuit.
+
+    """
     gate_types = map(lambda x: x.gate_type, circuit.elements.values())
     nontrivial_gates = list(filter(lambda x: x not in [NOT, IFF, INPUT], gate_types))
     return len(nontrivial_gates)

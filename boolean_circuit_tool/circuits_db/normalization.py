@@ -13,6 +13,11 @@ __all__ = ['NormalizationInfo']
 
 
 class NormalizationInfo:
+    # TODO:
+    #   class has very strange interfaces.
+    #   It normalizes truth_table and denormalizes Circuit. Looks strange.
+    #   I suggest to change interfaces. How?
+
     def __init__(self, truth_table: RawTruthTable):
         self.negations: tp.Optional[tp.List[bool]] = None
         self.permutation: tp.Optional[tp.List[int]] = None

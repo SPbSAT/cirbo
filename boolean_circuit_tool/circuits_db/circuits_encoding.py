@@ -1,3 +1,56 @@
+"""
+This module provides functionality for encoding and decoding boolean circuits to and
+from a binary format.
+
+Binary File Specification for Encoding and Decoding Circuits:
+
+The binary file consists of a header, followed by circuit parameters, and the circuit body.
+
+File Structure:
+1. Header
+    - Word Size (1 byte):
+        Defines the word size in bits used for encoding numbers in the file.
+
+2. Circuit Parameters
+    - Number of Inputs (word_size bits):
+        The number of input gates in the circuit.
+    - Number of Outputs (word_size bits):
+        The number of output gates in the circuit.
+    - Number of Intermediate Gates (word_size bits):
+        The number of intermediate gates in the circuit
+    (total gates - input gates).
+
+3. Circuit Body
+    - Gates:
+        - For each gate (excluding inputs):
+            - Gate Type (4 bits): Encodes the type of gate.
+                The mapping is defined in `_gate_type_to_int` and `_int_to_gate_type`.
+            - Operands (word_size bits each):
+                References to the gates that are inputs to this gate.
+                The number of operands depends on the gate type.
+    - Outputs:
+        - For each output gate:
+            - Gate Identifier (word_size bits):
+                Reference to the gate that is an output.
+
+Gate Type Encoding:
+- NOT: 0
+- AND: 1
+- OR: 2
+- NOR: 3
+- NAND: 4
+- XOR: 5
+- NXOR: 6
+- IFF: 7
+- GEQ: 8
+- GT: 9
+- LEQ: 10
+- LT: 11
+- ALWAYS_TRUE: 12
+- ALWAYS_FALSE: 13
+
+"""
+
 import typing as tp
 
 from boolean_circuit_tool.circuits_db.bit_io import BitReader, BitWriter
@@ -8,10 +61,18 @@ from boolean_circuit_tool.core.circuit.gate import Gate, GateType, Label
 
 __all__ = ['encode_circuit', 'decode_circuit']
 
+# Number of bits used to encode the gate type
 GATE_TYPE_BIT_SIZE = 4
 
 
 def encode_circuit(circuit: Circuit) -> bytes:
+    """
+    Encode a circuit into bytes.
+
+    :param circuit: The circuit to encode.
+    :return: The encoded circuit as bytes.
+
+    """
     word_size = _get_word_size(circuit)
     bit_writer = BitWriter()
     _encode_header(bit_writer, word_size)
@@ -21,6 +82,13 @@ def encode_circuit(circuit: Circuit) -> bytes:
 
 
 def decode_circuit(bytes_: bytes) -> Circuit:
+    """
+    Decode a circuit from bytes.
+
+    :param bytes_: The bytes to decode.
+    :return: The decoded circuit.
+
+    """
     bit_reader = BitReader(bytes_)
     word_size = _decode_header(bit_reader)
     inputs_count, outputs_count, intermediates_count = _decode_circuit_parameters(
