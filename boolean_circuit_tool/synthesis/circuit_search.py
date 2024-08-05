@@ -13,10 +13,7 @@ from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
 from boolean_circuit_tool.circuits_db.db import CircuitsDatabase
-from boolean_circuit_tool.core.boolean_function import (
-    BooleanFunctionModel,
-    RawTruthTableModel,
-)
+from boolean_circuit_tool.core.boolean_function import BooleanFunctionModel
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -47,7 +44,6 @@ from boolean_circuit_tool.synthesis.exception import (
     GateIsAbsentError,
     NoSolutionError,
     SolverTimeOutError,
-    StringTruthTableError,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,7 +53,6 @@ __all__ = [
     'Basis',
     'PySATSolverNames',
     'CircuitFinderSat',
-    'get_tt_by_str',
 ]
 
 
@@ -173,27 +168,6 @@ class PySATSolverNames(enum.Enum):
 
 def _get_GateType_by_tt(gate_tt: tp.List[bool]) -> GateType:
     return _tt_to_gate_type[tuple(gate_tt)]
-
-
-def get_tt_by_str(str_truth_table: tp.List[str]) -> RawTruthTableModel:
-    """
-    Convert a truth table from a list of strings to a list of TriValue lists.
-
-    :param str_truth_table: List of strings representing the truth table
-    :return: List of lists with TriValues corresponding to the input strings
-
-    """
-
-    def _char_to_trivalue(char):
-        if char == "*":
-            return DontCare
-        if char == "1":
-            return True
-        if char == "0":
-            return False
-        raise StringTruthTableError()
-
-    return [[_char_to_trivalue(char) for char in row] for row in str_truth_table]
 
 
 class CircuitFinderSat:
