@@ -37,5 +37,5 @@ def test_input_to_canonical_index(bit_list: list[bool], expected: int):
 )
 def test_get_bit_value(bit_list: list[bool]):
     value = input_to_canonical_index(bit_list)
-    for idx, bit in enumerate(reversed(bit_list)):
-        assert get_bit_value(value, bit_idx=idx) == bit
+    for idx, bit in enumerate(bit_list):
+        assert get_bit_value(value, bit_idx=idx, bit_size=len(bit_list)) == bit

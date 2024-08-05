@@ -14,9 +14,9 @@ __all__ = [
 ]
 
 # Type that represents bare truth table object.
-RawTruthTable = tp.MutableSequence[tp.MutableSequence[bool]]
+RawTruthTable = tp.Sequence[tp.Sequence[bool]]
 # Raw truth table with don't care outputs.
-RawTruthTableModel = tp.MutableSequence[tp.MutableSequence[TriValue]]
+RawTruthTableModel = tp.Sequence[tp.MutableSequence[TriValue]]
 
 BooleanFunctionT = tp.TypeVar('BooleanFunctionT', covariant=True)
 
@@ -78,8 +78,8 @@ class BooleanFunctionModel(tp.Protocol[BooleanFunctionT]):
         """
 
     def define(
-            self,
-            definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
+        self,
+        definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
     ) -> BooleanFunctionT:
         """
         Defines this model by defining ambiguous output values.
@@ -179,9 +179,9 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         """
 
     def is_dependent_on_input_at(
-            self,
-            output_index: int,
-            input_index: int,
+        self,
+        output_index: int,
+        input_index: int,
     ) -> bool:
         """
         Check if output `output_index` depends on input `input_index` (there exist two
@@ -195,9 +195,9 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         """
 
     def is_output_equal_to_input(
-            self,
-            output_index: int,
-            input_index: int,
+        self,
+        output_index: int,
+        input_index: int,
     ) -> bool:
         """
         Check if output `output_index` equals to input `input_index`.
@@ -210,9 +210,9 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         """
 
     def is_output_equal_to_input_negation(
-            self,
-            output_index: int,
-            input_index: int,
+        self,
+        output_index: int,
+        input_index: int,
     ) -> bool:
         """
         Check if output `output_index` equals to negation of input `input_index`.
@@ -234,8 +234,8 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         """
 
     def find_negations_to_make_symmetric(
-            self,
-            output_index: list[int],
+        self,
+        output_index: list[int],
     ) -> tp.Optional[list[bool]]:
         """
         Check if exist input negations set such that function is symmetric on given
@@ -292,8 +292,8 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         return tp.cast(RawTruthTableModel, self.get_truth_table())
 
     def define(
-            self,
-            definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
+        self,
+        definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
     ) -> tp_ext.Self:
         """
         Defines this model by defining ambiguous output values.

@@ -1,3 +1,4 @@
+import os
 import pathlib
 
 import pytest
@@ -8,7 +9,11 @@ from boolean_circuit_tool.core.circuit.gate import AND, INPUT, NOT, OR
 
 
 def get_file_path(file_name):
-    return str(pathlib.Path.cwd()) + '/tests/core/parser/benches/' + file_name
+    return str(
+        pathlib.Path(os.path.dirname(__file__))
+        .joinpath('./benches/')
+        .joinpath(file_name)
+    )
 
 
 def test_trivial_instance():

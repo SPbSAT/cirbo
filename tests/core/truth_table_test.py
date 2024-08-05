@@ -2,10 +2,21 @@ import random
 import typing as tp
 
 import pytest
-
 from boolean_circuit_tool.core.boolean_function import RawTruthTable
+
+from boolean_circuit_tool.core.exceptions import (
+    BadBooleanValue,
+    TruthTableBadShapeError,
+)
 from boolean_circuit_tool.core.logic import DontCare
-from boolean_circuit_tool.core.truth_table import TruthTable, TruthTableModel
+from boolean_circuit_tool.core.truth_table import (
+    _parse_bool,
+    _parse_trival,
+    _str_to_bool,
+    _str_to_trival,
+    TruthTable,
+    TruthTableModel,
+)
 
 
 def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTable:
@@ -13,6 +24,155 @@ def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTa
         [random.choice([True, False]) for _ in range(2**input_size)]
         for _ in range(output_size)
     ]
+
+
+@pytest.mark.parametrize(
+    'x, expected',
+    [
+        ('0', False),
+        ('1', True),
+    ],
+)
+def test_str_to_bool(x, expected):
+    assert _str_to_bool(x) == expected
+
+
+@pytest.mark.parametrize(
+    'x',
+    [
+        '*',
+        'abc',
+        '123',
+        '',
+    ],
+)
+def test_str_to_bool_raises(x):
+    with pytest.raises(BadBooleanValue):
+        _ = _str_to_bool(x)
+
+
+@pytest.mark.parametrize(
+    'x, expected',
+    [
+        ('0', False),
+        ('1', True),
+        ('*', DontCare),
+    ],
+)
+def test_str_to_trival(x, expected):
+    assert _str_to_trival(x) == expected
+
+
+@pytest.mark.parametrize(
+    'x',
+    [
+        'abc',
+        '123',
+        '',
+    ],
+)
+def test_str_to_bool_trival(x):
+    with pytest.raises(BadBooleanValue):
+        _ = _str_to_trival(x)
+
+
+@pytest.mark.parametrize(
+    'x, expected',
+    [
+        (0, False),
+        (1, True),
+        (False, False),
+        (True, True),
+        ('0', False),
+        ('1', True),
+    ],
+)
+def test_parse_bool(x, expected):
+    assert _parse_bool(x) == expected
+
+
+@pytest.mark.parametrize(
+    'x, expected',
+    [
+        (0, False),
+        (1, True),
+        (False, False),
+        (True, True),
+        (DontCare, DontCare),
+        ('0', False),
+        ('1', True),
+        ('*', DontCare),
+    ],
+)
+def test_parse_trival(x, expected):
+    assert _parse_trival(x) == expected
+
+
+@pytest.mark.parametrize(
+    'arg_tt, expected_tt, expected_transposed_tt',
+    [
+        (
+            [[False, True, '1', '1'], '0010'],
+            [[False, True, True, True], [False, False, True, False]],
+            [[False, False], [True, False], [True, True], [True, False]],
+        ),
+        (
+            ['00000001'],
+            [[False, False, False, False, False, False, False, True]],
+            [[False], [False], [False], [False], [False], [False], [False], [True]],
+        ),
+    ],
+)
+def test_truth_table_initialization(arg_tt, expected_tt, expected_transposed_tt):
+    tt = TruthTable(arg_tt)
+    assert tt.get_truth_table() == expected_tt
+    assert tt._table_t == expected_transposed_tt
+
+
+@pytest.mark.parametrize(
+    'arg_tt, expected_model_tt, expected_transposed_model_tt',
+    [
+        (
+            [[False, DontCare, '*', '1'], '0*10'],
+            [[False, DontCare, DontCare, True], [False, DontCare, True, False]],
+            [[False, False], [DontCare, DontCare], [DontCare, True], [True, False]],
+        ),
+    ],
+)
+def test_truth_table_model_initialization(
+    arg_tt,
+    expected_model_tt,
+    expected_transposed_model_tt,
+):
+    tt = TruthTableModel(arg_tt)
+    assert tt.get_model_truth_table() == expected_model_tt
+    assert tt._table_t == expected_transposed_model_tt
+
+
+@pytest.mark.parametrize(
+    'raw_tt, exc',
+    [
+        ([[True, True, False], [True, True]], TruthTableBadShapeError),
+        ([[True, 'A'], [False, False]], BadBooleanValue),
+        ([[True, True], [15, False]], BadBooleanValue),
+    ],
+)
+def test_bad_tt_arg_raises(raw_tt, exc):
+    with pytest.raises(exc):
+        _ = TruthTable(raw_tt)
+
+
+@pytest.mark.parametrize(
+    'raw_tt, exc',
+    [
+        ([[DontCare, True, False], [True, True]], TruthTableBadShapeError),
+        ([[DontCare, 'A'], [DontCare, False]], BadBooleanValue),
+        ([[DontCare, True], [7, False]], BadBooleanValue),
+    ],
+)
+def test_bad_tt_arg_model_raises(raw_tt, exc):
+    with pytest.raises(exc):
+        _ = TruthTableModel(raw_tt)
 
 
 @pytest.mark.parametrize("input_size, output_size", [(3, 3), (5, 2), (6, 1), (7, 1)])
@@ -27,12 +187,29 @@ def test_evaluate(input_size: int, output_size: int):
         assert values[i] == truth_table.evaluate(input_values)
 
 
+def test_is_constant_simple():
+    tt = TruthTable(['0000', '1101'])
+    assert tt.is_constant_at(0)
+    assert not tt.is_constant_at(1)
+    assert not tt.is_constant()
+
+
 @pytest.mark.parametrize("input_size", [3, 4, 5, 6, 7])
 def test_is_out_constant(input_size: int):
     constant_out = [False] * (2**input_size)
     truth_table = TruthTable([constant_out])
     assert truth_table.is_constant_at(0)
     assert truth_table.is_constant()
+
+
+def test_is_monotonic_simple():
+    tt = TruthTable(['1110', '0001'])
+    assert not tt.is_monotonic_at(0, inverse=False)
+    assert tt.is_monotonic_at(1, inverse=False)
+    assert not tt.is_monotonic(inverse=False)
+    assert tt.is_monotonic_at(0, inverse=True)
+    assert not tt.is_monotonic_at(1, inverse=True)
+    assert not tt.is_monotonic(inverse=True)
 
 
 @pytest.mark.parametrize("input_size", [3, 4, 5, 6, 7])
@@ -94,6 +271,35 @@ def test_get_out_is_input_negation():
     truth_table = TruthTable([out])
     assert truth_table.is_output_equal_to_input(0, 1)
     assert not truth_table.is_output_equal_to_input_negation(0, 1)
+
+
+def test_is_output_equal_to_input():
+    tt1 = TruthTable(['0101'])
+    assert tt1.is_output_equal_to_input(0, 1)
+    tt2 = TruthTable(['1010'])
+    assert not tt2.is_output_equal_to_input(0, 1)
+
+
+def test_is_output_equal_to_input_negation():
+    tt1 = TruthTable(['1010'])
+    assert tt1.is_output_equal_to_input_negation(0, 1)
+    tt2 = TruthTable(['0010'])
+    assert not tt2.is_output_equal_to_input_negation(0, 1)
+
+
+def test_is_symmetric():
+    tt1 = TruthTable(['00000000', '00000000'])
+    assert tt1.is_symmetric()
+    assert tt1.is_symmetric_at(0)
+    assert tt1.is_symmetric_at(1)
+    tt2 = TruthTable(['0110', '1001'])
+    assert tt2.is_symmetric()
+    assert tt2.is_symmetric_at(0)
+    assert tt2.is_symmetric_at(1)
+    tt3 = TruthTable(['0100', '1001'])
+    assert not tt3.is_symmetric()
+    assert not tt3.is_symmetric_at(0)
+    assert tt3.is_symmetric_at(1)
 
 
 def test_is_out_symmetric():
