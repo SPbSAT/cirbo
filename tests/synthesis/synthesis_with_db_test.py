@@ -26,7 +26,8 @@ def db_xaig_connection(pytestconfig):
     Fixture for setting up the XAIG database connection for the test module.
 
     Parameters:
-    pytestconfig (Config): The pytest configuration object, used to get the --db-xaig-path option.
+    pytestconfig (Config): The pytest configuration object, used to get
+    the --db-xaig-path option.
 
     Yields:
     CircuitsDatabase: An instance of the CircuitsDatabase connected to the specified path.
@@ -42,7 +43,8 @@ def db_aig_connection(pytestconfig):
     Fixture for setting up the AIG database connection for the test module.
 
     Parameters:
-    pytestconfig (Config): The pytest configuration object, used to get the --db-aig-path option.
+    pytestconfig (Config): The pytest configuration object, used to get
+    the --db-aig-path option.
 
     Yields:
     CircuitsDatabase: An instance of the CircuitsDatabase connected to the specified path.
@@ -67,7 +69,9 @@ def test_synthesis_db_xaig(tt_str, db_xaig_connection):
     check_correctness(ckt_from_db, tt_str, hasdontcares=True)
 
     # with pytest.raises(NoSolutionError):
-    #     circuit_finder_2 = CircuitFinderSat(ttm, ckt_from_db.elements_number - 4, basis=Basis.XAIG)
+    #     circuit_finder_2 = CircuitFinderSat(
+    #         ttm, ckt_from_db.elements_number - 4, basis=Basis.XAIG
+    #     )
     #     circuit_finder_2.find_circuit()
 
 
@@ -86,5 +90,7 @@ def test_synthesis_db_aig(tt_str, db_aig_connection):
     check_correctness(ckt_from_db, tt_str, hasdontcares=True)
 
     # with pytest.raises(NoSolutionError):
-    #     circuit_finder_2 = CircuitFinderSat(ttm, ckt_from_db.elements_number - 4, basis=Basis.XAIG)
+    #     circuit_finder_2 = CircuitFinderSat(
+    #         ttm, ckt_from_db.elements_number - 4, basis=Basis.XAIG
+    #     )
     #     circuit_finder_2.find_circuit()
