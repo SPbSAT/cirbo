@@ -102,6 +102,6 @@ class CircuitCombiner:
         circuit.connect(circuit.get_block('inputs'), circuit.get_block('circuit1'))
         circuit.connect(circuit.get_block('inputs'), circuit.get_block('circuit2'))
 
-        circuit.set_outputs(circuit.get_block('pairwise_xor').get_outputs())
+        circuit.mark_as_output('big_or')
 
         return circuit
