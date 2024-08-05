@@ -29,7 +29,8 @@ def test_create_circuit():
     instance = Circuit()
 
     instance.add_gate(Gate('A', INPUT))
-    assert instance.elements_number == 1
+    assert instance.size == 1
+    assert instance.elements_number == 0
     assert instance.inputs == ['A']
     assert instance.input_size == 1
     assert instance.output_size == 0
@@ -40,7 +41,8 @@ def test_create_circuit():
     instance.add_gate(Gate('C', AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    assert instance.elements_number == 3
+    assert instance.size == 3
+    assert instance.elements_number == 1
     assert instance.inputs == ['A']
     assert instance.outputs == ['C']
     assert instance.input_size == 1
@@ -91,7 +93,8 @@ def test_rename_gate():
 
     instance.rename_element('A', 'V')
 
-    assert instance.elements_number == 3
+    assert instance.size == 3
+    assert instance.elements_number == 1
     assert instance.inputs == ['V']
     assert instance.outputs == ['C']
     assert instance.input_size == 1
@@ -187,6 +190,9 @@ def test_evaluate_circuit():
         'B': Undefined,
         'C': Undefined,
     }
+
+    instance.mark_as_output('C')
+    assert instance.evaluate([True]) == [False, False]
 
     instance = Circuit()
 
@@ -634,6 +640,13 @@ def test_get_truth_table():
         [False, True, False, True],
     ]
 
+    instance.mark_as_output('C')
+    assert instance.get_truth_table() == [
+        [False, False, False, True],
+        [False, True, False, True],
+        [False, False, False, True],
+    ]
+
 
 def test_circuit_element():
     instance = Circuit()
@@ -643,7 +656,8 @@ def test_circuit_element():
     instance.emplace_gate('C', AND, ('A', 'B'))
     instance.mark_as_output('C')
 
-    assert instance.elements_number == 3
+    assert instance.size == 3
+    assert instance.elements_number == 1
     assert instance.inputs == ['A']
     assert instance.outputs == ['C']
     assert instance.input_size == 1
