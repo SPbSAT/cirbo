@@ -76,7 +76,7 @@ def encode_circuit(circuit: Circuit) -> bytes:
     word_size = _get_word_size(circuit)
     bit_writer = BitWriter()
     _encode_header(bit_writer, word_size)
-    _ecode_circuit_parameters(bit_writer, word_size, circuit)
+    _encode_circuit_parameters(bit_writer, word_size, circuit)
     _encode_circuit_body(bit_writer, word_size, circuit)
     return bytes(bit_writer)
 
@@ -110,7 +110,7 @@ def _decode_header(bit_reader: BitReader) -> int:
     return word_size
 
 
-def _ecode_circuit_parameters(
+def _encode_circuit_parameters(
     bit_writer: BitWriter, word_size: int, circuit: Circuit
 ) -> None:
     bit_writer.write_number(len(circuit.inputs), word_size)
