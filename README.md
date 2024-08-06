@@ -19,13 +19,12 @@ installed to refresh its index and stubs.
 
 ## Building extensions
 
-This package provides bridges to some external `C/C++` libraries written
-using `pybind11`. Those dependencies should be built before can be used
-locally. To build dependencies run `poetry build` and to install them use
-`poetry install`.
+This package provides bridges to some external `C/C++` libraries. Extensions
+are written using `pybind11` and should be built before used locally. To build
+dependencies run `poetry build` and to install them after use `poetry install`.
 
 Note: to build dependencies one should have all building tools available
-in the system. Currently, dependencies require `gcc` or `clang` compiler
+in the system. Currently, dependencies require `C++` compiler and `cmake`
 to be available.
 
 ## Codestyle guidelines
