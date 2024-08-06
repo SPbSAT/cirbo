@@ -8,24 +8,22 @@ Python >=3.9 is used to cover all currently
 
 1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
 1. Init and update repository submodules `git submodule update --init --recursive`
+1. Build extensions locally by running `poetry build` 
 1. Setup virtual environment by running `poetry install`
 1. Set your env to the oldest supported Python version `poetry env use 3.9`
 1. Enable virtual environment using `poetry shell`
-1. Run `poetry build` to locally build extensions.
-1. Run `poetry install` to install built extensions.
 
 Note: probably one will need to restart an IDE after extensions are built and
 installed to refresh its index and stubs.
 
 ## Building extensions
 
-This package provides bridges to some external `C/C++` libraries written
-using `pybind11`. Those dependencies should be built before can be used
-locally. To build dependencies run `poetry build` and to install them use
-`poetry install`.
+This package provides bridges to some external `C/C++` libraries. Extensions
+are written using `pybind11` and should be built before used locally. To build
+dependencies run `poetry build` and to install them after use `poetry install`.
 
 Note: to build dependencies one should have all building tools available
-in the system. Currently, dependencies require `gcc` or `clang` compiler
+in the system. Currently, dependencies require `C++` compiler and `cmake`
 to be available.
 
 ## Codestyle guidelines
@@ -89,13 +87,14 @@ Read more about submodules in
 `C/C++` extensions are written using `pybind11`. To create new extension one should:
 
 1. Put source files to `extensions/<extension name>/src/`.
-2. Add extension specification to `build.py`, to `ext_modules` variable.
-3. Locally compile and install extensions
+2. Add extension build specification to `CMakeLists.txt`.
+3. Add extension module specification to `build.py`, to `ext_modules` variable.
+4. Locally compile and install extensions
    ```sh
    poetry build
    poetry run
    ```
-4. Add python tests to `tests/<extension name>` package.
+5. Add python tests to `tests/<extension name>` package.
 
 Note: there is an `dummy_extension` needed solely to demonstrate a minimal
 configuration extension should have.

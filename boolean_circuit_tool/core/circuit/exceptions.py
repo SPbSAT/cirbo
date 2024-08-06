@@ -9,6 +9,7 @@ __all__ = [
     'CircuitElementAlreadyExistsError',
     'GateTypeNoOperatorError',
     'GateStateError',
+    'TraverseMethodError',
 ]
 
 
@@ -51,5 +52,11 @@ class GateTypeNoOperatorError(CircuitError):
 
 class GateStateError(CircuitError):
     """Represents error of gate state."""
+
+    pass
+
+
+class TraverseMethodError(CircuitError):
+    """Represents error of method for traverse circuit."""
 
     pass
