@@ -11,11 +11,15 @@ SET(MOCKTURTLE_EXAMPLES OFF CACHE BOOL "Build examples" FORCE)
 
 add_subdirectory(third_party/pybind11)
 add_subdirectory(third_party/mockturtle)
+add_subdirectory(third_party/abc)
 
 pybind11_add_module(dummy_extension extensions/dummy_extension/src/module.cpp)
 
 pybind11_add_module(mockturtle_wrapper extensions/mockturtle_wrapper/src/module.cpp)
 
+pybind11_add_module(abc_extension extensions/abc_extension/src/module.cpp)
+
 target_link_libraries(mockturtle_wrapper PRIVATE mockturtle)
 
 target_include_directories(mockturtle_wrapper PRIVATE third_party)
+
