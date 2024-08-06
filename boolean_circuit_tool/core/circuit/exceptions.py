@@ -10,6 +10,7 @@ __all__ = [
     'GateTypeNoOperatorError',
     'GateStateError',
     'TraverseMethodError',
+    'CreateBlockError',
 ]
 
 
@@ -58,5 +59,11 @@ class GateStateError(CircuitError):
 
 class TraverseMethodError(CircuitError):
     """Represents error of method for traverse circuit."""
+
+    pass
+
+
+class CreateBlockError(CircuitError):
+    """Represents error in creating block in the circuit."""
 
     pass

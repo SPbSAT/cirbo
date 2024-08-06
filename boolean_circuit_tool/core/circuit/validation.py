@@ -27,12 +27,11 @@ def check_label_doesnt_exist(gate_label: 'Label', circuit: 'Circuit') -> None:
         raise CircuitValidationError(
             f'Gate {gate_label} has already existed in the circuit',
         )
-    
-    
+
+
 def check_block_doesnt_exist(block_label: 'Label', blocks: list['Label']) -> None:
     """Check initializations blocks in the circuit."""
     if block_label in blocks:
         raise CircuitValidationError(
             f'Block {block_label} has already existed in the circuit',
         )
-

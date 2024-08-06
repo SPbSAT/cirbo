@@ -4,6 +4,7 @@ from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateIsAbsentError,
     CircuitValidationError,
+    CreateBlockError,
 )
 from boolean_circuit_tool.core.circuit.gate import (
     ALWAYS_FALSE,
@@ -165,6 +166,146 @@ def test_spec_binary_gates(arg1: GateState, arg2: GateState, result: GateState):
     instance.mark_as_output('14')
 
     assert instance.evaluate_circuit_outputs({'1': arg1, '2': arg2}) == {'14': result}
+
+
+def test_block():
+    C0 = Circuit()
+    C0.add_gate(Gate('A', INPUT))
+    C0.add_gate(Gate('B', INPUT))
+    C0.add_gate(Gate('C', OR, ('A', 'B')))
+    C0.mark_as_output('C')
+
+    C1 = Circuit()
+    C1.add_gate(Gate('A', INPUT))
+    C1.add_gate(Gate('B', NOT, ('A',)))
+    C1.add_gate(Gate('C', AND, ('A', 'B')))
+    C1.add_gate(Gate('D', OR, ('A', 'B')))
+    C1.mark_as_output('C')
+    C1.mark_as_output('D')
+
+    C2 = Circuit()
+    C2.add_gate(Gate('A', INPUT))
+    C2.add_gate(Gate('B', INPUT))
+    C2.add_gate(Gate('C', AND, ('A', 'B')))
+    C2.mark_as_output('C')
+
+    C = Circuit()
+
+    C.connect_block([], 'C0', C0)
+    assert C.size == 3
+    assert C.gates_number == 1
+    assert C.inputs == ['C0@A', 'C0@B']
+    assert C.outputs == ['C0@C']
+    assert C._gates.keys() == {'C0@A', 'C0@B', 'C0@C'}
+    assert C.get_gate('C0@C').gate_type == OR
+    assert C.get_gate('C0@C').operands == ('C0@A', 'C0@B')
+
+    C.make_block('backup_C0', C.inputs, C.outputs)
+    C.connect_block(C.outputs, 'C1', C1)
+    assert C.size == 6
+    assert C.gates_number == 3
+    assert C.inputs == ['C0@A', 'C0@B']
+    assert C.outputs == ['C1@C', 'C1@D']
+    assert C.get_block('backup_C0').outputs == ['C0@C']
+    assert C._gates.keys() == {'C0@A', 'C0@B', 'C0@C', 'C1@B', 'C1@C', 'C1@D'}
+    assert C.get_gate('C0@C').gate_type == OR
+    assert C.get_gate('C0@C').operands == ('C0@A', 'C0@B')
+    assert C.get_gate('C1@B').gate_type == NOT
+    assert C.get_gate('C1@B').operands == ('C0@C',)
+    assert C.get_gate('C1@C').gate_type == AND
+    assert C.get_gate('C1@C').operands == ('C0@C', 'C1@B')
+    assert C.get_gate_users('C0@C') == ['C1@B', 'C1@D', 'C1@C']
+
+    C.make_block('backup_C0_C1', C.inputs, C.outputs)
+    with pytest.raises(CreateBlockError):
+        C.make_block('make_B1', C.inputs[1:], ['C1@C'])
+    C.connect_block(C.outputs[1:], 'C2', C2)
+    assert C.size == 8
+    assert C.gates_number == 4
+    assert C.inputs == ['C0@A', 'C0@B', 'C2@B']
+    assert C.outputs == ['C1@C', 'C2@C']
+    assert C._gates.keys() == {
+        'C0@A',
+        'C0@B',
+        'C0@C',
+        'C1@B',
+        'C1@C',
+        'C1@D',
+        'C2@B',
+        'C2@C',
+    }
+    C.make_block('make_B1', C.inputs[:2], ['C1@C'])
+
+    C2.connect_block(C2.outputs, 'C', C)
+    assert C2.size == 10
+    assert C2.gates_number == 5
+    assert C2.inputs == ['A', 'B', 'C@C0@B', 'C@C2@B']
+    assert C2.outputs == ['C@C1@C', 'C@C2@C']
+    assert C2.input_size == 4
+    assert C2.output_size == 2
+
+    assert C2.get_gate('A').label == 'A'
+    assert C2.get_gate('A').gate_type == INPUT
+    assert C2.get_gate('A').operands == ()
+    assert C2.get_gate_users('A') == ['C']
+
+    assert C2.get_gate('B').label == 'B'
+    assert C2.get_gate('B').gate_type == INPUT
+    assert C2.get_gate('B').operands == ()
+    assert C2.get_gate_users('B') == ['C']
+
+    assert C2.get_gate('C').label == 'C'
+    assert C2.get_gate('C').gate_type == AND
+    assert C2.get_gate('C').operands == ('A', 'B')
+    assert C2.get_gate_users('C') == ['C@C0@C']
+
+    assert C2.get_gate('C@C0@B').label == 'C@C0@B'
+    assert C2.get_gate('C@C0@B').gate_type == INPUT
+    assert C2.get_gate('C@C0@B').operands == ()
+    assert C2.get_gate_users('C@C0@B') == ['C@C0@C']
+
+    assert C2.get_gate('C@C2@B').label == 'C@C2@B'
+    assert C2.get_gate('C@C2@B').gate_type == INPUT
+    assert C2.get_gate('C@C2@B').operands == ()
+    assert C2.get_gate_users('C@C2@B') == ['C@C2@C']
+
+    assert C2.get_gate('C@C0@C').label == 'C@C0@C'
+    assert C2.get_gate('C@C0@C').gate_type == OR
+    assert C2.get_gate('C@C0@C').operands == ('C', 'C@C0@B')
+    assert C2.get_gate_users('C@C0@C') == ['C@C1@B', 'C@C1@C', 'C@C1@D']
+
+    assert C2.get_gate('C@C1@B').label == 'C@C1@B'
+    assert C2.get_gate('C@C1@B').gate_type == NOT
+    assert C2.get_gate('C@C1@B').operands == ('C@C0@C',)
+    assert C2.get_gate_users('C@C1@B') == ['C@C1@C', 'C@C1@D']
+
+    assert C2.get_gate('C@C1@C').label == 'C@C1@C'
+    assert C2.get_gate('C@C1@C').gate_type == AND
+    assert C2.get_gate('C@C1@C').operands == ('C@C0@C', 'C@C1@B')
+    assert C2.get_gate_users('C@C1@C') == []
+
+    assert C2.get_gate('C@C1@D').label == 'C@C1@D'
+    assert C2.get_gate('C@C1@D').gate_type == OR
+    assert C2.get_gate('C@C1@D').operands == ('C@C0@C', 'C@C1@B')
+    assert C2.get_gate_users('C@C1@D') == ['C@C2@C']
+
+    assert C2.get_gate('C@C2@C').label == 'C@C2@C'
+    assert C2.get_gate('C@C2@C').gate_type == AND
+    assert C2.get_gate('C@C2@C').operands == ('C@C1@D', 'C@C2@B')
+    assert C2.get_gate_users('C@C2@C') == []
+
+    assert list(C2.blocks.keys()) == [
+        'C',
+        'C@C0',
+        'C@backup_C0',
+        'C@C1',
+        'C@backup_C0_C1',
+        'C@C2',
+        'C@make_B1',
+    ]
+    assert C2.get_block('C@C0').inputs == ['C', 'C@C0@B']
+    assert C2.get_block('C@C0').gates == ['C@C0@C']
+    assert C2.get_block('C@C0').outputs == ['C@C0@C']
 
 
 def test_evaluate_circuit():
