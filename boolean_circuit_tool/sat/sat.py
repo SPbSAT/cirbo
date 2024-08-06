@@ -24,4 +24,3 @@ def is_satisfiable(
 def check():
     for size in range(3, 16):
         pass
-
