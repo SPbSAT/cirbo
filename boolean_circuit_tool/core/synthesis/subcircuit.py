@@ -1,3 +1,4 @@
+import argparse
 import collections
 import copy
 import itertools
@@ -9,6 +10,8 @@ from boolean_circuit_tool.core.circuit.gate import Gate, GateType
 from boolean_circuit_tool.core.truth_table import TruthTableModel
 from boolean_circuit_tool.synthesis.circuit_search import CircuitFinderSat, Basis, get_tt_by_str
 from boolean_circuit_tool.synthesis.exception import NoSolutionError
+
+import  mockturtle_wrapper as mw
 
 logger = logging.getLogger(__name__)
 
@@ -89,18 +92,17 @@ class Subcircuit():
             json.dump(subcircuits_raw, f, indent=4)
 
 
-def read_cuts(filename):
+def read_cuts(cuts_raw, mapping):
     cut_nodes = collections.defaultdict(set)
-    with open(filename, 'r') as f:
-        for line in f.readlines():
-            if line == '\n':
-                continue
-            data = line.split()
-            if data[0] == 'Node:':
-                node = data[1]
-            else:
-                cut = tuple(x for x in data[1:-1])
-                cut_nodes[cut].add(node)
+    for line in cuts_raw.split('\n'):
+        if line == '\n' or not line:
+            continue
+        data = line.split()
+        if data[0] == 'Node:':
+            node = mapping[data[1]]
+        else:
+            cut = tuple(mapping[x] for x in data[1:-1])
+            cut_nodes[cut].add(node)
     return cut_nodes
 
 
@@ -128,7 +130,7 @@ def is_cyclic(circuit):
                 return True
     return False
 
-def get_subcircuits(circuit, cuts_path):
+def get_subcircuits(circuit, cuts):
     """
     Get subcircuits for simplification.
     Function processes given cuts and gets the most probable subcircuits for simplification.
@@ -138,10 +140,6 @@ def get_subcircuits(circuit, cuts_path):
     :return: list with subcircuits from the given circuit.
 
     """
-    cut_nodes = read_cuts(cuts_path)
-    cuts = sorted(cut_nodes.keys(), key=lambda x: len(x))
-
-    logger.info(f"Found {len(cuts)} cuts")
 
     def is_nested_cut(cut1, cut2) -> bool:
         """
@@ -293,14 +291,29 @@ def eval_dont_cares(circuit, subcircuits):
 
 
 if __name__ == '__main__':
-    circuit = Circuit.from_bench('./core/synthesis/test/sum5_size12.bench')
-    cuts_path = './core/synthesis/test/sum5_cuts.txt'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input", type=str, required=True)
+    parser.add_argument("-o", "--output", type=str, required=False)
+    parser.add_argument("-b", "--basis", type=str, required=True, choices=["AIG", "XAIG"])
+
+    args = parser.parse_args()
+    circuit_path = args.input
+    circuit_output_path = args.output
+    basis = Basis.XAIG if args.basis == 'XAIG' else Basis.AIG
+
+    circuit = Circuit.from_bench(circuit_path)
+    cuts_raw, mapping = mw.enumerate_cuts(circuit_path) # tuple with string cuts representation
+
+    cut_nodes = read_cuts(cuts_raw, mapping)
+    cuts = sorted(cut_nodes.keys(), key=lambda x: len(x))
+
+    logger.info(f"Found {len(cuts)} cuts")
 
     initial_circuit = copy.deepcopy(circuit)
     basis = Basis.XAIG
 
     inputs_tt = generate_inputs_tt([3, 4, 5])
-    subcircuits = get_subcircuits(circuit, cuts_path)
+    subcircuits = get_subcircuits(circuit, cuts)
     subcircuits = eval_dont_cares(circuit, subcircuits)
 
     gate_status = collections.defaultdict(str)
@@ -401,7 +414,6 @@ if __name__ == '__main__':
 
     # Sanity check
     assignment = {input: False for input in initial_circuit.inputs}
-    circuit.save_to_file('new_circuit.bench')
     for i in range(1 << len(initial_circuit.inputs)):
         if i: # update assignment for new iteration
             idx = len(inputs) - 1
@@ -412,4 +424,8 @@ if __name__ == '__main__':
         assert circuit.evaluate_circuit_outputs(assignment) == initial_circuit.evaluate_circuit_outputs(assignment), "Initial circuit and circuit after impovement differ"
 
     logger.info("Check passed")
-    # circuit.save_to_file('new_circuit.bench')
+
+    if circuit_output_path:
+        circuit.save_to_file(circuit_output_path)
+    else:
+        print(circuit)
