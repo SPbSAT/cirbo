@@ -78,7 +78,7 @@ def tseytin_transformation(
     def process_gate(label: str) -> Lit:
         if label in saved_lits:
             return saved_lits[label]
-        gate = circuit.get_element(label)
+        gate = circuit.get_gate(label)
         operands = gate.operands
         lits = [process_gate(lit) for lit in operands]
         gate_type = gate.gate_type

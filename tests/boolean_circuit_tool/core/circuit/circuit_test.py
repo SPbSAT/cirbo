@@ -2,7 +2,7 @@ import pytest
 
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.exceptions import (
-    CircuitElementIsAbsentError,
+    CircuitGateIsAbsentError,
     CircuitValidationError,
 )
 from boolean_circuit_tool.core.circuit.gate import (
@@ -30,36 +30,36 @@ def test_create_circuit():
 
     instance.add_gate(Gate('A', INPUT))
     assert instance.size == 1
-    assert instance.elements_number == 0
+    assert instance.gates_number == 0
     assert instance.inputs == ['A']
     assert instance.input_size == 1
     assert instance.output_size == 0
     assert instance.outputs == []
-    assert instance._elements.keys() == {'A'}
+    assert instance._gates.keys() == {'A'}
 
     instance.add_gate(Gate('B', NOT, ('A',)))
     instance.add_gate(Gate('C', AND, ('A', 'B')))
     instance.mark_as_output('C')
 
     assert instance.size == 3
-    assert instance.elements_number == 1
+    assert instance.gates_number == 1
     assert instance.inputs == ['A']
     assert instance.outputs == ['C']
     assert instance.input_size == 1
     assert instance.output_size == 1
 
-    assert instance._elements.keys() == {'A', 'B', 'C'}
-    assert instance.get_element('A').label == 'A'
-    assert instance.get_element('A').gate_type == INPUT
-    assert instance.get_element('A').operands == ()
+    assert instance._gates.keys() == {'A', 'B', 'C'}
+    assert instance.get_gate('A').label == 'A'
+    assert instance.get_gate('A').gate_type == INPUT
+    assert instance.get_gate('A').operands == ()
 
-    assert instance.get_element('B').label == 'B'
-    assert instance.get_element('B').gate_type == NOT
-    assert instance.get_element('B').operands == ('A',)
+    assert instance.get_gate('B').label == 'B'
+    assert instance.get_gate('B').gate_type == NOT
+    assert instance.get_gate('B').operands == ('A',)
 
-    assert instance.get_element('C').label == 'C'
-    assert instance.get_element('C').gate_type == AND
-    assert instance.get_element('C').operands == ('A', 'B')
+    assert instance.get_gate('C').label == 'C'
+    assert instance.get_gate('C').gate_type == AND
+    assert instance.get_gate('C').operands == ('A', 'B')
 
     with pytest.raises(CircuitValidationError):
         instance.add_gate(Gate('A', OR, ('B', 'C')))
@@ -75,7 +75,7 @@ def test_create_circuit():
     assert instance.all_indexes_of_output('C') == [0, 2]
     assert instance.index_of_output('A') == 1
 
-    assert instance.elements == {
+    assert instance.gates == {
         'A': Gate('A', INPUT, ()),
         'B': Gate('B', NOT, ('A',)),
         'C': Gate('C', AND, ('A', 'B')),
@@ -91,30 +91,30 @@ def test_rename_gate():
     instance.add_gate(Gate('C', AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    instance.rename_element('A', 'V')
+    instance.rename_gate('A', 'V')
 
     assert instance.size == 3
-    assert instance.elements_number == 1
+    assert instance.gates_number == 1
     assert instance.inputs == ['V']
     assert instance.outputs == ['C']
     assert instance.input_size == 1
     assert instance.output_size == 1
 
-    assert instance._elements.keys() == {'V', 'B', 'C'}
-    assert instance.get_element('V').label == 'V'
-    assert instance.get_element('V').gate_type == INPUT
-    assert instance.get_element('V').operands == ()
+    assert instance._gates.keys() == {'V', 'B', 'C'}
+    assert instance.get_gate('V').label == 'V'
+    assert instance.get_gate('V').gate_type == INPUT
+    assert instance.get_gate('V').operands == ()
 
-    assert instance.get_element('B').label == 'B'
-    assert instance.get_element('B').gate_type == NOT
-    assert instance.get_element('B').operands == ('V',)
+    assert instance.get_gate('B').label == 'B'
+    assert instance.get_gate('B').gate_type == NOT
+    assert instance.get_gate('B').operands == ('V',)
 
-    assert instance.get_element('C').label == 'C'
-    assert instance.get_element('C').gate_type == AND
-    assert instance.get_element('C').operands == ('V', 'B')
+    assert instance.get_gate('C').label == 'C'
+    assert instance.get_gate('C').gate_type == AND
+    assert instance.get_gate('C').operands == ('V', 'B')
 
-    with pytest.raises(CircuitElementIsAbsentError):
-        instance.rename_element('D', 'E')
+    with pytest.raises(CircuitGateIsAbsentError):
+        instance.rename_gate('D', 'E')
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -124,7 +124,7 @@ def test_rename_gate():
     instance.mark_as_output('A')
     instance.mark_as_output('E')
 
-    instance.rename_element('A', 'V')
+    instance.rename_gate('A', 'V')
     assert instance.inputs == ['V', 'E', 'F']
     assert instance.outputs == ['F', 'V', 'E']
 
@@ -648,7 +648,7 @@ def test_get_truth_table():
     ]
 
 
-def test_circuit_element():
+def test_circuit_gate():
     instance = Circuit()
 
     instance.add_gate(Gate('A', INPUT))
@@ -657,27 +657,27 @@ def test_circuit_element():
     instance.mark_as_output('C')
 
     assert instance.size == 3
-    assert instance.elements_number == 1
+    assert instance.gates_number == 1
     assert instance.inputs == ['A']
     assert instance.outputs == ['C']
     assert instance.input_size == 1
     assert instance.output_size == 1
 
-    assert instance._elements.keys() == {'A', 'B', 'C'}
-    assert instance.get_element('A').label == 'A'
-    assert instance.get_element('A').gate_type == INPUT
-    assert instance.get_element('A').operands == ()
-    assert instance.get_element_users('A') == ['B', 'C']
+    assert instance._gates.keys() == {'A', 'B', 'C'}
+    assert instance.get_gate('A').label == 'A'
+    assert instance.get_gate('A').gate_type == INPUT
+    assert instance.get_gate('A').operands == ()
+    assert instance.get_gate_users('A') == ['B', 'C']
 
-    assert instance.get_element('B').label == 'B'
-    assert instance.get_element('B').gate_type == NOT
-    assert instance.get_element('B').operands == ('A',)
-    assert instance.get_element_users('B') == ['C']
+    assert instance.get_gate('B').label == 'B'
+    assert instance.get_gate('B').gate_type == NOT
+    assert instance.get_gate('B').operands == ('A',)
+    assert instance.get_gate_users('B') == ['C']
 
-    assert instance.get_element('C').label == 'C'
-    assert instance.get_element('C').gate_type == AND
-    assert instance.get_element('C').operands == ('A', 'B')
-    assert instance.get_element_users('C') == []
+    assert instance.get_gate('C').label == 'C'
+    assert instance.get_gate('C').gate_type == AND
+    assert instance.get_gate('C').operands == ('A', 'B')
+    assert instance.get_gate_users('C') == []
 
-    assert instance.has_element('A') == True
-    assert instance.has_element('D') == False
+    assert instance.has_gate('A') == True
+    assert instance.has_gate('D') == False
