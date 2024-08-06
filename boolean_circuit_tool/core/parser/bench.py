@@ -17,7 +17,7 @@ from boolean_circuit_tool.core.circuit.gate import (
     OR,
     XOR,
 )
-from boolean_circuit_tool.core.circuit.validation import check_elements_exist
+from boolean_circuit_tool.core.circuit.validation import check_gates_exist
 from boolean_circuit_tool.core.parser.abstract import AbstractParser
 
 
@@ -175,8 +175,8 @@ class BenchToCircuit(AbstractBenchParser):
     def _eof(self) -> tp.Iterable:
         """Check initializations all operands into the circuit and filling gates
         users."""
-        for _, gate in self._circuit._elements.items():
-            check_elements_exist(gate.operands, self._circuit)
+        for gate in self._circuit.gates.values():
+            check_gates_exist(gate.operands, self._circuit)
         return []
 
     def _add_gate(self, out: str, gate_type: GateType, arg1: str, *args: str):

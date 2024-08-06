@@ -2,7 +2,7 @@ import copy
 import itertools
 import typing as tp
 
-from boolean_circuit_tool.core.circuit.exceptions import CircuitElementIsAbsentError
+from boolean_circuit_tool.core.circuit.exceptions import CircuitGateIsAbsentError
 
 from boolean_circuit_tool.core.circuit.gate import Label
 
@@ -54,7 +54,7 @@ def order_list(
     new_list = list()
     for elem in ordered_list:
         if elem not in old_list_copy:
-            raise CircuitElementIsAbsentError()
+            raise CircuitGateIsAbsentError()
         new_list.append(elem)
         old_list_copy.remove(elem)
 
