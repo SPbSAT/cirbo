@@ -1,5 +1,9 @@
-import pytest
 import typing as tp
+
+import pytest
+from boolean_circuit_tool.cnf import CnfRaw
+from boolean_circuit_tool.core.circuit import Circuit
+from boolean_circuit_tool.sat import is_satisfiable
 
 from tests.boolean_circuit_tool.cnf.tseytin_test import (
     generate_circuit1,
@@ -7,9 +11,6 @@ from tests.boolean_circuit_tool.cnf.tseytin_test import (
     generate_circuit3,
     generate_circuit4,
 )
-from boolean_circuit_tool.cnf import CnfRaw
-from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.sat import is_satisfiable
 
 
 @pytest.mark.parametrize(

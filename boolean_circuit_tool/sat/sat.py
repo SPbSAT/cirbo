@@ -1,8 +1,10 @@
-import pysat
 import typing as tp
 
-from boolean_circuit_tool.core.circuit import Circuit
+import pysat
+
 from boolean_circuit_tool.cnf import Cnf
+
+from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.synthesis.circuit_search import PySATSolverNames
 
 
