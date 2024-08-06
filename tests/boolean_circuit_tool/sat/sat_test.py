@@ -18,7 +18,7 @@ from boolean_circuit_tool.sat import is_satisfiable
         (generate_circuit1, True),
         (generate_circuit2, True),
         (generate_circuit3, True),
-        (generate_circuit4, True),
+        (generate_circuit4, False),
     ],
 )
 def test_is_satisfiable(
