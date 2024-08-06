@@ -5,8 +5,7 @@ from boolean_circuit_tool.circuits_db.db import CircuitsDatabase
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.core.truth_table import TruthTableModel
 from boolean_circuit_tool.synthesis.circuit_search import Basis, CircuitFinderSat
-
-from tests.synthesis.circuit_search_test import check_correctness
+from tests.boolean_circuit_tool.synthesis.circuit_search_test import check_correctness
 
 
 def generate_random_truth_table():
