@@ -2,15 +2,16 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+
 #include <abc/src/misc/util/abc_global.h>
 #include <abc/src/misc/extra/extra.h>
-#include <abc/base/abc/abc.h>
-#include <abc/base/io/ioReadBench.c>
-#include <abc/base/io/io.c>
-#include <abc/base/main/main.h>
-#include <abc/misc/extra/extraUtilReader.c>
-#include <abc/misc/vec/vec.h>
-#include <abc/base/io/ioWriteBench.c>
+#include <abc/src/base/abc/abc.h>
+#include <abc/src/base/io/ioReadBench.c>
+#include <abc/src/base/io/ioWriteBench.c>
+#include <abc/src/base/io/io.c>
+#include <abc/src/base/main/main.h>
+#include <abc/src/misc/extra/extraUtilReader.c>
+#include <abc/src/misc/vec/vec.h>
 
 Extra_FileReader_t *Extra_FileReaderAllocFromString(char *pFileContent, char *pCharsComment, char *pCharsStop, char *pCharsClean)
 {
