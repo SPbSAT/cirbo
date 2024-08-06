@@ -1,5 +1,3 @@
-from typing import Tuple, Any
-
 import pysat
 import typing as tp
 
@@ -14,7 +12,7 @@ __all__ = ['is_satisfiable']
 def is_satisfiable(
     circuit: Circuit,
     solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL193,
-) -> (bool, list[int]):
+) -> tp.Tuple[bool, list[int]]:
     g = pysat.solvers.Glucose3()
     for clause in Cnf.from_circuit(circuit).get_raw():
         g.add_clause(g)

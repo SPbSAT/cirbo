@@ -25,4 +25,5 @@ def test_is_satisfiable(
     generate_circuit: tp.Callable[[], tp.Tuple[Circuit, CnfRaw]], is_sat: bool
 ):
     circuit, _ = generate_circuit()
-    assert is_satisfiable(circuit) == is_sat
+    sat, _ = is_satisfiable(circuit)
+    assert sat == is_sat
