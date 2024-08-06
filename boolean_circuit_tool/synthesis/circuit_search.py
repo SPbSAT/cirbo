@@ -192,6 +192,8 @@ class CircuitFinderSat:
 
         :param boolean_function_model:
         The function for which the circuit is needed.
+        The outputs of the function must not contain two outputs,
+        one of which is a complement to the other.
         :param number_of_gates:
         The number of gates in the circuit we are finding.
         :param basis:
@@ -210,6 +212,7 @@ class CircuitFinderSat:
         self._forbidden_operations = list(set(Basis.FULL.value) - set(self._basis_list))
 
         self._input_gates = list(range(boolean_function_model.input_size))
+        self._number_of_gates = number_of_gates
         self._internal_gates = list(
             range(
                 boolean_function_model.input_size,
@@ -261,7 +264,10 @@ class CircuitFinderSat:
                 self._output_truth_tables
             )
             if db_ret is not None:
-                return db_ret
+                if db_ret.elements_number <= self._number_of_gates:
+                    return db_ret
+                else:
+                    raise NoSolutionError()
 
         self._init_default_cnf_formula()
         solver_name = PySATSolverNames(solver_name)
