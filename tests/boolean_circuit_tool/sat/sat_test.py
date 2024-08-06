@@ -22,7 +22,7 @@ from boolean_circuit_tool.sat import is_satisfiable
     ],
 )
 def test_is_satisfiable(
-        generate_circuit: tp.Callable[[], tp.Tuple[Circuit, CnfRaw]], is_sat: bool
+    generate_circuit: tp.Callable[[], tp.Tuple[Circuit, CnfRaw]], is_sat: bool
 ):
     circuit, _ = generate_circuit()
     assert is_satisfiable(circuit) == is_sat
