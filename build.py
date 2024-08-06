@@ -4,8 +4,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-from setuptools import Extension, setup
+from setuptools import Extension
 from setuptools.command.build_ext import build_ext
+
+
+# WARNING: cmake building code was taken from official example:
+# https://github.com/pybind/cmake_example/blob/master/setup.py
+
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
 PLAT_TO_CMAKE = {
