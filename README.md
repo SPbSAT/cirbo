@@ -8,7 +8,6 @@ Python >=3.9 is used to cover all currently
 
 1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
 1. Init and update repository submodules `git submodule update --init --recursive`
-1. Setup virtual environment by running `poetry install`
 1. Build extensions locally by running `poetry build` 
 1. Setup virtual environment by running `poetry install`
 1. Set your env to the oldest supported Python version `poetry env use 3.9`
