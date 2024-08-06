@@ -191,7 +191,7 @@ def test_block():
 
     C = Circuit()
 
-    C.connect_block([], 'C0', C0)
+    C.connect_circuit([], C0, circuit_name='C0')
     assert C.size == 3
     assert C.gates_number == 1
     assert C.inputs == ['C0@A', 'C0@B']
@@ -200,8 +200,8 @@ def test_block():
     assert C.get_gate('C0@C').gate_type == OR
     assert C.get_gate('C0@C').operands == ('C0@A', 'C0@B')
 
-    C.make_block('backup_C0', C.inputs, C.outputs)
-    C.connect_block(C.outputs, 'C1', C1)
+    C.make_block_from_slice('backup_C0', C.inputs, C.outputs)
+    C.connect_circuit(C.outputs, C1, circuit_name='C1')
     assert C.size == 6
     assert C.gates_number == 3
     assert C.inputs == ['C0@A', 'C0@B']
@@ -216,10 +216,10 @@ def test_block():
     assert C.get_gate('C1@C').operands == ('C0@C', 'C1@B')
     assert C.get_gate_users('C0@C') == ['C1@B', 'C1@D', 'C1@C']
 
-    C.make_block('backup_C0_C1', C.inputs, C.outputs)
+    C.make_block_from_slice('backup_C0_C1', C.inputs, C.outputs)
     with pytest.raises(CreateBlockError):
-        C.make_block('make_B1', C.inputs[1:], ['C1@C'])
-    C.connect_block(C.outputs[1:], 'C2', C2)
+        C.make_block_from_slice('make_B1', C.inputs[1:], ['C1@C'])
+    C.connect_circuit(C.outputs[1:], C2, circuit_name='C2')
     assert C.size == 8
     assert C.gates_number == 4
     assert C.inputs == ['C0@A', 'C0@B', 'C2@B']
@@ -234,9 +234,9 @@ def test_block():
         'C2@B',
         'C2@C',
     }
-    C.make_block('make_B1', C.inputs[:2], ['C1@C'])
+    C.make_block_from_slice('make_B1', C.inputs[:2], ['C1@C'])
 
-    C2.connect_block(C2.outputs, 'C', C)
+    C2.connect_circuit(C2.outputs, C, circuit_name='C')
     assert C2.size == 10
     assert C2.gates_number == 5
     assert C2.inputs == ['A', 'B', 'C@C0@B', 'C@C2@B']
