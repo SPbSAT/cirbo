@@ -4,25 +4,13 @@ from boolean_circuit_tool.core.circuit import Circuit, Gate, INPUT, NOT, AND, XO
 class CircuitBuilder:
     @staticmethod
     def generate_plus_one(inp_len : int, out_len : int) -> Circuit:
+        x_labels = ['x_' + str(i) for i in range(inp_len)]
+        z_labels = ['z_' + str(i) for i in range(out_len)]
         circuit = Circuit()
         for i in range(inp_len):
-            circuit.add_gate(Gate('x_'+str(i), INPUT))
+            circuit.add_gate(Gate(x_labels[i], INPUT))
 
-        circuit.add_gate(Gate('carry_0', IFF, tuple(['x_0'])))
-        circuit.add_gate(Gate('z_0', NOT, tuple(['x_0']))).mark_as_output('z_0')
-
-        for i in range(1, out_len):
-            if i<inp_len:
-                if i<out_len-1:
-                    circuit.add_gate(Gate('carry_'+str(i), AND, ('x_'+str(i), 'carry_'+str(i-1))))
-                circuit.add_gate(Gate('z_'+str(i), XOR, ('x_'+str(i), 'carry_'+str(i-1))))
-            elif i==inp_len:
-                circuit.add_gate(Gate('z_'+str(i), IFF, tuple(['carry_' + str(i - 1)])))
-            else:
-                circuit.add_gate(Gate('z_'+str(i), ALWAYS_FALSE, tuple()))
-            circuit.mark_as_output('z_'+str(i))
-
-        return circuit.order_outputs(['z_'+str(i) for i in range(out_len)])
+        return circuit.add_plus_one(z_labels, x_labels)
 
     @staticmethod
     def generate_if_then_else() -> Circuit:
