@@ -15,7 +15,7 @@ def is_satisfiable(
 ) -> tp.Tuple[bool, list[int]]:
     g = pysat.solvers.Glucose3()
     for clause in Cnf.from_circuit(circuit).get_raw():
-        g.add_clause(g)
+        g.add_clause(clause)
     return g.solve(), g.get_model()
 
 
