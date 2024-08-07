@@ -242,7 +242,7 @@ class CircuitFinderSat:
 
     def find_circuit(
         self,
-        solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL193,
+        solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL195,
         time_limit: tp.Union[int, None] = None,
     ) -> Circuit:
         """
@@ -250,7 +250,7 @@ class CircuitFinderSat:
         returns the circuit if it exists.
 
         :param solver_name: The name of the SAT-solver to use. Default is
-            PySATSolverNames.CADICAL193 ("cadical195").
+            PySATSolverNames.CADICAL195 ("cadical195").
         :param time_limit : Maximum time in seconds allowed for solving (default is
             None, meaning no time limit).
         :return: Circuit: If a solution is found within the specified time limit (if

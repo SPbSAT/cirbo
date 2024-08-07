@@ -18,7 +18,7 @@ class PySATSolverNames(enum.Enum):
 
     CADICAL103 = 'cadical103'
     CADICAL153 = 'cadical153'
-    CADICAL193 = 'cadical195'
+    CADICAL195 = 'cadical195'
     CRYPTOSAT = 'crypto'
     GLUECARD3 = 'gluecard3'
     GLUECARD4 = 'gluecard4'
@@ -52,13 +52,13 @@ class PySatResult:
 def is_satisfiable(
     circuit: Circuit,
     *,
-    solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL193,
+    solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL195,
 ) -> PySatResult:
     """
     Check if circuit is satisfiable using specific solver.
 
     @param circuit: circuit. @param solver_name: solver type/name, be default,
-    cadical103.
+    cadical195.
 
     """
     formula = CNF(from_clauses=Cnf.from_circuit(circuit).get_raw())
