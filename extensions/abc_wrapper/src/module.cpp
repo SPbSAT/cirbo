@@ -7,7 +7,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(abc_extension, m) {
+PYBIND11_MODULE(abc_wrapper, m) {
     m.doc() = "Example doc";
     m.def("run_abc_commands", &runAbcCommands, "Enumerates cuts.");
 
