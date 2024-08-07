@@ -63,13 +63,13 @@ class Block:
     def __init__(
         self,
         name: Label,
-        circuit: 'Circuit',
+        circuit_owner: 'Circuit',
         inputs: list[Label],
         gates: list[Label],
         outputs: list[Label],
     ):
         self._name = name
-        self._circuit_ref = circuit
+        self._circuit_ref = circuit_owner
         self._inputs = inputs
         self._gates = gates
         self._outputs = outputs
@@ -395,7 +395,7 @@ class Circuit(BooleanFunction):
 
         new_block = Block(
             name=name,
-            circuit=self,
+            circuit_owner=self,
             inputs=inputs,
             gates=gates,
             outputs=outputs,
@@ -456,10 +456,21 @@ class Circuit(BooleanFunction):
             output for output in self._outputs if output not in connect_to
         ] + [old_to_new_names[output] for output in circuit.outputs]
 
+        for block in circuit.blocks.values():
+            new_block_name = circuit_name + block.name
+            check_block_doesnt_exist(new_block_name, self)
+            self._blocks[new_block_name] = Block(
+                name=new_block_name,
+                circuit_owner=self,
+                inputs=[old_to_new_names[input] for input in block.inputs],
+                gates=[old_to_new_names[input] for input in block.gates],
+                outputs=[old_to_new_names[input] for input in block.outputs],
+            )
+
         if circuit_name != '':
             new_block = Block(
                 name=circuit_name[:-1],
-                circuit=self,
+                circuit_owner=self,
                 inputs=[old_to_new_names[input] for input in circuit.inputs],
                 gates=list(gates_for_block),
                 outputs=[old_to_new_names[output] for output in circuit.outputs],
@@ -467,20 +478,11 @@ class Circuit(BooleanFunction):
 
             self._blocks[new_block.name] = new_block
 
-            for block in circuit.blocks.values():
-                new_block_name = circuit_name + block.name
-                check_block_doesnt_exist(new_block_name, self)
-                self._blocks[new_block_name] = Block(
-                    name=new_block_name,
-                    circuit=self,
-                    inputs=[old_to_new_names[input] for input in block.inputs],
-                    gates=[old_to_new_names[input] for input in block.gates],
-                    outputs=[old_to_new_names[input] for input in block.outputs],
-                )
-
         return self
 
-    def extend_circuit(self, circuit: tp_ext.Self, *, name: Label = '') -> tp_ext.Self:
+    def extend_circuit(
+        self, circuit: tp_ext.Self, *, circuit_name: Label = ''
+    ) -> tp_ext.Self:
         """
         Extending a new circuit to the base one, where the inputs and outputs of the new
         circuit are added to the inputs and outputs of the base circuit, respectively.
@@ -492,9 +494,11 @@ class Circuit(BooleanFunction):
         :return: modifed circuit
 
         """
-        return self.connect_circuit(self.outputs, circuit, circuit_name=name)
+        return self.connect_circuit(self.outputs, circuit, circuit_name=circuit_name)
 
-    def add_circuit(self, circuit: tp_ext.Self, *, name: Label = '') -> tp_ext.Self:
+    def add_circuit(
+        self, circuit: tp_ext.Self, *, circuit_name: Label = ''
+    ) -> tp_ext.Self:
         """
         Extending a new circuit to the base one, where the outputs of the base one will
         be the inputs of the new one. The list of circuit outputs is replenished with
@@ -508,7 +512,7 @@ class Circuit(BooleanFunction):
         :return: modifed circuit
 
         """
-        return self.connect_circuit([], circuit, circuit_name=name)
+        return self.connect_circuit([], circuit, circuit_name=circuit_name)
 
     def rename_gate(self, old_label: Label, new_label: Label) -> tp_ext.Self:
         """
