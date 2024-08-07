@@ -957,7 +957,7 @@ class Circuit(BooleanFunction):
 
         return {output: assigment_dict[output] for output in self._outputs}
 
-    def evaluate(self, inputs: list[bool]) -> list[bool]:
+    def evaluate(self, inputs: tp.Sequence[bool]) -> list[bool]:
         """
         Get output values that correspond to provided `inputs`.
 
@@ -973,7 +973,7 @@ class Circuit(BooleanFunction):
         answer = self.evaluate_circuit_outputs(dict_inputs)
         return tp.cast(list[bool], [answer[output] for output in self._outputs])
 
-    def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
+    def evaluate_at(self, inputs: tp.Sequence[bool], output_index: int) -> bool:
         """
         Get value of `output_index`th output that corresponds to provided `inputs`.
 
