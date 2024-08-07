@@ -14,17 +14,20 @@ from tests.boolean_circuit_tool.cnf.tseytin_test import (
 
 
 @pytest.mark.parametrize(
-    'generate_circuit, is_sat',
+    'generate_circuit, is_sat, model',
     [
-        (generate_circuit1, True),
-        (generate_circuit2, True),
-        (generate_circuit3, True),
-        (generate_circuit4, False),
+        (generate_circuit1, True, [1, 2, 3]),
+        (generate_circuit2, True, [-1, -2, -3, 4, 5, 6]),
+        (generate_circuit3, True, [1, 2, 3, -4, 5, -6, 7]),
+        (generate_circuit4, False, None),
     ],
 )
 def test_is_satisfiable(
-    generate_circuit: tp.Callable[[], tp.Tuple[Circuit, CnfRaw]], is_sat: bool
+    generate_circuit: tp.Callable[[], tp.Tuple[Circuit, CnfRaw]],
+    is_sat: bool,
+    model: tp.Optional[list[int]],
 ):
     circuit, _ = generate_circuit()
-    sat, _ = is_satisfiable(circuit)
-    assert sat == is_sat
+    sat_result = is_satisfiable(circuit)
+    assert sat_result.answer == is_sat
+    assert sat_result.model == model
