@@ -21,7 +21,7 @@ def get_file_path(file_name):
 def test_trivial_instance():
 
     file_path = get_file_path('test_trivial_instance.bench')
-    instance = Circuit().from_bench(file_path)
+    instance = Circuit().from_bench_file(file_path)
 
     assert instance.size == 5
     assert instance.gates_number == 1
@@ -55,7 +55,7 @@ def test_trivial_instance():
 def test_spaces():
 
     file_path = get_file_path('test_spaces.bench')
-    instance = Circuit().from_bench(file_path)
+    instance = Circuit().from_bench_file(file_path)
 
     assert instance.size == 5
     assert instance.inputs == ['AAAAA', 'DDDD', 'E']
@@ -90,13 +90,13 @@ def test_not_init_operands():
 
     with pytest.raises(CircuitValidationError):
         file_path = get_file_path('test_not_init_operands.bench')
-        _ = Circuit().from_bench(file_path)
+        _ = Circuit().from_bench_file(file_path)
 
 
 def test_init_operands_after_using():
 
     file_path = get_file_path('test_init_operands_after_using.bench')
-    instance = Circuit().from_bench(file_path)
+    instance = Circuit().from_bench_file(file_path)
 
     assert instance.size == 3
     assert instance.inputs == ['A']
@@ -121,7 +121,7 @@ def test_init_operands_after_using():
 def test_sorting():
 
     file_path = get_file_path('test_sorting.bench')
-    instance = Circuit().from_bench(file_path)
+    instance = Circuit().from_bench_file(file_path)
 
     assert instance.size == 5
     assert instance.inputs == ['A', 'D', 'E']
@@ -139,7 +139,7 @@ def test_sorting():
 def test_top_sort():
 
     file_path = get_file_path('test_top_sort.bench')
-    instance = Circuit().from_bench(file_path)
+    instance = Circuit().from_bench_file(file_path)
 
     assert [elem.label for elem in instance.top_sort()] == [
         '6',
@@ -162,7 +162,7 @@ def test_top_sort():
 def test_top_sort_several_output():
 
     file_path = get_file_path('test_top_sort_several_output.bench')
-    instance = Circuit().from_bench(file_path)
+    instance = Circuit().from_bench_file(file_path)
 
     assert [elem.label for elem in instance.top_sort()] == [
         '4',
@@ -190,7 +190,7 @@ def test_top_sort_empty_circuit():
 def test_traverse_circuit_circuit():
 
     file_path = get_file_path('test_top_sort_several_output.bench')
-    instance = Circuit().from_bench(file_path)
+    instance = Circuit().from_bench_file(file_path)
 
     assert [elem.label for elem in instance.dfs(inverse=False)] == [
         '4',

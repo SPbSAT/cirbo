@@ -3,6 +3,7 @@
 import collections
 import copy
 import enum
+import io
 import itertools
 import logging
 import pathlib
@@ -181,7 +182,7 @@ class Circuit(BooleanFunction):
     """
 
     @staticmethod
-    def from_bench(file_path: str) -> "Circuit":
+    def from_bench_file(file_path: str) -> "Circuit":
         """
         Initialization the circuit with given data.
 
@@ -197,7 +198,7 @@ class Circuit(BooleanFunction):
             return _parser.convert_to_circuit(file)
 
     @staticmethod
-    def from_stream(stream: tp.Iterable[str]) -> "Circuit":
+    def from_bench_string(string: str) -> "Circuit":
         """
         Initialization the circuit with given stream data.
 
@@ -207,7 +208,9 @@ class Circuit(BooleanFunction):
         from boolean_circuit_tool.core.parser.bench import BenchToCircuit
 
         _parser = BenchToCircuit()
-        return _parser.convert_to_circuit(stream)
+
+        with io.StringIO(string) as s:
+            return _parser.convert_to_circuit(s)
 
     def __init__(self):
         self._inputs: list[Label] = list()
