@@ -2,15 +2,19 @@ import dataclasses
 import enum
 import typing as tp
 
-from pysat.formula import CNF
-from pysat.solvers import Solver
-
-from boolean_circuit_tool.cnf import Cnf
+import pysat.formula
+import pysat.solvers
 
 from boolean_circuit_tool.core.circuit import Circuit
+from boolean_circuit_tool.sat.cnf import Cnf
 
 
-__all__ = ['is_satisfiable', 'PySatResult', 'PySATSolverNames']
+__all__ = [
+    'is_satisfiable',
+    'is_circuit_satisfiable',
+    'PySatResult',
+    'PySATSolverNames',
+]
 
 
 class PySATSolverNames(enum.Enum):
@@ -50,20 +54,40 @@ class PySatResult:
 
 
 def is_satisfiable(
+    cnf: Cnf,
+    *,
+    solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL195,
+) -> PySatResult:
+    """
+    Checks if provided ``Cnf`` is satisfiable using specified solver.
+
+    :param cnf: Cnf formula to be checked for satisfiability.
+    :param solver_name: solver type/name.
+    :return: result returned from PySat.
+
+    """
+    solver_name = PySATSolverNames(solver_name)
+    _pysat_cnf = pysat.formula.CNF(from_clauses=cnf.get_raw())
+    with pysat.solvers.Solver(name=solver_name.value) as _solver:
+        _solver.append_formula(_pysat_cnf)
+        return PySatResult(_solver.solve(), _solver.get_model())
+
+
+def is_circuit_satisfiable(
     circuit: Circuit,
     *,
     solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL195,
 ) -> PySatResult:
     """
-    Check if circuit is satisfiable using specific solver.
+    Checks if circuit is satisfiable using specified solver. Uses Tseytin transformation
+    to construct SAT instance based on the provided ``Circuit`` (Circuit SAT) instance.
 
-    @param circuit: circuit. @param solver_name: solver type/name, be default,
-    cadical195.
+    :param circuit: Circuit representing a Circuit SAT instance.
+    :param solver_name: solver type/name.
+    :return: result returned from PySat.
 
     """
-    formula = CNF(from_clauses=Cnf.from_circuit(circuit).get_raw())
-    if isinstance(solver_name, PySATSolverNames):
-        solver_name = solver_name.value
-    with Solver(name=solver_name) as solver:
-        solver.append_formula(formula)
-        return PySatResult(solver.solve(), solver.get_model())
+    return is_satisfiable(
+        cnf=Cnf.from_circuit(circuit),
+        solver_name=solver_name,
+    )
