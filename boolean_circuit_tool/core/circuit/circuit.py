@@ -17,10 +17,19 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateIsAbsentError,
     CircuitIsCyclicalError,
     CreateBlockError,
+    GateNotInputError,
     GateStateError,
     TraverseMethodError,
 )
-from boolean_circuit_tool.core.circuit.gate import Gate, GateType, INPUT, Label, NOT
+from boolean_circuit_tool.core.circuit.gate import (
+    ALWAYS_FALSE,
+    ALWAYS_TRUE,
+    Gate,
+    GateType,
+    INPUT,
+    Label,
+    NOT,
+)
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
 from boolean_circuit_tool.core.circuit.utils import (
     input_iterator_with_fixed_sum,
@@ -28,6 +37,8 @@ from boolean_circuit_tool.core.circuit.utils import (
 )
 from boolean_circuit_tool.core.circuit.validation import (
     check_block_doesnt_exist,
+    check_block_hasnt_users,
+    check_gate_hasnt_users,
     check_gates_exist,
     check_label_doesnt_exist,
 )
@@ -69,7 +80,7 @@ class Block:
         outputs: list[Label],
     ):
         self._name = name
-        self._circuit_ref = circuit_owner
+        self._circuit_owner = circuit_owner
         self._inputs = inputs
         self._gates = gates
         self._outputs = outputs
@@ -91,8 +102,8 @@ class Block:
         return self._outputs
 
     @property
-    def circuit_ref(self) -> 'Circuit':
-        return self._circuit_ref
+    def circuit_owner(self) -> 'Circuit':
+        return self._circuit_owner
 
     def rename_gate(self, old_label: Label, new_label: Label) -> tp_ext.Self:
         """
@@ -103,22 +114,57 @@ class Block:
         :return: modified block.
 
         """
-        self._inputs = [
-            new_label if input_label == old_label else input_label
-            for input_label in self.inputs
-        ]
-        self._gates = [
-            new_label if gate_label == old_label else gate_label
-            for gate_label in self.gates
-        ]
-        self._outputs = [
-            new_label if output_label == old_label else output_label
-            for output_label in self.outputs
-        ]
+        for i, input_label in enumerate(self.inputs):
+            if input_label == old_label:
+                self.inputs[i] = new_label
+
+        for i, gate_label in enumerate(self.gates):
+            if gate_label == old_label:
+                self.gates[i] = new_label
+
+        for i, output_label in enumerate(self.outputs):
+            if output_label == old_label:
+                self.outputs[i] = new_label
+
+        return self
+
+    def delete_gate(self, gate_label: Label) -> tp_ext.Self:
+        """
+        Delete gate from block.
+
+        :param gate_label: gate's label to delete.
+        :return: modified block.
+
+        """
+
+        if gate_label in self.inputs:
+            self._inputs = [input for input in self._inputs if input != gate_label]
+
+        if gate_label in self.gates:
+            self._gates = [gate for gate in self._gates if gate != gate_label]
+
+        if gate_label in self.outputs:
+            self._outputs = [output for output in self._outputs if output != gate_label]
+
         return self
 
     def into_circuit(self):
-        pass
+        new_Circuit = Circuit()
+
+        for input in self.inputs:
+            new_Circuit._emplace_gate(label=input, gate_type=INPUT)
+
+        for gate_label in self.gates:
+            gate = self.circuit_owner.get_gate(gate_label)
+            new_Circuit._emplace_gate(
+                label=gate.label,
+                gate_type=gate.gate_type,
+                operands=copy.copy(gate.operands),
+            )
+
+        new_Circuit.set_outputs(copy.copy(self.outputs))
+
+        return new_Circuit
 
 
 class Circuit(BooleanFunction):
@@ -149,6 +195,19 @@ class Circuit(BooleanFunction):
         path = pathlib.Path(file_path)
         with path.open() as file:
             return _parser.convert_to_circuit(file)
+
+    @staticmethod
+    def from_stream(stream: tp.Iterable[str]) -> "Circuit":
+        """
+        Initialization the circuit with given stream data.
+
+        :param stream: stream to the data circuit
+
+        """
+        from boolean_circuit_tool.core.parser.bench import BenchToCircuit
+
+        _parser = BenchToCircuit()
+        return _parser.convert_to_circuit(stream)
 
     def __init__(self):
         self._inputs: list[Label] = list()
@@ -293,6 +352,18 @@ class Circuit(BooleanFunction):
         """
         return label in self._gates
 
+    def remove_gate(self, gate: Gate) -> tp_ext.Self:
+        """
+        Remove gate from the circuit.
+
+        :param gate: gate for deleting.
+        :return: modified circuit.
+
+        """
+        check_gates_exist((gate.label,), self)
+        check_gate_hasnt_users(gate.label, self)
+        return self._remove_gate(gate)
+
     def add_gate(self, gate: Gate) -> tp_ext.Self:
         """
         Add gate in the circuit.
@@ -352,7 +423,7 @@ class Circuit(BooleanFunction):
         check_gates_exist(inputs, self)
         check_gates_exist(outputs, self)
 
-        gates: set[Label] = set(output for output in outputs if output not in inputs)
+        gates: set[Label] = {output for output in outputs if output not in inputs}
         queue: list[Label] = list(gates)
         while queue:
 
@@ -368,30 +439,39 @@ class Circuit(BooleanFunction):
                         gates.add(oper)
                         queue.append(oper)
 
-        return self.make_block(name, inputs, list(gates), outputs)
+        return self.make_block(name, list(gates), outputs, inputs)
 
     def make_block(
         self,
         name: Label,
-        inputs: list[Label],
         gates: list[Label],
         outputs: list[Label],
+        inputs: tp.Optional[list[Label]] = None,
     ) -> Block:
         """
         Initializes a block with the provided data and adds it to the circuit.
 
-        :param name: new block's name
-        :param inputs: new block's inputs
-        :param gates: new block's gates
-        :param outputs: new block's outputs
-        :return: created block
+        :param name: new block's name.
+        :param gates: new block's gates.
+        :param outputs: new block's outputs.
+        :param inputs: new block's inputs. If the parameter is not specified, the
+            algorithm will collect all the gates that affect the gates otside the block.
+        :return: created block.
 
         """
 
         check_block_doesnt_exist(name, self)
-        check_gates_exist(inputs, self)
         check_gates_exist(gates, self)
         check_gates_exist(outputs, self)
+        if inputs is not None:
+            check_gates_exist(inputs, self)
+        else:
+            gates_set: set[Label] = set(gates)
+            inputs = []
+            for gate in gates:
+                for oper in self.get_gate(gate).operands:
+                    if oper not in gates_set:
+                        inputs.append(oper)
 
         new_block = Block(
             name=name,
@@ -404,12 +484,45 @@ class Circuit(BooleanFunction):
         self._blocks[name] = new_block
         return new_block
 
+    def delete_block(self, block_label: Label) -> tp_ext.Self:
+        """
+        Delete block from list of block in the circuit.
+
+        :param block_label: block's label for deleting
+        :return: modified circuit
+
+        """
+        del self._blocks[block_label]
+        return self
+
+    def remove_block(self, block_label: Label) -> tp_ext.Self:
+        """
+        Delete all gates from block from the circuit and block from list of block.
+
+        :param block_label: block's label for deleting
+        :return: modified circuit
+
+        """
+        block: Block = self.get_block(block_label)
+        check_block_hasnt_users(block, self)
+
+        for gate in block.gates:
+            self._remove_gate(self.get_gate(gate))
+
+        for block in self.blocks.values():
+            if len(block.gates) == 0:
+                self.delete_block(block.name)
+
+        return self.delete_block(block_label)
+
     def connect_circuit(
         self,
         connect_to: list[Label],
         circuit: tp_ext.Self,
+        connect_from: list[Label],
         *,
         circuit_name: Label = '',
+        add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
         Extending a new circuit to the base one, where `connect_to` will be the inputs
@@ -428,36 +541,50 @@ class Circuit(BooleanFunction):
         """
         check_gates_exist(connect_to, self)
         check_block_doesnt_exist(circuit_name, self)
+        check_gates_exist(connect_from, circuit)
+        assert len(connect_to) == len(connect_from)
 
-        if circuit_name != '':
-            circuit_name += '@'
+        prefix: str = ''
+        if circuit_name != '' and add_prefix:
+            prefix = circuit_name + '@'
 
-        old_to_new_names: dict[Label, Label] = {}
-        for i, old_name in enumerate(circuit.inputs):
-            if i < len(connect_to):
-                old_to_new_names[old_name] = connect_to[i]
-            else:
-                old_to_new_names[old_name] = circuit_name + old_name
-                self.add_gate(Gate(old_to_new_names[old_name], INPUT))
+        mapping: dict[Label, Label] = {}
+        for i, old_name in enumerate(connect_from):
+            mapping[old_name] = connect_to[i]
 
+        old_to_new_names = copy.copy(mapping)
         gates_for_block: set[Label] = set()
         for gate in circuit.top_sort(inversed=True):
-            if gate.gate_type != INPUT:
-                new_label: Label = circuit_name + gate.label
-                gates_for_block.add(new_label)
+            if gate.label not in mapping:
+                new_label: Label = prefix + gate.label
                 old_to_new_names[gate.label] = new_label
                 self.emplace_gate(
                     label=new_label,
                     gate_type=gate.gate_type,
                     operands=tuple(old_to_new_names[oper] for oper in gate.operands),
                 )
+                if gate.gate_type != INPUT:
+                    gates_for_block.add(new_label)
+            else:
+                if connect_from[0] in circuit.outputs:  #
+                    self._gates[old_to_new_names[gate.label]] = Gate(
+                        label=old_to_new_names[gate.label],
+                        gate_type=gate.gate_type,
+                        operands=tuple(
+                            old_to_new_names[oper] for oper in gate.operands
+                        ),
+                    )
 
         self._outputs = [
             output for output in self._outputs if output not in connect_to
-        ] + [old_to_new_names[output] for output in circuit.outputs]
+        ] + [
+            old_to_new_names[output]
+            for output in circuit.outputs
+            if output not in connect_from
+        ]
 
         for block in circuit.blocks.values():
-            new_block_name = circuit_name + block.name
+            new_block_name = prefix + block.name
             check_block_doesnt_exist(new_block_name, self)
             self._blocks[new_block_name] = Block(
                 name=new_block_name,
@@ -469,7 +596,7 @@ class Circuit(BooleanFunction):
 
         if circuit_name != '':
             new_block = Block(
-                name=circuit_name[:-1],
+                name=circuit_name,
                 circuit_owner=self,
                 inputs=[old_to_new_names[input] for input in circuit.inputs],
                 gates=list(gates_for_block),
@@ -480,8 +607,12 @@ class Circuit(BooleanFunction):
 
         return self
 
-    def extend_circuit(
-        self, circuit: tp_ext.Self, *, circuit_name: Label = ''
+    def extend_back_circuit(
+        self,
+        circuit: tp_ext.Self,
+        *,
+        circuit_name: Label = '',
+        add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
         Extending a new circuit to the base one, where the inputs and outputs of the new
@@ -494,10 +625,20 @@ class Circuit(BooleanFunction):
         :return: modifed circuit
 
         """
-        return self.connect_circuit(self.outputs, circuit, circuit_name=circuit_name)
+        return self.connect_circuit(
+            self.outputs,
+            circuit,
+            connect_from=circuit.inputs,
+            circuit_name=circuit_name,
+            add_prefix=add_prefix,
+        )
 
     def add_circuit(
-        self, circuit: tp_ext.Self, *, circuit_name: Label = ''
+        self,
+        circuit: tp_ext.Self,
+        *,
+        circuit_name: Label = '',
+        add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
         Extending a new circuit to the base one, where the outputs of the base one will
@@ -512,7 +653,13 @@ class Circuit(BooleanFunction):
         :return: modifed circuit
 
         """
-        return self.connect_circuit([], circuit, circuit_name=circuit_name)
+        return self.connect_circuit(
+            [],
+            circuit,
+            connect_from=[],
+            circuit_name=circuit_name,
+            add_prefix=add_prefix,
+        )
 
     def rename_gate(self, old_label: Label, new_label: Label) -> tp_ext.Self:
         """
@@ -574,6 +721,37 @@ class Circuit(BooleanFunction):
         """Set new outputs in the circuit."""
         check_gates_exist(outputs, self)
         self._outputs = outputs
+
+    def add_inputs(self, inputs: list[Label]) -> None:
+        """Add new inputs in the circuit."""
+        for input in inputs:
+            check_label_doesnt_exist(input, self)
+            self.emplace_gate(input, INPUT)
+
+    def replace_inputs(
+        self, inputs_to_true: list[Label], inputs_to_false: list[Label]
+    ) -> tp_ext.Self:
+        """
+        Replaces inputs with gate ALWAYS_TRUE or ALWAYS_FASE, while removing them from
+        the list of inputs of the circuit.
+
+        :param inputs_to_true: inputs that need to be replaced with ALWAYS_TRUE.
+        :param inputs_to_false: inputs that need to be replaced with ALWAYS_FALSE.
+        :return: modified circuit.
+
+        """
+
+        def _replace_inputs(inputs: list[Label], new_type: GateType):
+            for input_label in inputs:
+                if self.get_gate(input_label).gate_type != INPUT:
+                    raise GateNotInputError()
+                self._gates[input_label] = Gate(input_label, new_type)
+                self._inputs.remove(input_label)
+
+        _replace_inputs(inputs_to_true, ALWAYS_TRUE)
+        _replace_inputs(inputs_to_false, ALWAYS_FALSE)
+
+        return self
 
     def order_inputs(self, inputs: list[Label]) -> tp_ext.Self:
         """
@@ -1094,9 +1272,32 @@ class Circuit(BooleanFunction):
         )
         return f"{input_str}\n\n{gates_str}\n\n{output_str}"
 
+    def _remove_gate(self, gate: Gate) -> tp_ext.Self:
+        """
+        Remove gate from the circuit without any checkings (!!!).
+
+        :param gate: gate for deleting.
+        :return: modified circuit.
+
+        """
+        for operand in gate.operands:
+            self._remove_user(operand, gate.label)
+
+        del self._gates[gate.label]
+
+        if gate.gate_type == INPUT:
+            self._inputs.remove(gate.label)
+
+        self._outputs = [output for output in self.outputs if output != gate.label]
+
+        for block in self.blocks.values():
+            block.delete_gate(gate.label)
+
+        return self
+
     def _add_gate(self, gate: Gate) -> tp_ext.Self:
         """
-        Add gate in the ciurcuit without any checkings (!!!) and without filling users.
+        Add gate in the ciurcuit without any checkings (!!!)
 
         :param: gate.
         :return: circuit with new gate.
@@ -1119,7 +1320,7 @@ class Circuit(BooleanFunction):
         **kwargs,
     ) -> tp_ext.Self:
         """
-        Add gate in the ciurcuit without any checkings (!!!) and without filling users.
+        Add gate in the ciurcuit without any checkings (!!!).
 
         :param label: new gate's label.
         :param gate_type: new gate's type of operator.
@@ -1137,8 +1338,12 @@ class Circuit(BooleanFunction):
 
         return self
 
+    def _remove_user(self, gate: Label, user: Label):
+        """Remove user from `gate`."""
+        self._gate_to_users[gate].remove(user)
+
     def _add_user(self, gate: Label, user: Label):
-        """Adds user for `gate`."""
+        """Add user for `gate`."""
         self._gate_to_users[gate].append(user)
 
     def _traverse_circuit(
@@ -1243,6 +1448,28 @@ class Circuit(BooleanFunction):
             if gate_states[label] == TraverseState.UNVISITED:
                 unvisited_hook(self.get_gate(label), gate_states)
 
+    def __copy__(self):
+        new_circuit = Circuit()
+
+        for gate in self.top_sort(inversed=True):
+            new_circuit.emplace_gate(
+                label=gate.label,
+                gate_type=gate.gate_type,
+                operands=copy.copy(gate.operands),
+            )
+
+        new_circuit.set_outputs(copy.copy(self.outputs))
+
+        for block in self.blocks.values():
+            new_circuit.make_block(
+                name=block.name,
+                gates=copy.copy(block.gates),
+                outputs=copy.copy(block.outputs),
+                inputs=copy.copy(block.inputs),
+            )
+
+        return new_circuit
+
     def __str__(self):
         input_str = textwrap.shorten(
             'INPUTS: ' + '; '.join(f'{input_label}' for input_label in self._inputs),
@@ -1254,3 +1481,47 @@ class Circuit(BooleanFunction):
             width=100,
         )
         return f"{self.__class__.__name__}\n\t{input_str}\n\t{output_str}"
+
+
+if __name__ == '__main__':
+    from boolean_circuit_tool.core.circuit.gate import AND, OR
+
+    C0 = Circuit()
+    C0.add_gate(Gate('x1', INPUT))
+    C0.add_gate(Gate('x2', INPUT))
+    C0.add_gate(Gate('x3', OR, ('x1', 'x2')))
+    C0.mark_as_output('x3')
+
+    C1 = Circuit()
+    C1.add_gate(Gate('y1', INPUT))
+    C1.add_gate(Gate('y2', NOT, ('y1',)))
+    C1.add_gate(Gate('y3', AND, ('y1', 'y2')))
+    C1.add_gate(Gate('y4', OR, ('y1', 'y2')))
+    C1.mark_as_output('y3')
+    C1.mark_as_output('y4')
+
+    C2 = Circuit()
+    C2.add_gate(Gate('A', INPUT))
+    C2.add_gate(Gate('B', INPUT))
+    C2.add_gate(Gate('C', AND, ('A', 'B')))
+    C2.mark_as_output('C')
+
+    C = Circuit()
+
+    C.connect_circuit(
+        connect_to=[],
+        circuit=C0,
+        connect_from=[],
+        circuit_name='C_C0',
+        add_prefix=False,
+    )
+    print('\n\n\n', C.format_circuit())
+
+    C.connect_circuit(
+        connect_to=C.inputs,
+        circuit=C1,
+        connect_from=C1.outputs,
+        circuit_name='C1_C_C0',
+        add_prefix=False,
+    )
+    print('\n\n\n', C.format_circuit())

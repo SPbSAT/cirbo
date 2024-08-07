@@ -194,17 +194,17 @@ def test_block():
     C.add_circuit(C0, circuit_name='C0')
     assert C.size == 3
     assert C.gates_number == 1
-    assert C.inputs == ['C0@A', 'C0@B']
+    assert C.inputs == ['C0@B', 'C0@A']
     assert C.outputs == ['C0@C']
     assert C._gates.keys() == {'C0@A', 'C0@B', 'C0@C'}
     assert C.get_gate('C0@C').gate_type == OR
     assert C.get_gate('C0@C').operands == ('C0@A', 'C0@B')
 
     C.make_block_from_slice('backup_C0', C.inputs, C.outputs)
-    C.extend_circuit(C1, circuit_name='C1')
+    C.extend_back_circuit(C1, circuit_name='C1')
     assert C.size == 6
     assert C.gates_number == 3
-    assert C.inputs == ['C0@A', 'C0@B']
+    assert C.inputs == ['C0@B', 'C0@A']
     assert C.outputs == ['C1@C', 'C1@D']
     assert C.get_block('backup_C0').outputs == ['C0@C']
     assert C._gates.keys() == {'C0@A', 'C0@B', 'C0@C', 'C1@B', 'C1@C', 'C1@D'}
@@ -219,10 +219,10 @@ def test_block():
     C.make_block_from_slice('backup_C0_C1', C.inputs, C.outputs)
     with pytest.raises(CreateBlockError):
         C.make_block_from_slice('make_B1', C.inputs[1:], ['C1@C'])
-    C.connect_circuit(C.outputs[1:], C2, circuit_name='C2')
+    C.connect_circuit(C.outputs[1:], C2, C2.inputs[:1], circuit_name='C2')
     assert C.size == 8
     assert C.gates_number == 4
-    assert C.inputs == ['C0@A', 'C0@B', 'C2@B']
+    assert C.inputs == ['C0@B', 'C0@A', 'C2@B']
     assert C.outputs == ['C1@C', 'C2@C']
     assert C._gates.keys() == {
         'C0@A',
@@ -236,10 +236,10 @@ def test_block():
     }
     C.make_block_from_slice('make_B1', C.inputs[:2], ['C1@C'])
 
-    C2.extend_circuit(C, circuit_name='C')
+    C2.connect_circuit(C2.outputs, C, ['C0@A'], circuit_name='C')
     assert C2.size == 10
     assert C2.gates_number == 5
-    assert C2.inputs == ['A', 'B', 'C@C0@B', 'C@C2@B']
+    assert C2.inputs == ['A', 'B', 'C@C2@B', 'C@C0@B']
     assert C2.outputs == ['C@C1@C', 'C@C2@C']
     assert C2.input_size == 4
     assert C2.output_size == 2
@@ -308,15 +308,14 @@ def test_block():
     assert C2.get_block('C@C0').outputs == ['C@C0@C']
 
     C3 = Circuit()
-    C3.add_gate(Gate('A', INPUT))
-    C3.add_gate(Gate('B', INPUT))
+    C3.add_inputs(['A', 'B'])
     C3.add_gate(Gate('C', AND, ('A', 'B')))
     C3.mark_as_output('C')
 
-    C3.extend_circuit(C)
+    C3.connect_circuit(C3.outputs, C, ['C0@A'], circuit_name='')
     assert C3.size == 10
     assert C3.gates_number == 5
-    assert C3.inputs == ['A', 'B', 'C0@B', 'C2@B']
+    assert C3.inputs == ['A', 'B', 'C2@B', 'C0@B']
     assert C3.outputs == ['C1@C', 'C2@C']
     assert C3.input_size == 4
     assert C3.output_size == 2

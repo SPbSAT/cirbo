@@ -9,8 +9,11 @@ __all__ = [
     'CircuitGateAlreadyExistsError',
     'GateTypeNoOperatorError',
     'GateStateError',
+    'GateHasUsersError',
+    'GateNotInputError',
     'TraverseMethodError',
     'CreateBlockError',
+    'DeleteBlockError',
 ]
 
 
@@ -57,6 +60,18 @@ class GateStateError(CircuitError):
     pass
 
 
+class GateHasUsersError(CircuitError):
+    """Represents error that gate has users, this gate can't be deleted."""
+
+    pass
+
+
+class GateNotInputError(CircuitError):
+    """Represents error that gate is not input, this gate's type can't be change."""
+
+    pass
+
+
 class TraverseMethodError(CircuitError):
     """Represents error of method for traverse circuit."""
 
@@ -65,5 +80,11 @@ class TraverseMethodError(CircuitError):
 
 class CreateBlockError(CircuitError):
     """Represents error in creating block in the circuit."""
+
+    pass
+
+
+class DeleteBlockError(CircuitError):
+    """Represents error in deleting block in the circuit."""
 
     pass
