@@ -13,12 +13,21 @@ from boolean_circuit_tool.synthesis.circuit_search import (
     CircuitFinderSat,
     Operation,
 )
-from boolean_circuit_tool.synthesis.exception import NoSolutionError, SolverTimeOutError
+from boolean_circuit_tool.synthesis.exception import (
+    FixGateError,
+    FixGateOrderError,
+    ForbidWireOrderError,
+    GateIsAbsentError,
+    NoSolutionError,
+    SolverTimeOutError,
+)
+from pysat.solvers import Solver
 
 
 def check_exact_circuit_size(size, truth_tables, basis, hasdontcares=False):
-    circuit_finder = CircuitFinderSat(TruthTableModel(truth_tables), size, basis=basis)
-    circuit = circuit_finder.find_circuit()
+    circuit = CircuitFinderSat(
+        TruthTableModel(truth_tables), size, basis=basis
+    ).find_circuit()
     check_correctness(circuit, truth_tables, hasdontcares)
     with pytest.raises(NoSolutionError):
         CircuitFinderSat(
@@ -119,6 +128,19 @@ def test_sum_with_precomputed_xor(inputs: int, outputs: int, size: int):
     circuit = circuit_finder.find_circuit()
     check_correctness(circuit, tt)
 
+    def add_s(gate_n):
+        if gate_n >= inputs:
+            return f"s{gate_n}"
+        return str(gate_n)
+
+    gate = circuit.get_element(f"s{inputs}")
+    assert gate.gate_type == _tt_to_gate_type[(0, 1, 1, 0)]
+    assert gate.operands == ('0', '1')
+    for k in range(inputs - 2):
+        gate = circuit.get_element(add_s(inputs + k + 1))
+        assert gate.gate_type == _tt_to_gate_type[(0, 1, 1, 0)]
+        assert gate.operands == (add_s(k + 2), add_s(inputs + k))
+
 
 @pytest.mark.parametrize("inputs, size", [(3, 6), (4, 9)])
 def test_aig_basis(inputs: int, size: int):
@@ -144,11 +166,92 @@ def test_time_limit(inputs: int, outputs: int, size: int, tl: int):
         )
         for i in range(outputs)
     ]
-    finder = CircuitFinderSat(TruthTableModel(tt), size, basis=Basis.XAIG)
     with pytest.raises(SolverTimeOutError):
-        finder.find_circuit(time_limit=tl)
+        CircuitFinderSat(TruthTableModel(tt), size, basis=Basis.XAIG).find_circuit(
+            time_limit=tl
+        )
 
 
 def test_simple_dont_care():
     tt = ["011*"]
     check_exact_circuit_size(1, tt, [Operation.or_], hasdontcares=True)
+
+
+@pytest.mark.parametrize("tt, size, sat", [(["0110"], 3, True), (["0110"], 2, False)])
+def test_get_cnf(tt, size, sat):
+    circuit_finder = CircuitFinderSat(TruthTableModel(tt), size, basis=Basis.AIG)
+    cnf = circuit_finder.get_cnf()
+    print(cnf)
+
+    solver = Solver(name='g3')
+    for clause in cnf:
+        solver.add_clause(clause)
+    is_sat = solver.solve()
+    assert is_sat == sat
+    solver.delete()
+
+
+def test_need_normalized():
+    tt = ['00010001', '11110101', '11111010']
+    tt_normalized = ['00010001', '00001010', '00000101']
+
+    circuit = CircuitFinderSat(
+        TruthTableModel(tt), 3, basis=Basis.XAIG, need_normalized=False
+    ).find_circuit()
+    check_correctness(circuit, tt)
+
+    with pytest.raises(NoSolutionError):
+        CircuitFinderSat(
+            TruthTableModel(tt), 10, basis=Basis.FULL, need_normalized=True
+        ).find_circuit()
+
+    circuit = CircuitFinderSat(
+        TruthTableModel(tt_normalized), 3, basis=Basis.XAIG, need_normalized=True
+    ).find_circuit()
+    check_correctness(circuit, tt_normalized)
+
+
+def test_fix_gate_exceptions():
+    tt = ["01101001"]
+    circuit_finder = CircuitFinderSat(TruthTableModel(tt), 6, basis=Basis.AIG)
+    with pytest.raises(GateIsAbsentError):
+        circuit_finder.fix_gate(9, 0, 2)
+    with pytest.raises(GateIsAbsentError):
+        circuit_finder.fix_gate(8, 0, 9)
+    with pytest.raises(GateIsAbsentError):
+        circuit_finder.fix_gate(8, 9, 6)
+    with pytest.raises(FixGateError):
+        circuit_finder.fix_gate(3)
+    with pytest.raises(FixGateOrderError):
+        circuit_finder.fix_gate(3, 2, 1)
+    with pytest.raises(FixGateOrderError):
+        circuit_finder.fix_gate(3, 4)
+
+    circuit_finder.fix_gate(4, 1)
+    ckt = circuit_finder.find_circuit()
+    check_correctness(ckt, tt)
+    assert '1' in ckt.get_element('s4').operands
+
+
+def test_forbid_wire_exceptions():
+    tt = ["01101001"]
+    circuit_finder = CircuitFinderSat(TruthTableModel(tt), 6, basis=Basis.AIG)
+    with pytest.raises(GateIsAbsentError):
+        circuit_finder.forbid_wire(9, 0)
+    with pytest.raises(GateIsAbsentError):
+        circuit_finder.forbid_wire(0, 9)
+    with pytest.raises(ForbidWireOrderError):
+        circuit_finder.forbid_wire(5, 3)
+    circuit_finder.forbid_wire(1, 3)
+    ckt = circuit_finder.find_circuit()
+    check_correctness(ckt, tt)
+    assert '1' not in ckt.get_element('s3').operands
+
+
+def test_fix_forbid():
+    tt = ["01101001"]
+    circuit_finder = CircuitFinderSat(TruthTableModel(tt), 6, basis=Basis.AIG)
+    circuit_finder.fix_gate(4, 1)
+    circuit_finder.forbid_wire(1, 4)
+    with pytest.raises(NoSolutionError):
+        circuit_finder.find_circuit()

@@ -225,6 +225,7 @@ class CircuitFinderSat:
         self._vpool = IDPool()
         self._cnf = CNF()
         self.need_check_db = True
+        self.need_init_cnf = True
 
     def get_cnf(self) -> tp.List[tp.List[int]]:
         """
@@ -235,6 +236,9 @@ class CircuitFinderSat:
             representing literals.
 
         """
+        if self.need_init_cnf:
+            self._init_default_cnf_formula()
+            self.need_init_cnf = False
         return self._cnf.clauses
 
     def find_circuit(
@@ -269,7 +273,10 @@ class CircuitFinderSat:
                 else:
                     raise NoSolutionError()
 
-        self._init_default_cnf_formula()
+        if self.need_init_cnf:
+            self._init_default_cnf_formula()
+            self.need_init_cnf = False
+
         solver_name = PySATSolverNames(solver_name)
         logger.debug(
             f"Solving a CNF formula, "

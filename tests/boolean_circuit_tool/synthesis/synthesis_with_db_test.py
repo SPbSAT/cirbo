@@ -73,55 +73,62 @@ def db_aig_connection(pytestconfig):
         yield db
 
 
-@pytest.mark.db
+@pytest.mark.db_xaig
 @pytest.mark.parametrize("tt_str", truth_tables + truth_tables_with_dontcares)
 def test_synthesis_vs_db_xaig(tt_str, db_xaig_connection):
     ttm = TruthTableModel(tt_str)
     ckt_from_db: Circuit = db_xaig_connection.get_by_raw_truth_table_model(
         ttm.get_model_truth_table()
     )
-    circuit_finder = CircuitFinderSat(
+    circuit_from_synthesis = CircuitFinderSat(
         ttm, ckt_from_db.elements_number, basis=Basis.XAIG
-    )
-    circuit_from_synthesis = circuit_finder.find_circuit()
+    ).find_circuit()
     check_correctness(circuit_from_synthesis, tt_str, hasdontcares=True)
     check_correctness(ckt_from_db, tt_str, hasdontcares=True)
 
     with pytest.raises(NoSolutionError):
-        circuit_finder_2 = CircuitFinderSat(
+        CircuitFinderSat(
             ttm, ckt_from_db.elements_number - 1, basis=Basis.XAIG
-        )
-        circuit_finder_2.find_circuit()
+        ).find_circuit()
 
 
-@pytest.mark.db
+@pytest.mark.db_aig
 @pytest.mark.parametrize("tt_str", truth_tables + truth_tables_with_dontcares)
 def test_synthesis_vs_db_aig(tt_str, db_aig_connection):
     ttm = TruthTableModel(tt_str)
     ckt_from_db: Circuit = db_aig_connection.get_by_raw_truth_table_model(
         ttm.get_model_truth_table()
     )
-    circuit_finder = CircuitFinderSat(ttm, ckt_from_db.elements_number, basis=Basis.AIG)
-    circuit_from_synthesis = circuit_finder.find_circuit()
+    circuit_from_synthesis = CircuitFinderSat(
+        ttm, ckt_from_db.elements_number, basis=Basis.AIG
+    ).find_circuit()
     check_correctness(circuit_from_synthesis, tt_str, hasdontcares=True)
     check_correctness(ckt_from_db, tt_str, hasdontcares=True)
 
     with pytest.raises((NoSolutionError, SolverTimeOutError)):
-        circuit_finder_2 = CircuitFinderSat(
+        CircuitFinderSat(
             ttm, ckt_from_db.elements_number - 1, basis=Basis.AIG
-        )
-        circuit_finder_2.find_circuit(time_limit=2)
+        ).find_circuit(time_limit=2)
 
 
-@pytest.mark.db
+@pytest.mark.db_xaig
 @pytest.mark.parametrize("tt_str", truth_tables[:5] + truth_tables_with_dontcares[:5])
 def test_synthesis_with_db(tt_str, db_xaig_connection):
     ttm = TruthTableModel(tt_str)
     ckt_from_db: Circuit = db_xaig_connection.get_by_raw_truth_table_model(
         ttm.get_model_truth_table()
     )
-    circuit_finder = CircuitFinderSat(
+    circuit_from_synthesis = CircuitFinderSat(
         ttm, ckt_from_db.elements_number, basis=Basis.XAIG
-    )
-    circuit_from_synthesis = circuit_finder.find_circuit(circuit_db=db_xaig_connection)
+    ).find_circuit(circuit_db=db_xaig_connection)
     assert ckt_from_db.format_circuit() == circuit_from_synthesis.format_circuit()
+
+
+@pytest.mark.db_xaig
+def test_synthesis_with_db_no_solution_raise(db_xaig_connection):
+    tt = TruthTableModel(['00010001', '11110101', '11111010'])
+
+    with pytest.raises(NoSolutionError):
+        CircuitFinderSat(tt, 2, basis=Basis.XAIG).find_circuit(
+            circuit_db=db_xaig_connection
+        )

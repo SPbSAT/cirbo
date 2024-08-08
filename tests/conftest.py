@@ -3,10 +3,16 @@ import pytest
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--db-verify",
+        "--db-xaig-verify",
         action="store_true",
         default=False,
-        help="run tests to verify the correctness of the database",
+        help="run tests to verify the correctness of the xaig database",
+    )
+    parser.addoption(
+        "--db-aig-verify",
+        action="store_true",
+        default=False,
+        help="run tests to verify the correctness of the aig database",
     )
     parser.addoption(
         "--db-xaig-path",
@@ -23,13 +29,18 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "db: mark test as related to database")
+    config.addinivalue_line("markers", "db_xaig: mark test as related to xaig database")
+    config.addinivalue_line("markers", "db_aig: mark test as related to aig database")
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--db-verify"):
-        return
-    skip_db_checks = pytest.mark.skip(reason="need --db-verify option to run")
-    for item in items:
-        if "db" in item.keywords:
-            item.add_marker(skip_db_checks)
+    if not config.getoption("--db-xaig-verify"):
+        skip_db_checks = pytest.mark.skip(reason="need --db-xaig-verify option to run")
+        for item in items:
+            if "db_xaig" in item.keywords:
+                item.add_marker(skip_db_checks)
+    if not config.getoption("--db-aig-verify"):
+        skip_db_checks = pytest.mark.skip(reason="need --db-aig-verify option to run")
+        for item in items:
+            if "db_aig" in item.keywords:
+                item.add_marker(skip_db_checks)
