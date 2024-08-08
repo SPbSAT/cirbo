@@ -130,13 +130,14 @@ def is_cyclic(circuit):
                 return True
     return False
 
-def get_subcircuits(circuit, cuts):
+def get_subcircuits(circuit, cuts, cut_nodes):
     """
     Get subcircuits for simplification.
     Function processes given cuts and gets the most probable subcircuits for simplification.
 
     :param circuit: given circuit.
     :param cuts: cuts for the circuit.
+    :param cut_nodes: dict for mapping cut to set of its nodes
     :return: list with subcircuits from the given circuit.
 
     """
@@ -200,6 +201,7 @@ def get_subcircuits(circuit, cuts):
     logger.info(f"Process: {len(good_cuts)} cuts")
 
     outputs_set = set(circuit.outputs)
+    inputs_tt = generate_inputs_tt([3, 4, 5])
 
     for cut in good_cuts:
         n = len(cut)
@@ -290,32 +292,16 @@ def eval_dont_cares(circuit, subcircuits):
     return subcircuits
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", type=str, required=True)
-    parser.add_argument("-o", "--output", type=str, required=False)
-    parser.add_argument("-b", "--basis", type=str, required=True, choices=["AIG", "XAIG"])
-
-    args = parser.parse_args()
-    circuit_path = args.input
-    circuit_output_path = args.output
-    basis = Basis.XAIG if args.basis == 'XAIG' else Basis.AIG
-
-    circuit = Circuit.from_bench(circuit_path)
-    cuts_raw, mapping = mw.enumerate_cuts(circuit_path) # tuple with string cuts representation
-
+def minimize(circuit: Circuit, basis: Basis) -> Circuit:
+    cuts_raw, mapping = mw.enumerate_cuts(circuit.format_circuit()) # tuple with string cuts representation
     cut_nodes = read_cuts(cuts_raw, mapping)
     cuts = sorted(cut_nodes.keys(), key=lambda x: len(x))
 
     logger.info(f"Found {len(cuts)} cuts")
 
     initial_circuit = copy.deepcopy(circuit)
-    basis = Basis.XAIG
-
-    inputs_tt = generate_inputs_tt([3, 4, 5])
-    subcircuits = get_subcircuits(circuit, cuts)
+    subcircuits = get_subcircuits(circuit, cuts, cut_nodes)
     subcircuits = eval_dont_cares(circuit, subcircuits)
-
     gate_status = collections.defaultdict(str)
 
     for iter, subcircuit in enumerate(subcircuits):
@@ -425,7 +411,4 @@ if __name__ == '__main__':
 
     logger.info("Check passed")
 
-    if circuit_output_path:
-        circuit.save_to_file(circuit_output_path)
-    else:
-        print(circuit)
+    return circuit
