@@ -1,5 +1,6 @@
 import io
 import itertools
+import lzma
 import typing as tp
 from pathlib import Path
 
@@ -57,8 +58,14 @@ class CircuitsDatabase:
         if self._db_source is None:
             self._dict = dict()
         elif isinstance(self._db_source, Path):
-            with self._db_source.open('rb') as stream:
-                self._dict = read_binary_dict(stream)
+            if self._db_source.suffix == '.xz':
+                with lzma.open(self._db_source, "rb") as lzma_file:
+                    self._dict = read_binary_dict(lzma_file)
+            elif self._db_source.suffix == ".bin":
+                with self._db_source.open('rb') as stream:
+                    self._dict = read_binary_dict(stream)
+            else:
+                raise CircuitDatabaseOpenError(f"Try to open database from unsupported file: {self._db_source.suffix}")
         elif isinstance(self._db_source, io.BytesIO):
             self._db_source.seek(0)
             self._dict = read_binary_dict(self._db_source)
@@ -114,7 +121,7 @@ class CircuitsDatabase:
         return decode_circuit(encoded_circuit)
 
     def get_by_raw_truth_table(
-        self, truth_table: RawTruthTable
+            self, truth_table: RawTruthTable
     ) -> tp.Optional[Circuit]:
         """
         Retrieve a circuit by its raw truth table.
@@ -151,8 +158,6 @@ class CircuitsDatabase:
             normalized_truth_table = normalization.truth_table
             if normalized_truth_table != truth_table:
                 raise CircuitsDatabaseError("Cannot add not normalized circuit")
-                # TODO: For our goals support of all circuits is not needed.
-                #  Do we need to maintain any type of circuit?
             label = _truth_table_to_label(normalized_truth_table)
         if label in self._dict.keys():
             raise CircuitsDatabaseError(
@@ -162,7 +167,7 @@ class CircuitsDatabase:
         self._dict[label] = encoded_circuit
 
     def get_by_raw_truth_table_model(
-        self, truth_table: RawTruthTableModel
+            self, truth_table: RawTruthTableModel
     ) -> tp.Optional[Circuit]:
         """
         Retrieve a circuit by its raw truth table model.
@@ -184,7 +189,7 @@ class CircuitsDatabase:
         result: tp.Optional[Circuit] = None
         result_size: tp.Optional[int] = None
         for substitution in itertools.product(
-            (False, True), repeat=len(undefined_positions)
+                (False, True), repeat=len(undefined_positions)
         ):
             for i, val in enumerate(substitution):
                 j, k = undefined_positions[i]
@@ -198,7 +203,7 @@ class CircuitsDatabase:
                 result = circuit
         return result
 
-    def save(self, stream: tp.BinaryIO) -> None:
+    def save(self, stream: tp.IO[bytes]) -> None:
         """
         Save the database to a binary stream.
 
