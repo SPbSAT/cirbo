@@ -180,12 +180,7 @@ class CircuitsDatabase:
             for j, value in enumerate(table):
                 if value is not DontCare:
                     continue
-                if j == 0:
-                    # Database has only normalized circuits
-                    # => no need to query truth tables with first bit = 1
-                    defined_truth_table[i][j] = False
-                else:
-                    undefined_positions[len(undefined_positions)] = (i, j)
+                undefined_positions[len(undefined_positions)] = (i, j)
         result: tp.Optional[Circuit] = None
         result_size: tp.Optional[int] = None
         for substitution in itertools.product(
