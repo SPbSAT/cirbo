@@ -5,6 +5,8 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateIsAbsentError,
     CircuitValidationError,
     CreateBlockError,
+    GateDoesntExistError,
+    GateHasUsersError,
 )
 from boolean_circuit_tool.core.circuit.gate import (
     ALWAYS_FALSE,
@@ -81,6 +83,77 @@ def test_create_circuit():
         'B': Gate('B', NOT, ('A',)),
         'C': Gate('C', AND, ('A', 'B')),
     }
+
+    with pytest.raises(GateHasUsersError):
+        instance.remove_gate('A')
+
+    instance.remove_gate('C')
+    assert instance.size == 2
+    assert instance.gates_number == 0
+    assert instance.inputs == ['A']
+    assert instance.outputs == ['A', 'A']
+    assert instance.input_size == 1
+    assert instance.output_size == 2
+    assert instance.gates == {
+        'A': Gate('A', INPUT, ()),
+        'B': Gate('B', NOT, ('A',)),
+    }
+    assert instance.get_gate_users('A') == ['B']
+    assert instance.get_gate_users('B') == []
+
+    instance.remove_gate('B')
+    assert instance.size == 1
+    assert instance.gates_number == 0
+    assert instance.inputs == ['A']
+    assert instance.outputs == ['A', 'A']
+    assert instance.input_size == 1
+    assert instance.output_size == 2
+    assert instance.gates == {
+        'A': Gate('A', INPUT, ()),
+    }
+    assert instance.get_gate_users('A') == []
+
+    instance.remove_gate('A')
+    assert instance.size == 0
+    assert instance.gates_number == 0
+    assert instance.inputs == []
+    assert instance.outputs == []
+    assert instance.input_size == 0
+    assert instance.output_size == 0
+    assert instance.gates == {}
+
+
+def test_find_inputs_outputs():
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', AND, ('A', 'B')))
+    instance.add_gate(Gate('D', OR, ('C', 'B')))
+    instance.mark_as_output('C')
+    instance.mark_as_output('D')
+    instance.mark_as_output('C')
+
+    assert instance.input_at_index(0) == 'A'
+    assert instance.input_at_index(1) == 'B'
+    assert instance.output_at_index(0) == 'C'
+    assert instance.output_at_index(1) == 'D'
+    assert instance.output_at_index(2) == 'C'
+    assert instance.all_indexes_of_output('C') == [0, 2]
+    assert instance.all_indexes_of_output('D') == [1]
+    assert instance.index_of_input('A') == 0
+    assert instance.index_of_input('B') == 1
+    assert instance.index_of_output('C') == 0
+    assert instance.index_of_output('D') == 1
+    with pytest.raises(GateDoesntExistError):
+        instance.index_of_input('V')
+    with pytest.raises(GateDoesntExistError):
+        instance.index_of_input('C')
+    with pytest.raises(GateDoesntExistError):
+        instance.index_of_output('V')
+    with pytest.raises(GateDoesntExistError):
+        instance.input_at_index(2)
+    with pytest.raises(GateDoesntExistError):
+        instance.output_at_index(3)
 
 
 def test_rename_gate():

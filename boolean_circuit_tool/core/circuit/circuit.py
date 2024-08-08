@@ -18,6 +18,7 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateIsAbsentError,
     CircuitIsCyclicalError,
     CreateBlockError,
+    GateDoesntExistError,
     GateNotInputError,
     GateStateError,
     TraverseMethodError,
@@ -184,7 +185,7 @@ class Circuit(BooleanFunction):
     @staticmethod
     def from_bench_file(file_path: str) -> "Circuit":
         """
-        Initialization the circuit with given data.
+        Initialization the circuit with given data from file.
 
         :param filepath: path to the file with the circuit
 
@@ -200,9 +201,9 @@ class Circuit(BooleanFunction):
     @staticmethod
     def from_bench_string(string: str) -> "Circuit":
         """
-        Initialization the circuit with given stream data.
+        Initialization the circuit with given data from string.
 
-        :param stream: stream to the data circuit
+        :param string: string to the data circuit
 
         """
         from boolean_circuit_tool.core.parser.bench import BenchToCircuit
@@ -293,6 +294,8 @@ class Circuit(BooleanFunction):
         :return: inputs label which corresponds to the index
 
         """
+        if idx >= len(self._inputs):
+            raise GateDoesntExistError()
         return self._inputs[idx]
 
     def index_of_input(self, label: Label) -> int:
@@ -301,6 +304,8 @@ class Circuit(BooleanFunction):
         :return: inputs index which corresponds to the label
 
         """
+        if label not in self._inputs:
+            raise GateDoesntExistError()
         return self._inputs.index(label)
 
     def output_at_index(self, idx: int) -> Label:
@@ -309,6 +314,8 @@ class Circuit(BooleanFunction):
         :return: outputs label which corresponds to the index
 
         """
+        if idx >= len(self._outputs):
+            raise GateDoesntExistError()
         return self._outputs[idx]
 
     def index_of_output(self, label: Label) -> int:
@@ -317,6 +324,8 @@ class Circuit(BooleanFunction):
         :return: first outputs index which corresponds to the label
 
         """
+        if label not in self._outputs:
+            raise GateDoesntExistError()
         return self._outputs.index(label)
 
     def all_indexes_of_output(self, label: Label) -> list[int]:
@@ -325,6 +334,8 @@ class Circuit(BooleanFunction):
         :return: all outputs indexes which corresponds to the label
 
         """
+        if label not in self._outputs:
+            raise GateDoesntExistError()
         return [idx for idx, output in enumerate(self._outputs) if output == label]
 
     def get_gate(self, label: Label) -> Gate:
@@ -355,7 +366,7 @@ class Circuit(BooleanFunction):
         """
         return label in self._gates
 
-    def remove_gate(self, gate: Gate) -> tp_ext.Self:
+    def remove_gate(self, gate_label: Label) -> tp_ext.Self:
         """
         Remove gate from the circuit.
 
@@ -363,6 +374,7 @@ class Circuit(BooleanFunction):
         :return: modified circuit.
 
         """
+        gate = self.get_gate(gate_label)
         check_gates_exist((gate.label,), self)
         check_gate_hasnt_users(gate.label, self)
         return self._remove_gate(gate)
@@ -528,17 +540,26 @@ class Circuit(BooleanFunction):
         add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
-        Extending a new circuit to the base one, where `connect_to` will be the inputs
-        of the new one and if the len of list is less than the number of inputs in the
-        new circuit, then new corresponding inputs will be added to the base circuit.
-        The list of circuit outputs is replenished with the outputs of the new circuit,
-        and also the outputs that were used as inputs are removed from list of outputs.
+        Extending a new circuit to the base one, where `connect_from` (gates of the new
+        circuit) will be conecting to `connect_to` (gates of the base circuit). If
+        `connect_from` is list of inputs, than connecting gates will has type and
+        operands from base circuit, if its list of outputs, than connecting gates will
+        has type and operands from the new circuit. Name of these gate takes always from
+        base circuit. And all of the inputs and outputs of the new circuit which not be
+        in connecting are added to the inputs and outputs of the base circuit,
+        respectively.
 
-        :param connect_to: list of gates that will be inputs to the newly added circuit
+        :param connect_to: list of gates from the base circuit that will be conecting with
+            new circuit
         :param circuit: a new circuit that should expand the basic one
-        :param name: new block's name. iff name is blank string. If the name is an empty
-            string, then no new block is created, and the gates are added to the circuit
-            without a prefix
+        :param connect_from: list of gates from the new circuit that will be conecting with
+            the base one
+        :param circuit_name: new block's name. If `circuit_name` is an empty string, then
+            no new block is created, and the gates are added to the circuit without a prefix
+        :param add_prefix: If add_prefix == True, than the gates are added to the circuit
+            without a prefix and doesnt matter `circuit_name` is an empty string or not. If
+            add_prefix == False, the gates are added to the circuit wit a prefix only if
+            `circuit_name` is not an empty string
         :return: modifed circuit
 
         """
@@ -618,13 +639,16 @@ class Circuit(BooleanFunction):
         add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
-        Extending a new circuit to the base one, where the inputs and outputs of the new
-        circuit are added to the inputs and outputs of the base circuit, respectively.
+        Extending a new circuit to the base one, where all of inputs of the new circuit
+        will be all of the outputs of the base circuit.
 
         :param circuit: a new circuit that should expand the basic one
-        :param name: new block's name. iff name is blank string. If the name is an empty
-            string, then no new block is created, and the gates are added to the circuit
-            without a prefix
+        :param circuit_name: new block's name. If `circuit_name` is an empty string, then
+            no new block is created, and the gates are added to the circuit without a prefix
+        :param add_prefix: If add_prefix == True, than the gates are added to the circuit
+            without a prefix and doesnt matter `circuit_name` is an empty string or not. If
+            add_prefix == False, the gates are added to the circuit wit a prefix only if
+            `circuit_name` is not an empty string
         :return: modifed circuit
 
         """
@@ -632,6 +656,35 @@ class Circuit(BooleanFunction):
             self.outputs,
             circuit,
             connect_from=circuit.inputs,
+            circuit_name=circuit_name,
+            add_prefix=add_prefix,
+        )
+
+    def extend_front_circuit(
+        self,
+        circuit: tp_ext.Self,
+        *,
+        circuit_name: Label = '',
+        add_prefix: bool = True,
+    ) -> tp_ext.Self:
+        """
+        Extending a new circuit to the base one, where all of outputs of the new circuit
+        will be all of the inputs of the base circuit.
+
+        :param circuit: a new circuit that should expand the basic one
+        :param circuit_name: new block's name. If `circuit_name` is an empty string, then
+            no new block is created, and the gates are added to the circuit without a prefix
+        :param add_prefix: If add_prefix == True, than the gates are added to the circuit
+            without a prefix and doesnt matter `circuit_name` is an empty string or not. If
+            add_prefix == False, the gates are added to the circuit wit a prefix only if
+            `circuit_name` is not an empty string
+        :return: modifed circuit
+
+        """
+        return self.connect_circuit(
+            self.inputs,
+            circuit,
+            connect_from=circuit.outputs,
             circuit_name=circuit_name,
             add_prefix=add_prefix,
         )
@@ -644,15 +697,16 @@ class Circuit(BooleanFunction):
         add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
-        Extending a new circuit to the base one, where the outputs of the base one will
-        be the inputs of the new one. The list of circuit outputs is replenished with
-        the outputs of the new circuit, and also the outputs that were used as inputs
-        are removed from list of outputs.
+        Extending a new circuit to the base one, where the inputs and outputs of the new
+        circuit are added to the inputs and outputs of the base circuit, respectively.
 
         :param circuit: a new circuit that should expand the basic one
-        :param name: new block's name. iff name is blank string. If the name is an empty
-            string, then no new block is created, and the gates are added to the circuit
-            without a prefix
+        :param circuit_name: new block's name. If `circuit_name` is an empty string, then
+            no new block is created, and the gates are added to the circuit without a prefix
+        :param add_prefix: If add_prefix == True, than the gates are added to the circuit
+            without a prefix and doesnt matter `circuit_name` is an empty string or not. If
+            add_prefix == False, the gates are added to the circuit wit a prefix only if
+            `circuit_name` is not an empty string
         :return: modifed circuit
 
         """
@@ -682,8 +736,9 @@ class Circuit(BooleanFunction):
         if old_label in self._inputs:
             self._inputs[self.index_of_input(old_label)] = new_label
 
-        for idx in self.all_indexes_of_output(old_label):
-            self._outputs[idx] = new_label
+        if old_label in self._outputs:
+            for idx in self.all_indexes_of_output(old_label):
+                self._outputs[idx] = new_label
 
         self._gates[new_label] = Gate(
             new_label,

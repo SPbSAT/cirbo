@@ -11,6 +11,7 @@ __all__ = [
     'GateStateError',
     'GateHasUsersError',
     'GateNotInputError',
+    'GateDoesntExistError',
     'TraverseMethodError',
     'CreateBlockError',
     'DeleteBlockError',
@@ -68,6 +69,13 @@ class GateHasUsersError(CircuitError):
 
 class GateNotInputError(CircuitError):
     """Represents error that gate is not input, this gate's type can't be change."""
+
+    pass
+
+
+class GateDoesntExistError(CircuitError):
+    """Represents error that gate doesnt exist and you cannt recieve the information
+    about it."""
 
     pass
 
