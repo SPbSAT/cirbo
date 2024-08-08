@@ -9,6 +9,7 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CreateBlockError,
     GateDoesntExistError,
     GateHasUsersError,
+    GateNotInputError,
 )
 from boolean_circuit_tool.core.circuit.gate import (
     ALWAYS_FALSE,
@@ -414,6 +415,15 @@ def test_block2():
     assert C.get_gate('C0@C').operands == ('C0@A', 'C0@B')
 
     C.make_block_from_slice('backup_C0', C.inputs, C.outputs)
+    BackUpC0 = C.get_block('backup_C0').into_circuit()
+    assert BackUpC0.size == 3
+    assert BackUpC0.gates_number() == 1
+    assert BackUpC0.inputs == ['C0@B', 'C0@A']
+    assert BackUpC0.outputs == ['C0@C']
+    assert BackUpC0._gates.keys() == {'C0@A', 'C0@B', 'C0@C'}
+    assert BackUpC0.get_gate('C0@C').gate_type == OR
+    assert BackUpC0.get_gate('C0@C').operands == ('C0@A', 'C0@B')
+
     C.extend_circuit(C1, circuit_name='C1')
     assert C.size == 6
     assert C.gates_number() == 3
@@ -596,6 +606,15 @@ def test_block2():
     assert C3.get_block('C0').gates == ['C0@C']
     assert C3.get_block('C0').outputs == ['C0@C']
 
+    C3.delete_block('backup_C0_C1')
+    assert list(C3.blocks.keys()) == [
+        'C0',
+        'backup_C0',
+        'C1',
+        'C2',
+        'make_B1',
+    ]
+
     C3.rename_gate('C0@C', 'my_favorite_gate')
     assert C3.size == 10
     assert C3.gates_number() == 5
@@ -617,6 +636,44 @@ def test_block2():
     assert C3.get_block('C0').inputs == ['C', 'C0@B']
     assert C3.get_block('C0').gates == ['my_favorite_gate']
     assert C3.get_block('C0').outputs == ['my_favorite_gate']
+
+
+def test_block3():
+    C0 = Circuit()
+    C0.add_gate(Gate('x1', INPUT))
+    C0.add_gate(Gate('x2', INPUT))
+    C0.add_gate(Gate('x3', OR, ('x1', 'x2')))
+    C0.mark_as_output('x3')
+
+    C1 = Circuit()
+    C1.add_gate(Gate('y1', INPUT))
+    C1.add_gate(Gate('y2', INPUT))
+    C1.add_gate(Gate('y3', AND, ('y1', 'y2')))
+    C1.mark_as_output('y3')
+
+    manipulateC0 = copy.copy(C0)
+
+    manipulateC0.connect_circuit(
+        ['x3'], C1, ['y1'], circuit_name='C1', add_prefix=False
+    )
+    assert manipulateC0.gates == {
+        'x1': Gate('x1', INPUT),
+        'x2': Gate('x2', INPUT),
+        'x3': Gate('x3', OR, ('x1', 'x2')),
+        'y2': Gate('y2', INPUT),
+        'y3': Gate('y3', AND, ('x3', 'y2')),
+    }
+
+    manipulateC0.make_block('new_block', ['y3'], ['y3'])
+    assert manipulateC0.get_block('new_block').inputs == ['x3', 'y2']
+
+    manipulateC0.remove_block('C1')
+    assert manipulateC0.gates == {
+        'x1': Gate('x1', INPUT),
+        'x2': Gate('x2', INPUT),
+        'y2': Gate('y2', INPUT),
+        'x3': Gate('x3', OR, ('x1', 'x2')),
+    }
 
 
 def test_evaluate_circuit():
@@ -798,13 +855,28 @@ def test_evaluate():
     assert instance.evaluate([True, True]) == [True, False, True]
     assert instance.evaluate([True, Undefined]) == [True, Undefined, Undefined]
     assert instance.evaluate([Undefined, False]) == [Undefined, Undefined, False]
-    assert instance.evaluate([Undefined, False]) == [Undefined, Undefined, False]
     assert instance.evaluate([Undefined, True]) == [True, Undefined, True]
     assert instance.evaluate([Undefined, Undefined]) == [
         Undefined,
         Undefined,
         Undefined,
     ]
+
+    with pytest.raises(GateNotInputError):
+        instance.replace_inputs(['D'], ['C'])
+
+    assert instance.inputs == ['A', 'B']
+    instance.replace_inputs([], ['B'])
+    assert instance.inputs == ['A']
+
+    assert instance.evaluate([False]) == [False, False, False]
+    assert instance.evaluate([True]) == [True, True, False]
+    assert instance.evaluate([Undefined]) == [Undefined, Undefined, False]
+
+    instance.set_outputs(['E'])
+    assert instance.evaluate([False]) == [False]
+    assert instance.evaluate([True]) == [True]
+    assert instance.evaluate([Undefined]) == [Undefined]
 
 
 def test_evaluate_at():

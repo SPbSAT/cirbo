@@ -523,11 +523,13 @@ class Circuit(BooleanFunction):
         for gate in block.gates:
             self._remove_gate(self.get_gate(gate))
 
-        for block in self.blocks.values():
-            if len(block.gates) == 0:
-                self.delete_block(block.name)
+        self._blocks = {
+            block_label: block
+            for block_label, block in self.blocks.items()
+            if len(block.gates) != 0
+        }
 
-        return self.delete_block(block_label)
+        return self
 
     def connect_circuit(
         self,
@@ -1542,34 +1544,21 @@ if __name__ == '__main__':
 
     C1 = Circuit()
     C1.add_gate(Gate('y1', INPUT))
-    C1.add_gate(Gate('y2', NOT, ('y1',)))
+    C1.add_gate(Gate('y2', INPUT))
     C1.add_gate(Gate('y3', AND, ('y1', 'y2')))
-    C1.add_gate(Gate('y4', OR, ('y1', 'y2')))
     C1.mark_as_output('y3')
-    C1.mark_as_output('y4')
 
-    C2 = Circuit()
-    C2.add_gate(Gate('A', INPUT))
-    C2.add_gate(Gate('B', INPUT))
-    C2.add_gate(Gate('C', AND, ('A', 'B')))
-    C2.mark_as_output('C')
+    manipulateC0 = copy.copy(C0)
 
-    C = Circuit()
-
-    C.connect_circuit(
-        connect_to=[],
-        circuit=C0,
-        connect_from=[],
-        circuit_name='C_C0',
-        add_prefix=False,
+    manipulateC0.connect_circuit(
+        ['x3'], C1, ['y1'], circuit_name='C1', add_prefix=False
     )
-    print('\n\n\n', C.format_circuit())
-
-    C.connect_circuit(
-        connect_to=C.inputs,
-        circuit=C1,
-        connect_from=C1.outputs,
-        circuit_name='C1_C_C0',
-        add_prefix=False,
-    )
-    print('\n\n\n', C.format_circuit())
+    assert manipulateC0.gates == {
+        'x1': Gate('x1', INPUT),
+        'x2': Gate('x2', INPUT),
+        'x3': Gate('x3', OR, ('x1', 'x2')),
+        'y2': Gate('y2', INPUT),
+        'y3': Gate('y3', AND, ('x3', 'y2')),
+    }
+    manipulateC0.remove_block('C1')
+    print('\n\n\n', manipulateC0.format_circuit())
