@@ -219,7 +219,7 @@ class Circuit(BooleanFunction):
         check_elements_exist(gate.operands, self)
 
         return self._add_gate(gate)
-    
+
     def remove_gate(self, gate: Gate) -> tp_ext.Self:
         """
         Remove gate from the circuit.
@@ -254,12 +254,12 @@ class Circuit(BooleanFunction):
         check_elements_exist(operands, self)
 
         return self._emplace_gate(label, gate_type, operands, **kwargs)
-    
+
     def replace_subcircuit(
         self,
         subcircuit: tp_ext.Self,
         inputs_mapping: dict[Label, Label],
-        outputs_mapping: dict[Label, Label]
+        outputs_mapping: dict[Label, Label],
     ) -> tp_ext.Self:
         labels_to_remove = []
         label_is_visited = collections.defaultdict(bool)
@@ -277,7 +277,9 @@ class Circuit(BooleanFunction):
                         if not label_is_visited[operand]:
                             label_is_visited[operand] = True
                             queue.append(operand)
-                            if label in outputs_mapping and (operand in inputs_mapping or operand in outputs_mapping):
+                            if label in outputs_mapping and (
+                                operand in inputs_mapping or operand in outputs_mapping
+                            ):
                                 self._remove_user(operand, label)
         for label in labels_to_remove:
             self._remove_gate(self.get_element(label))
@@ -291,12 +293,13 @@ class Circuit(BooleanFunction):
                 self.add_gate(subcircuit.get_element(label))
         for label in outputs_mapping:
             self.get_element(label)._operands = subcircuit.get_element(label)._operands
-            self.get_element(label)._gate_type = subcircuit.get_element(label)._gate_type
+            self.get_element(label)._gate_type = subcircuit.get_element(
+                label
+            )._gate_type
             for operand in self.get_element(label)._operands:
                 if operand in inputs_mapping or operand in outputs_mapping:
                     self._add_user(operand, label)
-        return self            
-
+        return self
 
     def rename_element(self, old_label: Label, new_label: Label) -> tp_ext.Self:
         """
@@ -885,7 +888,7 @@ class Circuit(BooleanFunction):
             self._inputs.append(gate.label)
 
         return self
-    
+
     def _remove_gate(self, gate: Gate) -> tp_ext.Self:
         """
         Remove gate from the ciurcuit without any checkings (!!!)

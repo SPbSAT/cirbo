@@ -5,20 +5,33 @@ import itertools
 import json
 import logging
 
+import mockturtle_wrapper as mw
+
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import Gate, GateType
 from boolean_circuit_tool.core.truth_table import TruthTableModel
-from boolean_circuit_tool.synthesis.circuit_search import CircuitFinderSat, Basis, get_tt_by_str
+from boolean_circuit_tool.synthesis.circuit_search import (
+    Basis,
+    CircuitFinderSat,
+    get_tt_by_str,
+)
 from boolean_circuit_tool.synthesis.exception import NoSolutionError
-
-import  mockturtle_wrapper as mw
 
 logger = logging.getLogger(__name__)
 
-class Subcircuit():
-    def __init__(self, inputs = None, gates = None, outputs = None, size = 0, inputs_tt = None, patterns = None):
+
+class Subcircuit:
+    def __init__(
+        self,
+        inputs=None,
+        gates=None,
+        outputs=None,
+        size=0,
+        inputs_tt=None,
+        patterns=None,
+    ):
         self.inputs = [] if inputs is None else inputs
-        self.gates = [] if gates is None else gates # gates are in topsort order
+        self.gates = [] if gates is None else gates  # gates are in topsort order
         self.outputs = [] if outputs is None else outputs
         self.size = size
         self.inputs_tt = [] if inputs_tt is None else inputs_tt
@@ -26,11 +39,15 @@ class Subcircuit():
 
     @property
     def key(self):
-        return tuple([len(self.inputs)] + sorted([self.patterns[output] for output in self.outputs]))
-    
+        return tuple(
+            [len(self.inputs)]
+            + sorted([self.patterns[output] for output in self.outputs])
+        )
+
     def evaluate_truth_table_with_dont_cares(self):
         """
-        Returns truth table with don't cares based on possible inputs assignments (stored in `inputs_tt` field)
+        Returns truth table with don't cares based on possible inputs assignments
+        (stored in `inputs_tt` field)
 
         :return: truth table for outputs
 
@@ -42,7 +59,7 @@ class Subcircuit():
 
         for i in itertools.product(('0', '1'), repeat=n):
             assignment = ''.join(i)
-            assignment = assignment[::-1] # todo: check if needed
+            assignment = assignment[::-1]  # todo: check if needed
             for j, pattern in enumerate(output_patterns):
                 bit = str(pattern & 1)
                 output_patterns[j] >>= 1
@@ -56,7 +73,7 @@ class Subcircuit():
             'outputs': self.outputs,
             'size': self.size,
             'inputs_tt': self.inputs_tt,
-            'patterns': self.patterns
+            'patterns': self.patterns,
         }
 
     @staticmethod
@@ -77,14 +94,14 @@ class Subcircuit():
             outputs=outputs,
             size=size,
             inputs_tt=inputs_tt,
-            patterns=patterns
+            patterns=patterns,
         )
-        
+
     def deserialize_array_from_file(filename):
         with open(filename, 'r') as f:
             data = json.load(f)
         return [Subcircuit.deserialize(raw_subcircuit) for raw_subcircuit in data]
-    
+
     @staticmethod
     def dump_list_to_file(subcircuits, filename):
         subcircuits_raw = [subcircuit.serialize() for subcircuit in subcircuits]
@@ -108,7 +125,9 @@ def read_cuts(cuts_raw, mapping):
 
 def powerset(iterable):
     lst = list(iterable)
-    return itertools.chain.from_iterable(itertools.combinations(lst, x) for x in range(len(lst) + 1))
+    return itertools.chain.from_iterable(
+        itertools.combinations(lst, x) for x in range(len(lst) + 1)
+    )
 
 
 def generate_inputs_tt(sizes: list[int]):
@@ -130,10 +149,11 @@ def is_cyclic(circuit):
                 return True
     return False
 
+
 def get_subcircuits(circuit, cuts, cut_nodes):
     """
-    Get subcircuits for simplification.
-    Function processes given cuts and gets the most probable subcircuits for simplification.
+    Get subcircuits for simplification. Function processes given cuts and gets the most
+    probable subcircuits for simplification.
 
     :param circuit: given circuit.
     :param cuts: cuts for the circuit.
@@ -164,7 +184,7 @@ def get_subcircuits(circuit, cuts, cut_nodes):
     good_cuts = []
     is_removed = collections.defaultdict(bool)
     for i, cut in enumerate(cuts):
-        for subcut in powerset(cut): # check whether cut should be removed
+        for subcut in powerset(cut):  # check whether cut should be removed
             if is_removed[subcut]:
                 is_removed[cut] = True
                 break
@@ -177,7 +197,7 @@ def get_subcircuits(circuit, cuts, cut_nodes):
         if is_removed[cut]:
             continue
 
-        for next_cut in cuts[i+1:]:
+        for next_cut in cuts[i + 1 :]:
             if len(next_cut) > len(cut):
                 break
             if is_nested_cut(cut, next_cut):
@@ -196,7 +216,7 @@ def get_subcircuits(circuit, cuts, cut_nodes):
 
     node_pos = {node.label: i for i, node in enumerate(circuit.top_sort(inversed=True))}
     subcircuits = []
-    good_cuts = [cut for cut in good_cuts if len(cut) > 2] # skip small cuts
+    good_cuts = [cut for cut in good_cuts if len(cut) > 2]  # skip small cuts
 
     logger.info(f"Process: {len(good_cuts)} cuts")
 
@@ -224,22 +244,30 @@ def get_subcircuits(circuit, cuts, cut_nodes):
             oper_type = circuit.get_element(node).gate_type.name
 
             if len(operands) == 1:
-                assert operands[0] in circuit_tt, f'{cut} {node} {operands} {oper_type}' 
+                assert operands[0] in circuit_tt, f'{cut} {node} {operands} {oper_type}'
                 circuit_tt[node] = MAX_PATTERN - circuit_tt[operands[0]]
             else:
-                assert operands[0] in circuit_tt and operands[1] in circuit_tt, f'{cut} {node} {operands} {oper_type}' 
+                assert (
+                    operands[0] in circuit_tt and operands[1] in circuit_tt
+                ), f'{cut} {node} {operands} {oper_type}'
                 if oper_type == 'AND':
                     circuit_tt[node] = circuit_tt[operands[0]] & circuit_tt[operands[1]]
                 elif oper_type == 'NAND':
-                    circuit_tt[node] = MAX_PATTERN - (circuit_tt[operands[0]] & circuit_tt[operands[1]])
+                    circuit_tt[node] = MAX_PATTERN - (
+                        circuit_tt[operands[0]] & circuit_tt[operands[1]]
+                    )
                 elif oper_type == 'OR':
                     circuit_tt[node] = circuit_tt[operands[0]] | circuit_tt[operands[1]]
                 elif oper_type == 'NOR':
-                    circuit_tt[node] = MAX_PATTERN - (circuit_tt[operands[0]] | circuit_tt[operands[1]])
+                    circuit_tt[node] = MAX_PATTERN - (
+                        circuit_tt[operands[0]] | circuit_tt[operands[1]]
+                    )
                 elif oper_type == 'XOR':
                     circuit_tt[node] = circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
                 elif oper_type == 'NXOR':
-                    circuit_tt[node] = MAX_PATTERN - (circuit_tt[operands[0]] ^ circuit_tt[operands[1]])
+                    circuit_tt[node] = MAX_PATTERN - (
+                        circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
+                    )
                 else:
                     print('Error! Incorrect operation')
                     assert False
@@ -260,7 +288,7 @@ def get_subcircuits(circuit, cuts, cut_nodes):
                 gates=nodes,
                 outputs=outputs,
                 size=circuit_size,
-                patterns=circuit_tt
+                patterns=circuit_tt,
             )
         )
     return subcircuits
@@ -272,7 +300,7 @@ def eval_dont_cares(circuit, subcircuits):
     truth_table = collections.defaultdict(list)
 
     for i in range(1 << len(inputs)):
-        if i: # update assignment for new iteration
+        if i:  # update assignment for new iteration
             idx = len(inputs) - 1
             while assignment[inputs[idx]]:
                 assignment[inputs[idx]] = False
@@ -293,7 +321,9 @@ def eval_dont_cares(circuit, subcircuits):
 
 
 def minimize(circuit: Circuit, basis: Basis) -> Circuit:
-    cuts_raw, mapping = mw.enumerate_cuts(circuit.format_circuit()) # tuple with string cuts representation
+    cuts_raw, mapping = mw.enumerate_cuts(
+        circuit.format_circuit()
+    )  # tuple with string cuts representation
     cut_nodes = read_cuts(cuts_raw, mapping)
     cuts = sorted(cut_nodes.keys(), key=lambda x: len(x))
 
@@ -346,7 +376,8 @@ def minimize(circuit: Circuit, basis: Basis) -> Circuit:
                 found_patterns[pattern] = output
 
         outputs_tt = [
-            row for i, row in enumerate(subcircuit.evaluate_truth_table_with_dont_cares())
+            row
+            for i, row in enumerate(subcircuit.evaluate_truth_table_with_dont_cares())
             if subcircuit.outputs[i] in filtered_outputs
         ]
         new_subcircuit = None
@@ -382,7 +413,9 @@ def minimize(circuit: Circuit, basis: Basis) -> Circuit:
 
         # Changing initial circuit
         new_circuit = copy.deepcopy(circuit)
-        new_circuit.replace_subcircuit(new_subcircuit, input_labels_mapping, output_labels_mapping) 
+        new_circuit.replace_subcircuit(
+            new_subcircuit, input_labels_mapping, output_labels_mapping
+        )
 
         if is_cyclic(new_circuit):
             continue
@@ -392,7 +425,7 @@ def minimize(circuit: Circuit, basis: Basis) -> Circuit:
 
         for output in filtered_outputs:
             gate_status[output] = 'modified'
-    
+
         for gate in subcircuit.gates:
             if gate in inputs_set or gate in outputs_set:
                 continue
@@ -401,13 +434,17 @@ def minimize(circuit: Circuit, basis: Basis) -> Circuit:
     # Sanity check
     assignment = {input: False for input in initial_circuit.inputs}
     for i in range(1 << len(initial_circuit.inputs)):
-        if i: # update assignment for new iteration
+        if i:  # update assignment for new iteration
             idx = len(inputs) - 1
             while assignment[inputs[idx]]:
                 assignment[inputs[idx]] = False
                 idx -= 1
             assignment[inputs[idx]] = True
-        assert circuit.evaluate_circuit_outputs(assignment) == initial_circuit.evaluate_circuit_outputs(assignment), "Initial circuit and circuit after impovement differ"
+        assert circuit.evaluate_circuit_outputs(
+            assignment
+        ) == initial_circuit.evaluate_circuit_outputs(
+            assignment
+        ), "Initial circuit and circuit after impovement differ"
 
     logger.info("Check passed")
 
