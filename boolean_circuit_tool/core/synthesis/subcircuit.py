@@ -1,4 +1,3 @@
-import argparse
 import collections
 import copy
 import itertools
@@ -8,7 +7,6 @@ import logging
 import mockturtle_wrapper as mw
 
 from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import Gate, GateType
 from boolean_circuit_tool.core.truth_table import TruthTableModel
 from boolean_circuit_tool.synthesis.circuit_search import (
     Basis,
@@ -181,8 +179,8 @@ def get_subcircuits(circuit, cuts, cut_nodes):
                 return False
         return True
 
-    good_cuts = []
-    is_removed = collections.defaultdict(bool)
+    good_cuts: list[tuple[str]] = []
+    is_removed: dict[tuple[str], bool] = collections.defaultdict(bool)
     for i, cut in enumerate(cuts):
         for subcut in powerset(cut):  # check whether cut should be removed
             if is_removed[subcut]:
@@ -281,7 +279,6 @@ def get_subcircuits(circuit, cuts, cut_nodes):
             if is_output:
                 outputs.append(node)
         outputs.sort(key=lambda x: circuit_tt[x])
-        outputs_tt = {circuit_tt[output] for output in outputs}
         subcircuits.append(
             Subcircuit(
                 inputs=list(inputs_lst)[::-1],
@@ -332,7 +329,7 @@ def minimize(circuit: Circuit, basis: Basis) -> Circuit:
     initial_circuit = copy.deepcopy(circuit)
     subcircuits = get_subcircuits(circuit, cuts, cut_nodes)
     subcircuits = eval_dont_cares(circuit, subcircuits)
-    gate_status = collections.defaultdict(str)
+    gate_status: dict[str, str] = collections.defaultdict(str)
 
     for iter, subcircuit in enumerate(subcircuits):
         inputs = subcircuit.inputs
@@ -403,11 +400,10 @@ def minimize(circuit: Circuit, basis: Basis) -> Circuit:
             if output not in filtered_outputs:
                 negation_gate = outputs_negation_mapping[output]
                 new_gate = output_labels_mapping[negation_gate]
-                found_negation = False
+
                 for user in new_subcircuit.get_element_users(new_gate):
                     if new_subcircuit.get_element(user).gate_type.name == 'NOT':
                         output_labels_mapping[output] = user
-                        found_negation = True
                         new_subcircuit.mark_as_output(user)
                         break
 

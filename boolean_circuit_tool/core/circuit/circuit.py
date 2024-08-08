@@ -262,9 +262,9 @@ class Circuit(BooleanFunction):
         outputs_mapping: dict[Label, Label],
     ) -> tp_ext.Self:
         labels_to_remove = []
-        label_is_visited = collections.defaultdict(bool)
+        label_is_visited: dict[Label, bool] = collections.defaultdict(bool)
         for output_label in outputs_mapping:
-            queue = collections.deque()
+            queue: tp.Deque[Label] = collections.deque()
             if not label_is_visited[output_label]:
                 label_is_visited[output_label]
                 queue.append(output_label)
