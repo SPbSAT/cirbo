@@ -24,7 +24,7 @@ def test_trivial_instance():
     instance = Circuit().from_bench_file(file_path)
 
     assert instance.size == 5
-    assert instance.gates_number == 1
+    assert instance.gates_number() == 1
     assert instance.inputs == ['A', 'D', 'E']
     assert instance.outputs == ['C']
     assert instance.input_size == 3
