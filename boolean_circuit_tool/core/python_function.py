@@ -142,7 +142,9 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
             # blindly believe in user input.
             return tp.cast(tp.Sequence[bool], answer)
 
-        return PyFunction(_new_callable, output_size=self.output_size, input_size=self.input_size)
+        return PyFunction(
+            _new_callable, output_size=self.output_size, input_size=self.input_size
+        )
 
 
 class PyFunction(BooleanFunction):
@@ -167,7 +169,7 @@ class PyFunction(BooleanFunction):
         def func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             assert len(args) == 2 * input_size
             index1 = input_to_canonical_index(args[: len(args) // 2])
-            index2 = input_to_canonical_index(args[len(args) // 2:])
+            index2 = input_to_canonical_index(args[len(args) // 2 :])
             result = f(index1, index2)
             return canonical_index_to_input(result, output_size)
 
