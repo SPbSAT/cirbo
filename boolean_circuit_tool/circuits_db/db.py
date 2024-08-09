@@ -200,7 +200,7 @@ class CircuitsDatabase:
             circuit = self.get_by_raw_truth_table(defined_truth_table)
             if circuit is None:
                 continue
-            circuit_size = circuit.gates_number([NOT, IFF, INPUT])
+            circuit_size = circuit.gates_number()
             if result_size is None or circuit_size < result_size:
                 result_size = circuit_size
                 result = circuit

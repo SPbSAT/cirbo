@@ -203,11 +203,11 @@ def _decode_circuit_body(
 
 
 def _get_word_size(circuit: Circuit) -> int:
-    if circuit.gates_number() == 0:
+    if circuit.size == 0:
         return 1
     else:
         return max(
-            len(circuit.inputs), len(circuit.outputs), circuit.gates_number([]) - 1
+            len(circuit.inputs), len(circuit.outputs), circuit.size - 1
         ).bit_length()
 
 
