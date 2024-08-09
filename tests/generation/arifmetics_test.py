@@ -3,6 +3,7 @@ import random
 from boolean_circuit_tool.core.boolean_function import BooleanFunction
 from boolean_circuit_tool.core.circuit import Circuit, Gate
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
+from boolean_circuit_tool.generation.arithmetics.add_equal import add_equal
 from boolean_circuit_tool.generation.arithmetics.add_mul import (
     add_mul,
     add_mul_alter,
@@ -15,7 +16,6 @@ from boolean_circuit_tool.generation.arithmetics.add_square import (
     add_square,
     add_square_pow2_m1
 )
-
 random.seed(42)
 
 def to_bin(n, out_len):
@@ -34,7 +34,7 @@ def to_num(inputs):
 
 def mul_naive(inputs_a, inputs_b):
     a = to_num(inputs_a)
-    b = to_num(inputs_b)    
+    b = to_num(inputs_b)
 
     out_len = len(inputs_a) + len(inputs_b)
     if(len(inputs_a) == 1 or len(inputs_b) == 1):
@@ -43,7 +43,7 @@ def mul_naive(inputs_a, inputs_b):
     return to_bin(a*b, out_len)
 
 def square_naive(inputs_a):
-    a = to_num(inputs_a)  
+    a = to_num(inputs_a)
 
     out_len = 2*len(inputs_a)
     if(len(inputs_a) == 1):
@@ -77,11 +77,11 @@ def test_mul(func, size):
         assert mul_naive(input_labels_a, input_labels_b) == ckt.evaluate(input_labels_a + input_labels_b)[::-1]
 
 @pytest.mark.parametrize("func", [
-        add_square, 
+        add_square,
         add_square_pow2_m1
     ])
 @pytest.mark.parametrize("x", [1, 2, 5, 7, 17, 60])
-def test_square(func, x):   
+def test_square(func, x):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
     for i in range(x):
@@ -93,5 +93,18 @@ def test_square(func, x):
 
     for test in range(1000):
         input_labels_a = [random.choice([0, 1]) for _ in range(x)]
-        assert square_naive(input_labels_a) == ckt.evaluate(input_labels_a)[::-1] 
+        assert square_naive(input_labels_a) == ckt.evaluate(input_labels_a)[::-1]
 
+@pytest.mark.parametrize("num", list(range(128)))
+def test_add_equal(num):
+    r = 7
+    ckt = Circuit()
+    inputs = [f"x{i}" for i in range(r)]
+    ckt.add_inputs(inputs)
+    out_gate = add_equal(ckt, inputs, num)
+    ckt.mark_as_output(out_gate)
+    for i, b in enumerate(ckt.get_truth_table()[0]):
+        if bin(i)[2:].zfill(r)[::-1] == bin(num)[2:].zfill(r):
+            assert b
+        else:
+            assert not b
