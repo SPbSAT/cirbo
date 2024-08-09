@@ -148,7 +148,7 @@ private:
 }
 
 
-inline std::pair<std::string, std::map<std::string, std::string>> enumerate_cuts(const std::string &circuit) {
+inline std::pair<std::string, std::map<std::string, std::string>> enumerate_cuts(const std::string &circuit, int cut_size, int cut_limit, int fanout_size) {
     mockturtle::klut_network aig;
     auto bench_reader = mockturtle::public_bench_reader(aig);
     std::istringstream in(circuit);
@@ -168,9 +168,9 @@ inline std::pair<std::string, std::map<std::string, std::string>> enumerate_cuts
         return std::make_pair("", index_to_node);
     }
     mockturtle::cut_enumeration_params ps;
-    ps.cut_size = 5;
-    ps.cut_limit = 25;
-    ps.fanin_limit = 10000;
+    ps.cut_size = cut_size;
+    ps.cut_limit = cut_limit;
+    ps.fanin_limit = fanout_size;
     std::cerr << "Start enumeration" << std::endl;
     auto const cuts = cut_enumeration(aig, ps);
     std::cerr << "Finish enumeration" << std::endl;

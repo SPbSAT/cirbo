@@ -257,11 +257,22 @@ class Circuit(BooleanFunction):
 
     def replace_subcircuit(
         self,
-        subcircuit: tp_ext.Self,
+        subcircuit: "Circuit",
         inputs_mapping: dict[Label, Label],
         outputs_mapping: dict[Label, Label],
     ) -> tp_ext.Self:
-        labels_to_remove = []
+        """
+        Replace subcircuit with a new one.
+
+        :param subcircuit: new subcircuit.
+        :param inputs_mapping: label to label mapping between subcitcuit inputs and
+            circuit nodes.
+        :param outputs_mapping: label to label mapping between subcitcuit outputs and
+            circuit nodes.
+        :return: modified circuit.
+
+        """
+        labels_to_remove: list[Label] = []
         label_is_visited: dict[Label, bool] = collections.defaultdict(bool)
         for output_label in outputs_mapping:
             queue: tp.Deque[Label] = collections.deque()
@@ -286,7 +297,8 @@ class Circuit(BooleanFunction):
         for label1, label2 in inputs_mapping.items():
             subcircuit.rename_element(old_label=label2, new_label=label1)
         for label1, label2 in outputs_mapping.items():
-            subcircuit.rename_element(old_label=label2, new_label=label1)
+            if label1 not in inputs_mapping:
+                subcircuit.rename_element(old_label=label2, new_label=label1)
         for node in subcircuit.top_sort(inversed=True):
             label = node.label
             if label not in inputs_mapping and label not in outputs_mapping:
@@ -492,10 +504,10 @@ class Circuit(BooleanFunction):
 
     def evaluate_circuit(
         self,
-        assigment: dict[str, GateState],
+        assigment: dict[Label, GateState],
         *,
         outputs: tp.Optional[list[Label]] = None,
-    ) -> dict[str, GateState]:
+    ) -> dict[Label, GateState]:
         """
         Evaluate the circuit with the given input values and return full assigment.
 
@@ -539,7 +551,7 @@ class Circuit(BooleanFunction):
 
     def evaluate_circuit_outputs(
         self,
-        assigment: dict[str, GateState],
+        assigment: dict[Label, GateState],
     ) -> dict[str, GateState]:
         """
         Evaluate the circuit with the given input values and return outputs assigment.
@@ -904,8 +916,7 @@ class Circuit(BooleanFunction):
         if gate.gate_type == INPUT:
             self._inputs.remove(gate.label)
 
-        self._outputs = [x for x in self._outputs if x != gate]
-
+        self._outputs: list[Label] = [x for x in self._outputs if x != gate]
         return self
 
     def _emplace_gate(
