@@ -13,7 +13,10 @@ from boolean_circuit_tool.core.boolean_function import (
 )
 from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
 from boolean_circuit_tool.core.logic import DontCare, TriValue
-from boolean_circuit_tool.core.utils import input_to_canonical_index, canonical_index_to_input
+from boolean_circuit_tool.core.utils import (
+    canonical_index_to_input,
+    input_to_canonical_index,
+)
 
 
 __all__ = [
@@ -146,7 +149,9 @@ class PyFunction(BooleanFunction):
     """Boolean function given as a python callable."""
 
     @staticmethod
-    def from_int_unary_func(input_size: int, output_size: int, f: tp.Callable[[int], int]):
+    def from_int_unary_func(
+        input_size: int, output_size: int, f: tp.Callable[[int], int]
+    ):
         def func(*args: bool) -> list[bool]:
             assert len(args) == input_size
             index = input_to_canonical_index(args)
@@ -156,11 +161,13 @@ class PyFunction(BooleanFunction):
         return PyFunction(func=func)
 
     @staticmethod
-    def from_int_binary_func(input_size: int, output_size: int, f: tp.Callable[[int, int], int]):
+    def from_int_binary_func(
+        input_size: int, output_size: int, f: tp.Callable[[int, int], int]
+    ):
         def func(*args: bool) -> list[bool]:
             assert len(args) == 2 * input_size
-            index1 = input_to_canonical_index(args[:len(args) // 2])
-            index2 = input_to_canonical_index(args[len(args) // 2:])
+            index1 = input_to_canonical_index(args[: len(args) // 2])
+            index2 = input_to_canonical_index(args[len(args) // 2 :])
             result = f(index1, index2)
             return list(canonical_index_to_input(result, output_size))
 
