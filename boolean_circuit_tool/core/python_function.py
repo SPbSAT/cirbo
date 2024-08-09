@@ -26,8 +26,8 @@ __all__ = [
 ]
 
 Ts = tpe.TypeVarTuple('Ts')
-FunctionModelType = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[TriValue]]
-FunctionType = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[bool]]
+FunctionModelType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[TriValue]]
+FunctionType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[bool]]
 
 
 class PyFunctionModel(BooleanFunctionModel['PyFunction']):
@@ -129,7 +129,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
         # `wraps` helps to disguise function from itertools.signature,
         # allowing it to correctly see parameters set of original func.
         @functools.wraps(_old_callable)
-        def _new_callable(*args: bool) -> tp.Sequence[bool]:
+        def _new_callable(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             answer = list(_old_callable(*args))
 
             # replace undefined part of answer according to definition
@@ -137,7 +137,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
                 if answer[idx] != DontCare:
                     continue
 
-                answer[idx] = definition[(args, idx)]
+                answer[idx] = definition[(*args, idx)]
 
             # blindly believe in user input.
             return tp.cast(tp.Sequence[bool], answer)
@@ -152,11 +152,11 @@ class PyFunction(BooleanFunction):
     def from_int_unary_func(
         input_size: int, output_size: int, f: tp.Callable[[int], int]
     ):
-        def func(*args: bool) -> list[bool]:
+        def func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             assert len(args) == input_size
             index = input_to_canonical_index(args)
             result = f(index)
-            return list(canonical_index_to_input(result, output_size))
+            return canonical_index_to_input(result, output_size)
 
         return PyFunction(func=func)
 
@@ -164,12 +164,12 @@ class PyFunction(BooleanFunction):
     def from_int_binary_func(
         input_size: int, output_size: int, f: tp.Callable[[int, int], int]
     ):
-        def func(*args: bool) -> list[bool]:
+        def func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             assert len(args) == 2 * input_size
             index1 = input_to_canonical_index(args[: len(args) // 2])
-            index2 = input_to_canonical_index(args[len(args) // 2 :])
+            index2 = input_to_canonical_index(args[len(args) // 2:])
             result = f(index1, index2)
-            return list(canonical_index_to_input(result, output_size))
+            return canonical_index_to_input(result, output_size)
 
         return PyFunction(func=func)
 
