@@ -404,18 +404,18 @@ class Circuit(BooleanFunction):
 
         return self._add_gate(gate)
 
-    def remove_gate(self, gate: Gate) -> tp_ext.Self:
+    def remove_gate(self, gate_label: Label) -> tp_ext.Self:
         """
         Remove gate from the circuit.
 
-        :param gate: gate to remove.
-        :return: modified circuit.
+        :param gate_label: gate for deleting.
+        :return: this circuit after modification.
 
         """
+        gate = self.get_gate(gate_label)
         check_gates_exist((gate.label,), self)
-        # check_gates_exist(gate.operands, self)
-
-        return self._remove_gate(gate)
+        check_gate_has_not_users(gate.label, self)
+        return self._remove_gate(gate_label)
 
     def emplace_gate(
         self,
@@ -477,7 +477,7 @@ class Circuit(BooleanFunction):
                             ):
                                 self._remove_user(operand, label)
         for label in labels_to_remove:
-            self._remove_gate(self.get_gate(label))
+            self._remove_gate(label)
         for label1, label2 in inputs_mapping.items():
             subcircuit.rename_gate(old_label=label2, new_label=label1)
         for label1, label2 in outputs_mapping.items():
@@ -1410,6 +1410,23 @@ class Circuit(BooleanFunction):
         )
         return f"{input_str}\n\n{gates_str}\n\n{output_str}"
 
+    def _add_gate(self, gate: Gate) -> tp_ext.Self:
+        """
+        Add gate in the circuit without any checks (!!!)
+
+        :param: gate.
+        :return: circuit with new gate.
+
+        """
+        for operand in gate.operands:
+            self._add_user(operand, gate.label)
+
+        self._gates[gate.label] = gate
+        if gate.gate_type == INPUT:
+            self._inputs.append(gate.label)
+
+        return self
+
     def _remove_gate(self, gate_label: Label) -> tp_ext.Self:
         """
         Remove gate from the circuit without any checks (!!!).
@@ -1433,41 +1450,6 @@ class Circuit(BooleanFunction):
         for block in self.blocks.values():
             block.delete_gate(gate_label)
 
-        return self
-
-    def _add_gate(self, gate: Gate) -> tp_ext.Self:
-        """
-        Add gate in the circuit without any checks (!!!)
-
-        :param: gate.
-        :return: circuit with new gate.
-
-        """
-        for operand in gate.operands:
-            self._add_user(operand, gate.label)
-
-        self._gates[gate.label] = gate
-        if gate.gate_type == INPUT:
-            self._inputs.append(gate.label)
-
-        return self
-
-    def _remove_gate(self, gate: Gate) -> tp_ext.Self:
-        """
-        Remove gate from the ciurcuit without any checkings (!!!)
-
-        :param: gate.
-        :return: circuit without gate.
-
-        """
-        for operand in gate.operands:
-            self._remove_user(operand, gate.label)
-
-        self._gates.pop(gate.label, None)
-        if gate.gate_type == INPUT:
-            self._inputs.remove(gate.label)
-
-        self._outputs: list[Label] = [x for x in self._outputs if x != gate]
         return self
 
     def _emplace_gate(

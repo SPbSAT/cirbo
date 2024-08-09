@@ -140,10 +140,10 @@ def _is_cyclic(circuit: Circuit) -> bool:
     :return: True if circuit has any oriented cycles, otherwise False.
 
     """
-    sorted_gates: list[Label] = [node.label for node in circuit.top_sort(inversed=True)]
+    sorted_gates: list[Label] = [node.label for node in circuit.top_sort(inverse=True)]
     gate_position: dict[Label, int] = {gate: i for i, gate in enumerate(sorted_gates)}
     for gate in sorted_gates:
-        for operand in circuit.get_element(gate).operands:
+        for operand in circuit.get_gate(gate).operands:
             if gate_position[gate] < gate_position[operand]:
                 return True
     return False
@@ -216,7 +216,7 @@ def _get_subcircuits(
             cut_nodes[cut].update(cut_nodes[subcut])
 
     node_pos: dict[Label, int] = {
-        node.label: i for i, node in enumerate(circuit.top_sort(inversed=True))
+        node.label: i for i, node in enumerate(circuit.top_sort(inverse=True))
     }
     subcircuits: list[_Subcircuit] = list()
     good_cuts = [cut for cut in good_cuts if len(cut) > 2]  # skip small cuts
@@ -242,9 +242,9 @@ def _get_subcircuits(
             if node in inputs:
                 continue
 
-            operands: tuple[Label, ...] = circuit.get_element(node).operands
-            users: list[Label] = circuit.get_element_users(node)
-            oper_type: str = circuit.get_element(node).gate_type.name
+            operands: tuple[Label, ...] = circuit.get_gate(node).operands
+            users: list[Label] = circuit.get_gate_users(node)
+            oper_type: str = circuit.get_gate(node).gate_type.name
 
             if oper_type == 'NOT':
                 circuit_tt[node] = MAX_PATTERN - circuit_tt[operands[0]]
@@ -379,7 +379,7 @@ def minimize_subcircuits(
     subcircuits: list[_Subcircuit] = _get_subcircuits(circuit, cuts, cut_nodes)
     subcircuits = _eval_dont_cares(circuit, subcircuits)
     node_states: dict[Label, NodeState] = {
-        label: NodeState.UNCHANGED for label in circuit.elements
+        label: NodeState.UNCHANGED for label in circuit.gates
     }
 
     for iter, subcircuit in enumerate(subcircuits):
@@ -456,8 +456,8 @@ def minimize_subcircuits(
                 negation_gate: Label = outputs_negation_mapping[output]
                 new_gate = output_labels_mapping[negation_gate]
 
-                for user in new_subcircuit.get_element_users(new_gate):
-                    if new_subcircuit.get_element(user).gate_type.name == 'NOT':
+                for user in new_subcircuit.get_gate_users(new_gate):
+                    if new_subcircuit.get_gate(user).gate_type.name == 'NOT':
                         output_labels_mapping[output] = user
                         new_subcircuit.mark_as_output(user)
                         break
