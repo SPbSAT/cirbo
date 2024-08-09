@@ -65,7 +65,10 @@ class CircuitsDatabase:
                 with self._db_source.open('rb') as stream:
                     self._dict = read_binary_dict(stream)
             else:
-                raise CircuitDatabaseOpenError(f"Try to open database from unsupported file: {self._db_source.suffix}")
+                raise CircuitDatabaseOpenError(
+                    f"Try to open database from unsupported file: "
+                    f"{self._db_source.suffix}"
+                )
         elif isinstance(self._db_source, io.BytesIO):
             self._db_source.seek(0)
             self._dict = read_binary_dict(self._db_source)
@@ -121,7 +124,7 @@ class CircuitsDatabase:
         return decode_circuit(encoded_circuit)
 
     def get_by_raw_truth_table(
-            self, truth_table: RawTruthTable
+        self, truth_table: RawTruthTable
     ) -> tp.Optional[Circuit]:
         """
         Retrieve a circuit by its raw truth table.
@@ -167,7 +170,7 @@ class CircuitsDatabase:
         self._dict[label] = encoded_circuit
 
     def get_by_raw_truth_table_model(
-            self, truth_table: RawTruthTableModel
+        self, truth_table: RawTruthTableModel
     ) -> tp.Optional[Circuit]:
         """
         Retrieve a circuit by its raw truth table model.
@@ -189,7 +192,7 @@ class CircuitsDatabase:
         result: tp.Optional[Circuit] = None
         result_size: tp.Optional[int] = None
         for substitution in itertools.product(
-                (False, True), repeat=len(undefined_positions)
+            (False, True), repeat=len(undefined_positions)
         ):
             for i, val in enumerate(substitution):
                 j, k = undefined_positions[i]
