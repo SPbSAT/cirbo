@@ -16,6 +16,7 @@ from boolean_circuit_tool.core.boolean_function import (
     BooleanFunctionModel,
     RawTruthTableModel,
 )
+
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -39,6 +40,8 @@ from boolean_circuit_tool.core.circuit import (
     XOR,
 )
 from boolean_circuit_tool.core.logic import DontCare
+
+from boolean_circuit_tool.sat import PySATSolverNames
 from boolean_circuit_tool.synthesis.exception import (
     FixGateError,
     FixGateOrderError,
@@ -148,28 +151,6 @@ _tt_to_gate_type: tp.Dict[tp.Tuple, GateType] = {
 }
 
 
-class PySATSolverNames(enum.Enum):
-    """Enum version of pysat.solvers.SolverNames."""
-
-    CADICAL103 = 'cadical103'
-    CADICAL153 = 'cadical153'
-    CADICAL193 = 'cadical195'
-    CRYPTOSAT = 'crypto'
-    GLUECARD3 = 'gluecard3'
-    GLUECARD4 = 'gluecard4'
-    GLUCOSE3 = 'glucose3'
-    GLUCOSE4 = 'glucose4'
-    GLUCOSE42 = 'glucose42'
-    LINGELING = 'lingeling'
-    MAPLECHRONO = 'maplechrono'
-    MAPLECM = 'maplecm'
-    MAPLESAT = 'maplesat'
-    MERGESAT3 = 'mergesat3'
-    MINICARD = 'minicard'
-    MINISAT22 = 'minisat22'
-    MINISATGH = 'minisat-gh'
-
-
 def _get_GateType_by_tt(gate_tt: tp.List[bool]) -> GateType:
     return _tt_to_gate_type[tuple(gate_tt)]
 
@@ -261,7 +242,7 @@ class CircuitFinderSat:
 
     def find_circuit(
         self,
-        solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL193,
+        solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL195,
         time_limit: tp.Union[int, None] = None,
     ) -> Circuit:
         """
@@ -269,7 +250,7 @@ class CircuitFinderSat:
         returns the circuit if it exists.
 
         :param solver_name: The name of the SAT-solver to use. Default is
-            PySATSolverNames.CADICAL193 ("cadical195").
+            PySATSolverNames.CADICAL195 ("cadical195").
         :param time_limit : Maximum time in seconds allowed for solving (default is
             None, meaning no time limit).
         :return: Circuit: If a solution is found within the specified time limit (if

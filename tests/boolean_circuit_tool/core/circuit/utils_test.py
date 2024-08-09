@@ -1,5 +1,5 @@
 import pytest
-from boolean_circuit_tool.core.circuit.exceptions import CircuitElementIsAbsentError
+from boolean_circuit_tool.core.circuit.exceptions import CircuitGateIsAbsentError
 
 from boolean_circuit_tool.core.circuit.utils import (
     input_iterator_with_fixed_sum,
@@ -61,5 +61,5 @@ def test_order_list():
         '3',
     ]
 
-    with pytest.raises(CircuitElementIsAbsentError):
+    with pytest.raises(CircuitGateIsAbsentError):
         order_list(['1', '4'], ['1', '2', '3'])

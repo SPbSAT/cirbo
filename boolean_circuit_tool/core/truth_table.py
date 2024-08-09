@@ -69,7 +69,7 @@ def _parse_trival(x: tp.Union[str, TriValue, tp.Literal[0, 1]]) -> TriValue:
     raise BadBooleanValue()
 
 
-class TruthTableModel(BooleanFunctionModel):
+class TruthTableModel(BooleanFunctionModel['TruthTable']):
     """Boolean function model given as a truth table with don't care outputs."""
 
     def __init__(self, table: TruthTableModelArg):
@@ -104,7 +104,7 @@ class TruthTableModel(BooleanFunctionModel):
         """
         return self._output_size
 
-    def check(self, inputs: list[bool]) -> tp.Sequence[TriValue]:
+    def check(self, inputs: tp.Sequence[bool]) -> tp.Sequence[TriValue]:
         """
         Get model output values that correspond to provided `inputs`.
 
@@ -115,7 +115,7 @@ class TruthTableModel(BooleanFunctionModel):
         idx = input_to_canonical_index(inputs)
         return self._table_t[idx]
 
-    def check_at(self, inputs: list[bool], output_index: int) -> TriValue:
+    def check_at(self, inputs: tp.Sequence[bool], output_index: int) -> TriValue:
         """
         Get model value of `output_index`th output that corresponds to provided
         `inputs`.
@@ -196,7 +196,7 @@ class TruthTable(BooleanFunction):
         """
         return self._output_size
 
-    def evaluate(self, inputs: list[bool]) -> tp.Sequence[bool]:
+    def evaluate(self, inputs: tp.Sequence[bool]) -> tp.Sequence[bool]:
         """
         Get output values that correspond to provided `inputs`.
 
@@ -207,7 +207,7 @@ class TruthTable(BooleanFunction):
         idx = input_to_canonical_index(inputs)
         return self._table_t[idx]
 
-    def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
+    def evaluate_at(self, inputs: tp.Sequence[bool], output_index: int) -> bool:
         """
         Get value of `output_index`th output that corresponds to provided `inputs`.
 
