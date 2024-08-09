@@ -70,7 +70,7 @@ def test_encode_decode_circuit(gates):
     encoded = encode_circuit(circuit)
     decoded = decode_circuit(encoded)
 
-    assert decoded.elements_number == circuit.elements_number
+    assert decoded.gates_number() == circuit.gates_number()
     assert len(decoded.inputs) == len(circuit.inputs)
     assert len(decoded.outputs) == len(circuit.outputs)
     original_truth_table = circuit.get_truth_table()

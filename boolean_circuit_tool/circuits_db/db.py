@@ -197,7 +197,7 @@ class CircuitsDatabase:
             circuit = self.get_by_raw_truth_table(defined_truth_table)
             if circuit is None:
                 continue
-            circuit_size = _get_circuit_size(circuit)
+            circuit_size = circuit.gates_number([NOT, IFF, INPUT])
             if result_size is None or circuit_size < result_size:
                 result_size = circuit_size
                 result = circuit
@@ -236,6 +236,6 @@ def _get_circuit_size(circuit: Circuit) -> int:
     :return: The size of the circuit.
 
     """
-    gate_types = map(lambda x: x.gate_type, circuit.elements.values())
+    gate_types = map(lambda x: x.gate_type, circuit.gates.values())
     nontrivial_gates = list(filter(lambda x: x not in [NOT, IFF, INPUT], gate_types))
     return len(nontrivial_gates)
