@@ -12,7 +12,7 @@ CnfRaw = list[Clause]
 
 
 class Cnf:
-    """Class for CNF storage."""
+    """Structure to store CNF formula."""
 
     @staticmethod
     def from_circuit(circuit: Circuit) -> 'Cnf':
@@ -22,7 +22,7 @@ class Cnf:
         :param circuit: Circuit what will be converted to cnf.
 
         """
-        from boolean_circuit_tool.cnf.tseytin import tseytin_transformation
+        from boolean_circuit_tool.sat.cnf.tseytin import tseytin_transformation
 
         return tseytin_transformation(circuit)
 
