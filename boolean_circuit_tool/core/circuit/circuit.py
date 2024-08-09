@@ -440,7 +440,7 @@ class Circuit(BooleanFunction):
         this input is not present in the given list of inputs, the algorithm raises.
 
         :param name: new block's name
-        :param _inputs: new block's inputs
+        :param inputs: new block's inputs
         :param outputs: new block's outputs
         :return: created block
 
@@ -548,33 +548,33 @@ class Circuit(BooleanFunction):
         self,
         this_connectors: tp.Sequence[Label],
         circuit: tp_ext.Self,
-        other_connerctors: tp.Sequence[Label],
+        other_connectors: tp.Sequence[Label],
         *,
         right_connect: bool = False,
         circuit_name: Label = '',
         add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
-        Connecting a new circuit to the base one, where `other_connerctors` (gates of
-        the new circuit) will be connecting to `this_connectors` (gates of the base
+        Connecting a new circuit to the base one, where `other_connectors` (gates of the
+        new circuit) will be connecting to `this_connectors` (gates of the base
         circuit). All inputs and outputs of the new circuit which not be in connecting
         are added to the inputs and outputs of the base circuit, respectively.
 
         :param this_connectors: list of gates from the base circuit that will be connecting
             with new circuit
         :param circuit: a new circuit that should expand the basic one
-        :param other_connerctors: list of gates from the new circuit that will be connecting
+        :param other_connectors: list of gates from the new circuit that will be connecting
             with the base one
         :param right_connect:
-            If `right_connect` == False, it means that `other_connerctors` (from `circuit`)
+            If `right_connect` == False, it means that `other_connectors` (from `circuit`)
             must be inputs, after connecting they will be replaced by `this_connectors`
             (from `self`).
             If `right_connect` == True, then `this_connectors` (from `self`) must be inputs,
-            after connecting they will be replaced by `other_connerctors` (from `circuit`).
+            after connecting they will be replaced by `other_connectors` (from `circuit`).
         :param circuit_name: new block's name. If `circuit_name` is an empty string, then
             no new block is created, and the gates are added to the circuit without a prefix
         :param add_prefix: If add_prefix == False, than the gates are added to the circuit
-            without a prefix and it doesn't matter if `circuit_name` is an empty string or
+            without a prefix, and it doesn't matter if `circuit_name` is an empty string or
             not. If add_prefix == True, the gates are added to the circuit with a prefix only
             if `circuit_name` is not an empty string
         :return: this circuit after modification
@@ -582,15 +582,15 @@ class Circuit(BooleanFunction):
         """
         check_block_doesnt_exist(circuit_name, self)
         check_gates_exist(this_connectors, self)
-        check_gates_exist(other_connerctors, circuit)
-        if len(this_connectors) != len(other_connerctors):
+        check_gates_exist(other_connectors, circuit)
+        if len(this_connectors) != len(other_connectors):
             raise CreateBlockError()
         if right_connect:
             for gate_label in this_connectors:
                 if self.get_gate(gate_label).gate_type != INPUT:
                     raise CreateBlockError()
         else:
-            for gate_label in other_connerctors:
+            for gate_label in other_connectors:
                 if circuit.get_gate(gate_label).gate_type != INPUT:
                     raise CreateBlockError()
 
@@ -599,7 +599,7 @@ class Circuit(BooleanFunction):
             prefix = circuit_name + '@'
 
         mapping: dict[Label, Label] = {}
-        for i, old_name in enumerate(other_connerctors):
+        for i, old_name in enumerate(other_connectors):
             mapping[old_name] = this_connectors[i]
 
         old_to_new_names = copy.copy(mapping)
@@ -638,7 +638,7 @@ class Circuit(BooleanFunction):
         ] + [
             old_to_new_names[output]
             for output in circuit.outputs
-            if output not in other_connerctors
+            if output not in other_connectors
         ]
 
         for block in circuit.blocks.values():
@@ -683,7 +683,7 @@ class Circuit(BooleanFunction):
         :param circuit_name: new block's name. If `circuit_name` is an empty string, then
             no new block is created, and the gates are added to the circuit without a prefix
         :param add_prefix: If add_prefix == False, than the gates are added to the circuit
-            without a prefix and it doesn't matter if `circuit_name` is an empty string or not.
+            without a prefix, and it doesn't matter if `circuit_name` is an empty string or not.
             If add_prefix == True, the gates are added to the circuit with a prefix only if
             `circuit_name` is not an empty string
         :return: this circuit after modification
@@ -713,7 +713,7 @@ class Circuit(BooleanFunction):
         :param circuit_name: new block's name. If `circuit_name` is an empty string, then
             no new block is created, and the gates are added to the circuit without a prefix
         :param add_prefix: If add_prefix == False, than the gates are added to the circuit
-            without a prefix and it doesn't matter if `circuit_name` is an empty string or not.
+            without a prefix, and it doesn't matter if `circuit_name` is an empty string or not.
             If add_prefix == True, the gates are added to the circuit with a prefix only if
             `circuit_name` is not an empty string
         :return: this circuit after modification
@@ -722,7 +722,7 @@ class Circuit(BooleanFunction):
         return self.connect_circuit(
             this_connectors=[],
             circuit=circuit,
-            other_connerctors=[],
+            other_connectors=[],
             circuit_name=circuit_name,
             add_prefix=add_prefix,
         )
