@@ -13,6 +13,7 @@ from boolean_circuit_tool.core.boolean_function import (
 )
 from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
 from boolean_circuit_tool.core.logic import DontCare, TriValue
+from boolean_circuit_tool.core.utils import input_to_canonical_index, canonical_index_to_input
 
 
 __all__ = [
@@ -143,6 +144,27 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
 
 class PyFunction(BooleanFunction):
     """Boolean function given as a python callable."""
+
+    @staticmethod
+    def from_int_unary_func(input_size: int, output_size: int, f: tp.Callable[[int], int]):
+        def func(*args: bool) -> list[bool]:
+            assert len(args) == input_size
+            index = input_to_canonical_index(args)
+            result = f(index)
+            return list(canonical_index_to_input(result, output_size))
+
+        return PyFunction(func=func)
+
+    @staticmethod
+    def from_int_binary_func(input_size: int, output_size: int, f: tp.Callable[[int, int], int]):
+        def func(*args: bool) -> list[bool]:
+            assert len(args) == 2 * input_size
+            index1 = input_to_canonical_index(args[:len(args) // 2])
+            index2 = input_to_canonical_index(args[len(args) // 2:])
+            result = f(index1, index2)
+            return list(canonical_index_to_input(result, output_size))
+
+        return PyFunction(func=func)
 
     def __init__(
         self,
