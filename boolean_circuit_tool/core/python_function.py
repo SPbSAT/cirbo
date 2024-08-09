@@ -142,7 +142,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
             # blindly believe in user input.
             return tp.cast(tp.Sequence[bool], answer)
 
-        return PyFunction(_new_callable, output_size=self.output_size)
+        return PyFunction(_new_callable, output_size=self.output_size, input_size=self.input_size)
 
 
 class PyFunction(BooleanFunction):
@@ -158,7 +158,7 @@ class PyFunction(BooleanFunction):
             result = f(index)
             return canonical_index_to_input(result, output_size)
 
-        return PyFunction(func=func)
+        return PyFunction(func=func, input_size=input_size)
 
     @staticmethod
     def from_int_binary_func(
@@ -171,11 +171,12 @@ class PyFunction(BooleanFunction):
             result = f(index1, index2)
             return canonical_index_to_input(result, output_size)
 
-        return PyFunction(func=func)
+        return PyFunction(func=func, input_size=2 * input_size)
 
     def __init__(
         self,
         func: FunctionType,
+        input_size: int,
         *,
         output_size: tp.Optional[int] = None,
     ):
@@ -189,10 +190,10 @@ class PyFunction(BooleanFunction):
         s = inspect.signature(func)
 
         self._func = func
-        self._input_size = len(s.parameters)
+        self._input_size = input_size
 
         if output_size is None:
-            result = func(*([False] * self.input_size))
+            result = func(([False] * self.input_size))
             self._output_size = len(result)
         else:
             self._output_size = output_size
