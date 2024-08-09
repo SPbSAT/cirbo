@@ -4,11 +4,7 @@ import pytest
 from boolean_circuit_tool.core.boolean_function import RawTruthTable
 from boolean_circuit_tool.core.logic import DontCare, TriValue
 
-from boolean_circuit_tool.core.python_function import (
-    FunctionType,
-    PyFunction,
-    PyFunctionModel,
-)
+from boolean_circuit_tool.core.python_function import PyFunction, PyFunctionModel
 from boolean_circuit_tool.core.utils import canonical_index_to_input
 
 
@@ -100,7 +96,7 @@ class TestPyFunctionModel:
         ],
     )
     def test_init(self, model, input_size, output_size):
-        py_model = PyFunctionModel(model)
+        py_model = PyFunctionModel.from_ts_model(model)
         assert py_model.input_size == input_size
         assert py_model.output_size == output_size
 
@@ -128,7 +124,7 @@ class TestPyFunctionModel:
         ],
     )
     def test_check(self, model, expected_answers):
-        py_model = PyFunctionModel(model)
+        py_model = PyFunctionModel.from_ts_model(model)
         assert py_model.check([False, False]) == expected_answers[(False, False)]
         assert py_model.check([False, True]) == expected_answers[(False, True)]
         assert py_model.check([True, False]) == expected_answers[(True, False)]
@@ -151,7 +147,7 @@ class TestPyFunctionModel:
         ],
     )
     def test_get_model_tt(self, model, expected_tt):
-        py_model = PyFunctionModel(model)
+        py_model = PyFunctionModel.from_ts_model(model)
         assert py_model.get_model_truth_table() == expected_tt
 
     @pytest.mark.parametrize(
@@ -181,7 +177,7 @@ class TestPyFunctionModel:
         ],
     )
     def test_define(self, model, definition, expected_tt):
-        py_model = PyFunctionModel(model)
+        py_model = PyFunctionModel.from_ts_model(model)
         py_func = py_model.define(definition=definition)
         assert py_func.get_truth_table() == expected_tt
 
@@ -196,8 +192,8 @@ class TestPyFunction:
             (f_sum, 3, 2),
         ],
     )
-    def test_sizes(self, function: FunctionType, input_size: int, output_size: int):
-        bf = PyFunction(function)
+    def test_sizes(self, function, input_size, output_size):
+        bf = PyFunction.from_ts_function(function)
         assert bf.input_size == input_size
         assert bf.output_size == output_size
 
@@ -215,7 +211,7 @@ class TestPyFunction:
         ],
     )
     def test_evaluate(self, inputs: list[bool], value: list[bool]):
-        bf = PyFunction(f_sum)
+        bf = PyFunction.from_ts_function(f_sum)
         assert bf.evaluate(inputs) == value
 
     @pytest.mark.parametrize(
@@ -232,7 +228,7 @@ class TestPyFunction:
         ],
     )
     def test_evaluate_at(self, inputs: list[bool], index: int, value: bool):
-        bf = PyFunction(f_sum)
+        bf = PyFunction.from_ts_function(f_sum)
         assert bf.evaluate_at(inputs, index) == value
 
     @pytest.mark.parametrize(
@@ -242,8 +238,8 @@ class TestPyFunction:
             (f_max, False),
         ],
     )
-    def test_is_constant(self, function: FunctionType, is_constant: bool):
-        bf = PyFunction(function)
+    def test_is_constant(self, function, is_constant):
+        bf = PyFunction.from_ts_function(function)
         assert bf.is_constant() == is_constant
 
     @pytest.mark.parametrize(
@@ -258,12 +254,12 @@ class TestPyFunction:
     )
     def test_is_monotonic(
         self,
-        function: FunctionType,
-        output_index: int,
-        inverse: bool,
-        is_monotonic: bool,
+        function,
+        output_index,
+        inverse,
+        is_monotonic,
     ):
-        bf = PyFunction(function)
+        bf = PyFunction.from_ts_function(function)
         assert bf.is_monotonic_at(output_index, inverse=inverse) == is_monotonic
 
     @pytest.mark.parametrize(
@@ -274,8 +270,8 @@ class TestPyFunction:
             (f_one_plus_minus, False),
         ],
     )
-    def test_is_symmetric(self, function: FunctionType, is_symmetric: bool):
-        bf = PyFunction(function)
+    def test_is_symmetric(self, function, is_symmetric):
+        bf = PyFunction.from_ts_function(function)
         assert bf.is_symmetric() == is_symmetric
 
     @pytest.mark.parametrize(
@@ -291,11 +287,11 @@ class TestPyFunction:
             [True, True, True],
         ],
     )
-    def test_find_negations_to_make_symmetric(self, negations: list[bool]):
-        def f_sum_neg(arg1: bool, arg2: bool, arg3: bool) -> tp.Sequence[bool]:
+    def test_find_negations_to_make_symmetric(self, negations):
+        def f_sum_neg(arg1, arg2, arg3):
             return sum_inputs_with_negations([arg1, arg2, arg3], negations)
 
-        bf = PyFunction(f_sum_neg)
+        bf = PyFunction.from_ts_function(f_sum_neg)
         negs = bf.find_negations_to_make_symmetric([0, 1])
         assert negs == negations or negs == [not b for b in negations]
 
@@ -318,11 +314,11 @@ class TestPyFunction:
     )
     def test_is_dependent_on_input_at(
         self,
-        function: FunctionType,
-        input_index: int,
-        depends: bool,
+        function,
+        input_index,
+        depends,
     ):
-        bf = PyFunction(function)
+        bf = PyFunction.from_ts_function(function)
         assert bf.is_dependent_on_input_at(0, input_index) == depends
 
     @pytest.mark.parametrize(
@@ -336,11 +332,11 @@ class TestPyFunction:
     )
     def test_is_output_equal_to_input(
         self,
-        function: FunctionType,
-        input_index: int,
-        is_equal: bool,
+        function,
+        input_index,
+        is_equal,
     ):
-        bf = PyFunction(function)
+        bf = PyFunction.from_ts_function(function)
         assert bf.is_output_equal_to_input(0, input_index) == is_equal
 
     @pytest.mark.parametrize(
@@ -354,11 +350,11 @@ class TestPyFunction:
     )
     def test_is_output_equal_to_input_negation(
         self,
-        function: FunctionType,
-        input_index: int,
-        is_equal: bool,
+        function,
+        input_index,
+        is_equal,
     ):
-        bf = PyFunction(function)
+        bf = PyFunction.from_ts_function(function)
         assert bf.is_output_equal_to_input_negation(0, input_index) == is_equal
 
     @pytest.mark.parametrize(
@@ -376,10 +372,10 @@ class TestPyFunction:
     )
     def test_get_significant_inputs_of(
         self,
-        function: FunctionType,
-        significant_inputs: list[int],
+        function,
+        significant_inputs,
     ):
-        bf = PyFunction(function)
+        bf = PyFunction.from_ts_function(function)
         assert bf.get_significant_inputs_of(0) == significant_inputs
 
     @pytest.mark.parametrize(
@@ -391,8 +387,8 @@ class TestPyFunction:
     )
     def test_get_truth_table(
         self,
-        function: FunctionType,
-        truth_table: RawTruthTable,
+        function,
+        truth_table,
     ):
-        bf = PyFunction(function)
+        bf = PyFunction.from_ts_function(function)
         assert bf.get_truth_table() == truth_table

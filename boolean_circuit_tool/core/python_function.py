@@ -23,36 +23,66 @@ __all__ = [
     'PyFunctionModel',
     'PyFunction',
     'FunctionType',
+    'FunctionTypeTs',
+    'FunctionModelType',
+    'FunctionModelTypeTs',
 ]
 
-Ts = tpe.TypeVarTuple('Ts')
 FunctionModelType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[TriValue]]
 FunctionType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[bool]]
+
+Ts = tpe.TypeVarTuple('Ts')
+FunctionModelTypeTs = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[TriValue]]
+FunctionTypeTs = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[bool]]
 
 
 class PyFunctionModel(BooleanFunctionModel['PyFunction']):
     """Boolean function model given as a python callable with don't care outputs."""
 
-    def __init__(
-        self,
-        func: FunctionModelType,
+    @staticmethod
+    def from_ts_model(
+        func: FunctionModelTypeTs,
         *,
         output_size: tp.Optional[int] = None,
     ):
         """
+        Creates PyFunctionModel from function with signature (arg1: bool, arg2: bool,
+        ..., argN: bool) -> tp.Sequence[TriValue]
+
         :param func: python callable. If `output_size` is not provided, this callable
-               will be invoked once in the constructor to evaluate output size.
+            will be invoked once in the constructor to evaluate output size.
         :param output_size: optional size of func output. May be provided to avoid
-               empty `func` evaluation during this object initialization.
+            empty `func` evaluation during this object initialization.
 
         """
-        s = inspect.signature(func)
 
+        def f(args: tp.Sequence[bool]) -> tp.Sequence[TriValue]:
+            return func(*args)
+
+        s = inspect.signature(func)
+        input_size = len(s.parameters)
+        return PyFunctionModel(f, input_size=input_size, output_size=output_size)
+
+    def __init__(
+        self,
+        func: FunctionModelType,
+        input_size: int,
+        *,
+        output_size: tp.Optional[int] = None,
+    ):
+        """
+        :param func: python callable with signature (args: tp.Sequence[bool]) -> tp.Sequence[bool]
+            If `output_size` is not provided, this callable
+            will be invoked once in the constructor to evaluate output size.
+        :param output_size: optional size of func output. May be provided to avoid
+            empty `func` evaluation during this object initialization.
+
+        """
         self._func = func
-        self._input_size = len(s.parameters)
+        self._input_size = input_size
 
         if output_size is None:
-            result = func(*([False] * self.input_size))
+            result = func([False] * self.input_size)
             self._output_size = len(result)
         else:
             self._output_size = output_size
@@ -79,7 +109,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
         :return: value of outputs evaluated for input values `inputs`.
 
         """
-        return self._func(*inputs)
+        return self._func(inputs)
 
     def check_at(self, inputs: tp.Sequence[bool], output_index: int) -> TriValue:
         """
@@ -130,14 +160,14 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
         # allowing it to correctly see parameters set of original func.
         @functools.wraps(_old_callable)
         def _new_callable(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
-            answer = list(_old_callable(*args))
+            answer = list(_old_callable(args))
 
             # replace undefined part of answer according to definition
             for idx in range(_output_size):
                 if answer[idx] != DontCare:
                     continue
 
-                answer[idx] = definition[(*args, idx)]
+                answer[idx] = definition[(tuple(args), idx)]
 
             # blindly believe in user input.
             return tp.cast(tp.Sequence[bool], answer)
@@ -175,6 +205,30 @@ class PyFunction(BooleanFunction):
 
         return PyFunction(func=func, input_size=2 * input_size)
 
+    @staticmethod
+    def from_ts_function(
+        func: FunctionTypeTs,
+        *,
+        output_size: tp.Optional[int] = None,
+    ):
+        """
+        Creates PyFunction from function with signature (arg1: bool, arg2: bool, ...,
+        argN: bool) -> tp.Sequence[bool]
+
+        :param func: python callable. If `output_size` is not provided, this callable
+            will be invoked once in the constructor to evaluate output size.
+        :param output_size: optional size of func output. May be provided to avoid
+            empty `func` evaluation during this object initialization.
+
+        """
+        s = inspect.signature(func)
+        input_size = len(s.parameters)
+
+        def f(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
+            return func(*args)
+
+        return PyFunction(f, input_size=input_size, output_size=output_size)
+
     def __init__(
         self,
         func: FunctionType,
@@ -183,19 +237,17 @@ class PyFunction(BooleanFunction):
         output_size: tp.Optional[int] = None,
     ):
         """
-        :param func: python callable. If `output_size` is not provided, this callable
-               will be invoked once in the constructor to evaluate output size.
+        :param func: python callable with signature (args: list[bool]) -> tp.Sequence[bool].
+            If `output_size` is not provided, this callable will be invoked once in the
+            constructor to evaluate output size.
         :param output_size: optional size of func output. May be provided to avoid
-               empty `func` evaluation during this object initialization.
-
+            empty `func` evaluation during this object initialization.
         """
-        s = inspect.signature(func)
-
         self._func = func
         self._input_size = input_size
 
         if output_size is None:
-            result = func(([False] * self.input_size))
+            result = func([False] * self.input_size)
             self._output_size = len(result)
         else:
             self._output_size = output_size
@@ -222,7 +274,7 @@ class PyFunction(BooleanFunction):
         :return: value of outputs evaluated for input values `inputs`.
 
         """
-        return self._func(*inputs)
+        return self._func(inputs)
 
     def evaluate_at(self, inputs: tp.Sequence[bool], output_index: int) -> bool:
         """
