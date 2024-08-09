@@ -71,8 +71,8 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
         output_size: tp.Optional[int] = None,
     ):
         """
-        :param func: python callable with signature (args: tp.Sequence[bool]) -> tp.Sequence[bool]
-            If `output_size` is not provided, this callable
+        :param func: python callable with signature (args: tp.Sequence[bool])
+            -> tp.Sequence[bool]. If `output_size` is not provided, this callable
             will be invoked once in the constructor to evaluate output size.
         :param output_size: optional size of func output. May be provided to avoid
             empty `func` evaluation during this object initialization.

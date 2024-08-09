@@ -1,7 +1,6 @@
 import typing as tp
 
 import pytest
-from boolean_circuit_tool.core.boolean_function import RawTruthTable
 from boolean_circuit_tool.core.logic import DontCare, TriValue
 
 from boolean_circuit_tool.core.python_function import PyFunction, PyFunctionModel
