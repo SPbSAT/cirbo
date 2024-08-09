@@ -1,4 +1,3 @@
-import copy
 import itertools
 import typing as tp
 
@@ -16,13 +15,14 @@ def input_iterator_with_fixed_sum(
     input_size: int,
     number_of_true: int,
     *,
-    negations: tp.Optional[list[bool]] = None,
+    negations: tp.Optional[tp.Sequence[bool]] = None,
 ) -> tp.Iterable:
     """
     Returns all permutations with a given number of True without repetition.
 
-    :param inp: list of assign inputs
+    :param input_size: size of inputs
     :param number_of_true: the amount of True that will be present in the assign
+    :param negations: list of bool to which to apply negation
     :return: assignment inputs as Iterator
 
     """
@@ -37,8 +37,8 @@ def input_iterator_with_fixed_sum(
 
 
 def order_list(
-    ordered_list: list[Label],
-    old_list: list[Label],
+    ordered_list: tp.Sequence[Label],
+    old_list: tp.Sequence[Label],
 ) -> list[Label]:
     """
     Order old elements list with full or partially ordered elements list.
@@ -49,7 +49,7 @@ def order_list(
     `ordered_list` must be subset of `old_list`.
 
     """
-    old_list_copy = copy.copy(old_list)
+    old_list_copy = [label for label in old_list]
 
     new_list = list()
     for elem in ordered_list:

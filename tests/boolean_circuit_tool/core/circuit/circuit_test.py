@@ -277,7 +277,7 @@ def test_block():
 
     manipulateC0 = copy.copy(C0)
 
-    # connect_to=outputs
+    # this_connectors=outputs
     manipulateC0.connect_circuit(['C'], C1, ['A'], circuit_name='C1')
     assert manipulateC0.gates == {
         'A': Gate('A', INPUT),
@@ -288,7 +288,7 @@ def test_block():
     }
     assert manipulateC0.inputs == ['B', 'A', 'C1@B']
 
-    # connect_to=inputs
+    # this_connectors=inputs
     manipulateC1 = copy.copy(C0)
     manipulateC1.connect_circuit(['A'], C1, ['B'], circuit_name='C1')
     assert manipulateC1.gates == {
@@ -300,7 +300,7 @@ def test_block():
     }
     assert manipulateC1.inputs == ['B', 'A', 'C1@A']
 
-    # connect_to=mix
+    # this_connectors=mix
     manipulateC2 = copy.copy(C2)
     manipulateC2.connect_circuit(['B', 'D', 'F'], C3, C3.inputs, circuit_name='C3')
     assert manipulateC2.gates == {
@@ -321,7 +321,7 @@ def test_block():
             ['C'], C1, ['A'], right_connect=True, circuit_name='C2'
         )
 
-    # connect_from=outputs
+    # other_connerctors=outputs
     manipulateC3 = copy.copy(C0)
     manipulateC3.connect_circuit(
         ['A'], C1, ['C'], right_connect=True, circuit_name='C1'
@@ -335,7 +335,7 @@ def test_block():
     }
     assert manipulateC3.inputs == ['B', 'C1@B', 'C1@A']
 
-    # connect_from=inputs
+    # other_connerctors=inputs
     manipulateC4 = copy.copy(C0)
     manipulateC4.connect_circuit(
         ['B'], C1, ['A'], right_connect=True, circuit_name='C1'
@@ -349,7 +349,7 @@ def test_block():
     }
     assert manipulateC4.inputs == ['B', 'A', 'C1@B']
 
-    # connect_from=mix
+    # other_connerctors=mix
     manipulateC5 = copy.copy(C2)
     manipulateC5.connect_circuit(
         ['A', 'B', 'C'], C3, ['B', 'D', 'F'], right_connect=True, circuit_name='C3'

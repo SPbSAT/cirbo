@@ -149,7 +149,7 @@ def test_top_sort():
         '3',
         '1',
     ]
-    assert [elem.label for elem in instance.top_sort(inversed=True)] == [
+    assert [elem.label for elem in instance.top_sort(inverse=True)] == [
         '2',
         '1',
         '4',
@@ -172,7 +172,7 @@ def test_top_sort_several_output():
         '2',
         '1',
     ]
-    assert [elem.label for elem in instance.top_sort(inversed=True)] == [
+    assert [elem.label for elem in instance.top_sort(inverse=True)] == [
         '2',
         '1',
         '5',

@@ -7,6 +7,7 @@ __all__ = [
     'CircuitValidationError',
     'CircuitGateIsAbsentError',
     'CircuitGateAlreadyExistsError',
+    'CircuitIsCyclicalError',
     'GateTypeNoOperatorError',
     'GateStateError',
     'GateHasUsersError',
@@ -68,13 +69,13 @@ class GateHasUsersError(CircuitError):
 
 
 class GateNotInputError(CircuitError):
-    """Represents error that gate is not input, this gate's type can't be change."""
+    """Represents error that gate is not input, this gate's type can't be changed."""
 
     pass
 
 
 class GateDoesntExistError(CircuitError):
-    """Represents error that gate doesnt exist and you cannt recieve the information
+    """Represents error that gate doesn't exist, and you can not receive the information
     about it."""
 
     pass

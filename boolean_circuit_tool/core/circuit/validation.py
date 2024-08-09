@@ -13,8 +13,8 @@ __all__ = [
     'check_gates_exist',
     'check_label_doesnt_exist',
     'check_block_doesnt_exist',
-    'check_gate_hasnt_users',
-    'check_block_hasnt_users',
+    'check_gate_has_not_users',
+    'check_block_has_not_users',
 ]
 
 if tp.TYPE_CHECKING:
@@ -39,7 +39,7 @@ def check_label_doesnt_exist(gate_label: 'Label', circuit: 'Circuit') -> None:
         )
 
 
-def check_gate_hasnt_users(gate_label: 'Label', circuit: 'Circuit') -> None:
+def check_gate_has_not_users(gate_label: 'Label', circuit: 'Circuit') -> None:
     """Check that gate hasn't users in the circuit."""
     if len(circuit.get_gate_users(gate_label)) > 0:
         raise GateHasUsersError()
@@ -53,7 +53,7 @@ def check_block_doesnt_exist(block_label: 'Label', circuit: 'Circuit') -> None:
         )
 
 
-def check_block_hasnt_users(block: 'Block', circuit: 'Circuit') -> None:
+def check_block_has_not_users(block: 'Block', circuit: 'Circuit') -> None:
     """Check that block hasn't users in the circuit outside itself."""
     gates_set: set[Label] = set(block.gates)
     for gate in block.gates:
