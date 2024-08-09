@@ -140,7 +140,7 @@ def _replace_gate(old_label, new_label, circuit):
 
 
 def _replace_equivalent_gates(
-        circuit: Circuit, equivalent_groups: list[list[str]]
+    circuit: Circuit, equivalent_groups: list[list[str]]
 ) -> Circuit:
     """
     Reconstructs the circuit by replacing all equivalent gates identified by
@@ -240,10 +240,10 @@ def merge_same_gates(circuit: Circuit, num_samples: int = 1000) -> Circuit:
                     continue
                 gate = circuit.get_gate(gate_label)
                 found_duplicate = False
-                for other_gate_label in group[i + 1:]:
+                for other_gate_label in group[i + 1 :]:
                     other_gate = circuit.get_gate(other_gate_label)
                     if gate.gate_type == other_gate.gate_type and set(
-                            gate.operands
+                        gate.operands
                     ) == set(other_gate.operands):
                         replacement_map[other_gate_label] = gate_label
                         found_duplicate = True
