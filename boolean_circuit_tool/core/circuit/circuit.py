@@ -378,19 +378,6 @@ class Circuit(BooleanFunction):
         """
         return label in self._gates
 
-    def remove_gate(self, gate_label: Label) -> tp_ext.Self:
-        """
-        Remove gate from the circuit.
-
-        :param gate_label: gate for deleting.
-        :return: this circuit after modification.
-
-        """
-        gate = self.get_gate(gate_label)
-        check_gates_exist((gate.label,), self)
-        check_gate_has_not_users(gate.label, self)
-        return self._remove_gate(gate_label)
-
     def add_gate(self, gate: Gate) -> tp_ext.Self:
         """
         Add gate in the circuit.
