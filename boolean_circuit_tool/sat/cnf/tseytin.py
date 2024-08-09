@@ -1,8 +1,6 @@
 import collections
 import typing as tp
 
-from boolean_circuit_tool.cnf.cnf import Cnf, CnfRaw, Lit
-
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -26,13 +24,15 @@ from boolean_circuit_tool.core.circuit import (
     RNOT,
     XOR,
 )
+from boolean_circuit_tool.sat.cnf.cnf import Cnf, CnfRaw, Lit
 
 
 __all__ = ['tseytin_transformation']
 
 
 def tseytin_transformation(
-    circuit: Circuit, outputs: tp.Optional[list[int]] = None
+    circuit: Circuit,
+    outputs: tp.Optional[list[int]] = None,
 ) -> Cnf:
     next_lit = 0
 
@@ -78,7 +78,7 @@ def tseytin_transformation(
     def process_gate(label: str) -> Lit:
         if label in saved_lits:
             return saved_lits[label]
-        gate = circuit.get_element(label)
+        gate = circuit.get_gate(label)
         operands = gate.operands
         lits = [process_gate(lit) for lit in operands]
         gate_type = gate.gate_type

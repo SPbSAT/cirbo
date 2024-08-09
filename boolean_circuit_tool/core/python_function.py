@@ -1,36 +1,169 @@
+import functools
 import inspect
 import itertools
 import typing as tp
 
-from boolean_circuit_tool.core.boolean_function import BooleanFunction, RawTruthTable
+import typing_extensions as tpe
+
+from boolean_circuit_tool.core.boolean_function import (
+    BooleanFunction,
+    BooleanFunctionModel,
+    RawTruthTable,
+    RawTruthTableModel,
+)
 from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
+from boolean_circuit_tool.core.logic import DontCare, TriValue
 
 
 __all__ = [
-    'PythonFunction',
+    'PyFunctionModel',
+    'PyFunction',
     'FunctionType',
 ]
 
+Ts = tpe.TypeVarTuple('Ts')
+FunctionModelType = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[TriValue]]
+FunctionType = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[bool]]
 
-FunctionType = tp.Callable[..., tp.Sequence[bool]]
 
+class PyFunctionModel(BooleanFunctionModel['PyFunction']):
+    """Boolean function model given as a python callable with don't care outputs."""
 
-class PythonFunction(BooleanFunction):
-    """Boolean function given as a python function."""
-
-    def __init__(self, func: FunctionType, *, output_size: tp.Optional[int] = None):
+    def __init__(
+        self,
+        func: FunctionModelType,
+        *,
+        output_size: tp.Optional[int] = None,
+    ):
         """
-
-        :param func: python callable. This callable will be invoked once
-        on false input set if output_size is None.
-        :param output_size: optional size of func output.
+        :param func: python callable. If `output_size` is not provided, this callable
+               will be invoked once in the constructor to evaluate output size.
+        :param output_size: optional size of func output. May be provided to avoid
+               empty `func` evaluation during this object initialization.
 
         """
         s = inspect.signature(func)
+
         self._func = func
         self._input_size = len(s.parameters)
+
         if output_size is None:
-            result = func(*([0] * self.input_size))
+            result = func(*([False] * self.input_size))
+            self._output_size = len(result)
+        else:
+            self._output_size = output_size
+
+    @property
+    def input_size(self) -> int:
+        """
+        :return: number of inputs.
+        """
+        return self._input_size
+
+    @property
+    def output_size(self) -> int:
+        """
+        :return: number of outputs.
+        """
+        return self._output_size
+
+    def check(self, inputs: tp.Sequence[bool]) -> tp.Sequence[TriValue]:
+        """
+        Get model output values that correspond to provided `inputs`.
+
+        :param inputs: values of input gates.
+        :return: value of outputs evaluated for input values `inputs`.
+
+        """
+        return self._func(*inputs)
+
+    def check_at(self, inputs: tp.Sequence[bool], output_index: int) -> TriValue:
+        """
+        Get model value of `output_index`th output that corresponds to provided
+        `inputs`.
+
+        :param inputs: values of input gates.
+        :param output_index: index of desired output.
+        :return: value of `output_index` evaluated for input values `inputs`.
+
+        """
+        return self.check(inputs)[output_index]
+
+    def get_model_truth_table(self) -> RawTruthTableModel:
+        """
+        Get truth table of a boolean function, which is a matrix, `i`th row of which
+        contains values of `i`th output, which may contain bool or DontCare values, and
+        `j`th column corresponds to the input which is a binary encoding of a number `j`
+        (for example j=9 corresponds to [..., 1, 0, 0, 1])
+
+        :return: truth table describing this model.
+
+        """
+        table = [
+            self.check(list(x))
+            for x in itertools.product((False, True), repeat=self.input_size)
+        ]
+        return [list(i) for i in zip(*table)]
+
+    def define(
+        self,
+        definition: tp.Mapping[tuple[tuple[bool, ...], int], bool],
+    ) -> 'PyFunction':
+        """
+        Defines this model by defining ambiguous output values.
+
+        :param definition: mapping of pairs (input value set, output index) to
+        output values, required to completely define this boolean function model.
+        :return: new object of `BooleanFunctionT` type.
+
+        """
+        # need to define separate variable to not
+        # bind new function to `self` reference.
+        _old_callable = self._func
+        _output_size = self._output_size
+
+        # `wraps` helps to disguise function from itertools.signature,
+        # allowing it to correctly see parameters set of original func.
+        @functools.wraps(_old_callable)
+        def _new_callable(*args: bool) -> tp.Sequence[bool]:
+            answer = list(_old_callable(*args))
+
+            # replace undefined part of answer according to definition
+            for idx in range(_output_size):
+                if answer[idx] != DontCare:
+                    continue
+
+                answer[idx] = definition[(args, idx)]
+
+            # blindly believe in user input.
+            return tp.cast(tp.Sequence[bool], answer)
+
+        return PyFunction(_new_callable, output_size=self.output_size)
+
+
+class PyFunction(BooleanFunction):
+    """Boolean function given as a python callable."""
+
+    def __init__(
+        self,
+        func: FunctionType,
+        *,
+        output_size: tp.Optional[int] = None,
+    ):
+        """
+        :param func: python callable. If `output_size` is not provided, this callable
+               will be invoked once in the constructor to evaluate output size.
+        :param output_size: optional size of func output. May be provided to avoid
+               empty `func` evaluation during this object initialization.
+
+        """
+        s = inspect.signature(func)
+
+        self._func = func
+        self._input_size = len(s.parameters)
+
+        if output_size is None:
+            result = func(*([False] * self.input_size))
             self._output_size = len(result)
         else:
             self._output_size = output_size
