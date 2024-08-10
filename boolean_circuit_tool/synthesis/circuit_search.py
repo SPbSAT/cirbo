@@ -12,8 +12,11 @@ from pebble import concurrent
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
-from boolean_circuit_tool.circuits_db.db import CircuitsDatabase
-from boolean_circuit_tool.core.boolean_function import BooleanFunctionModel
+from boolean_circuit_tool.core.boolean_function import (
+    BooleanFunctionModel,
+    RawTruthTableModel,
+)
+
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -37,6 +40,8 @@ from boolean_circuit_tool.core.circuit import (
     XOR,
 )
 from boolean_circuit_tool.core.logic import DontCare
+
+from boolean_circuit_tool.sat import PySATSolverNames
 from boolean_circuit_tool.synthesis.exception import (
     FixGateError,
     FixGateOrderError,
@@ -44,6 +49,7 @@ from boolean_circuit_tool.synthesis.exception import (
     GateIsAbsentError,
     NoSolutionError,
     SolverTimeOutError,
+    StringTruthTableError,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,6 +59,7 @@ __all__ = [
     'Basis',
     'PySATSolverNames',
     'CircuitFinderSat',
+    'get_tt_by_str',
 ]
 
 
@@ -144,30 +151,29 @@ _tt_to_gate_type: tp.Dict[tp.Tuple, GateType] = {
 }
 
 
-class PySATSolverNames(enum.Enum):
-    """Enum version of pysat.solvers.SolverNames."""
-
-    CADICAL103 = 'cadical103'
-    CADICAL153 = 'cadical153'
-    CADICAL193 = 'cadical195'
-    CRYPTOSAT = 'crypto'
-    GLUECARD3 = 'gluecard3'
-    GLUECARD4 = 'gluecard4'
-    GLUCOSE3 = 'glucose3'
-    GLUCOSE4 = 'glucose4'
-    GLUCOSE42 = 'glucose42'
-    LINGELING = 'lingeling'
-    MAPLECHRONO = 'maplechrono'
-    MAPLECM = 'maplecm'
-    MAPLESAT = 'maplesat'
-    MERGESAT3 = 'mergesat3'
-    MINICARD = 'minicard'
-    MINISAT22 = 'minisat22'
-    MINISATGH = 'minisat-gh'
-
-
 def _get_GateType_by_tt(gate_tt: tp.List[bool]) -> GateType:
     return _tt_to_gate_type[tuple(gate_tt)]
+
+
+def get_tt_by_str(str_truth_table: tp.List[str]) -> RawTruthTableModel:
+    """
+    Convert a truth table from a list of strings to a list of TriValue lists.
+
+    :param str_truth_table: List of strings representing the truth table
+    :return: List of lists with TriValues corresponding to the input strings
+
+    """
+
+    def _char_to_trivalue(char):
+        if char == "*":
+            return DontCare
+        if char == "1":
+            return True
+        if char == "0":
+            return False
+        raise StringTruthTableError()
+
+    return [[_char_to_trivalue(char) for char in row] for row in str_truth_table]
 
 
 class CircuitFinderSat:
@@ -192,8 +198,6 @@ class CircuitFinderSat:
 
         :param boolean_function_model:
         The function for which the circuit is needed.
-        The outputs of the function must not contain two outputs,
-        one of which is a complement to the other.
         :param number_of_gates:
         The number of gates in the circuit we are finding.
         :param basis:
@@ -212,7 +216,6 @@ class CircuitFinderSat:
         self._forbidden_operations = list(set(Basis.FULL.value) - set(self._basis_list))
 
         self._input_gates = list(range(boolean_function_model.input_size))
-        self._number_of_gates = number_of_gates
         self._internal_gates = list(
             range(
                 boolean_function_model.input_size,
@@ -224,8 +227,7 @@ class CircuitFinderSat:
         self.need_normalized = need_normalized
         self._vpool = IDPool()
         self._cnf = CNF()
-        self.need_check_db = True
-        self.need_init_cnf = True
+        self._init_default_cnf_formula()
 
     def get_cnf(self) -> tp.List[tp.List[int]]:
         """
@@ -236,23 +238,19 @@ class CircuitFinderSat:
             representing literals.
 
         """
-        if self.need_init_cnf:
-            self._init_default_cnf_formula()
-            self.need_init_cnf = False
         return self._cnf.clauses
 
     def find_circuit(
         self,
-        solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL193,
-        time_limit: tp.Optional[int] = None,
-        circuit_db: tp.Optional[CircuitsDatabase] = None,
+        solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL195,
+        time_limit: tp.Union[int, None] = None,
     ) -> Circuit:
         """
         Solves the Conjunctive Normal Form (CNF) using a specified SAT-solver and
         returns the circuit if it exists.
 
         :param solver_name: The name of the SAT-solver to use. Default is
-            PySATSolverNames.CADICAL193 ("cadical195").
+            PySATSolverNames.CADICAL195 ("cadical195").
         :param time_limit : Maximum time in seconds allowed for solving (default is
             None, meaning no time limit).
         :return: Circuit: If a solution is found within the specified time limit (if
@@ -262,21 +260,6 @@ class CircuitFinderSat:
         :raises SolverTimeOutError: If the solver exceeds the specified time limit.
 
         """
-
-        if circuit_db is not None and self.need_check_db:
-            db_ret: tp.Optional[Circuit] = circuit_db.get_by_raw_truth_table_model(
-                self._output_truth_tables
-            )
-            if db_ret is not None:
-                if db_ret.elements_number <= self._number_of_gates:
-                    return db_ret
-                else:
-                    raise NoSolutionError()
-
-        if self.need_init_cnf:
-            self._init_default_cnf_formula()
-            self.need_init_cnf = False
-
         solver_name = PySATSolverNames(solver_name)
         logger.debug(
             f"Solving a CNF formula, "
@@ -316,9 +299,9 @@ class CircuitFinderSat:
     def fix_gate(
         self,
         gate: int,
-        first_predecessor: tp.Optional[int] = None,
-        second_predecessor: tp.Optional[int] = None,
-        gate_type: tp.Optional[GateType] = None,
+        first_predecessor: tp.Union[int, None] = None,
+        second_predecessor: tp.Union[int, None] = None,
+        gate_type: tp.Union[GateType, None] = None,
     ):
         """
         Fix a specific gate in the circuit.
@@ -330,8 +313,6 @@ class CircuitFinderSat:
         :param gate_type: The gate type to be fixed.
 
         """
-
-        self.need_check_db = False
 
         if gate not in self._internal_gates:
             raise GateIsAbsentError()
@@ -362,16 +343,12 @@ class CircuitFinderSat:
                 if a != first_predecessor and b != first_predecessor:
                     self._cnf.append([-self._predecessors_variable(gate, a, b)])
 
-        if gate_type:
-            for a, b in itertools.product(range(2), repeat=2):
-                bit = gate_type.operator(bool(a), bool(b))
-                assert bit in [True, False]
-                self._cnf.append(
-                    [
-                        (1 if bit else -1)
-                        * self._gate_type_variable(gate, int(a), int(b))
-                    ]
-                )
+        # TODO: maintain gate_type
+        # if gate_type:
+        #     for a, b in itertools.product(range(2), repeat=2):
+        #         bit = int(gate_type[2 * a + b])
+        #         assert bit in range(2)
+        #         self._cnf.append([(1 if bit else -1) * self._gate_type_variable(gate, a, b)])
 
     def forbid_wire(self, from_gate: int, to_gate: int):
         """
@@ -381,9 +358,6 @@ class CircuitFinderSat:
         :param to_gate: The gate to be forbidden.
 
         """
-
-        self.need_check_db = False
-
         if from_gate not in self._gates:
             raise GateIsAbsentError()
         if to_gate not in self._internal_gates:
@@ -624,4 +598,5 @@ class CircuitFinderSat:
             for gate in self._gates:
                 if self._output_gate_variable(h, gate) in model:
                     initial_circuit.mark_as_output('s' + str(gate))
+
         return initial_circuit

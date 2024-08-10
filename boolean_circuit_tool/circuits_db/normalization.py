@@ -100,6 +100,6 @@ class NormalizationInfo:
 def _negate_gate(circuit: Circuit, gate: Label) -> Label:
     not_gate = f"not_{gate}"
     # TODO: name collisions?
-    if not_gate not in circuit.elements.keys():
+    if not_gate not in circuit.gates.keys():
         circuit.emplace_gate(not_gate, NOT, (gate,))
     return not_gate

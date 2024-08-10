@@ -115,7 +115,7 @@ def _encode_circuit_parameters(
 ) -> None:
     bit_writer.write_number(len(circuit.inputs), word_size)
     bit_writer.write_number(len(circuit.outputs), word_size)
-    bit_writer.write_number(circuit.elements_number - len(circuit.inputs), word_size)
+    bit_writer.write_number(circuit.gates_number([gate.INPUT]), word_size)
 
 
 def _decode_circuit_parameters(
@@ -174,9 +174,7 @@ def _encode_circuit_body(
     gate_identifiers = _enumerate_gates(circuit)
 
     for label in gate_identifiers.keys():
-        _encode_gate(
-            bit_writer, circuit.get_element(label), gate_identifiers, word_size
-        )
+        _encode_gate(bit_writer, circuit.get_gate(label), gate_identifiers, word_size)
 
     for label in circuit.outputs:
         bit_writer.write_number(gate_identifiers[label], word_size)
@@ -205,11 +203,11 @@ def _decode_circuit_body(
 
 
 def _get_word_size(circuit: Circuit) -> int:
-    if circuit.elements_number == 0:
+    if circuit.size == 0:
         return 1
     else:
         return max(
-            len(circuit.inputs), len(circuit.outputs), circuit.elements_number - 1
+            len(circuit.inputs), len(circuit.outputs), circuit.size - 1
         ).bit_length()
 
 
@@ -217,7 +215,7 @@ def _enumerate_gates(circuit: Circuit) -> tp.Dict[Label, int]:
     result: tp.Dict[Label, int] = dict()
     for input_label in circuit.inputs:
         result[input_label] = len(result)
-    for gate_label, gate_ in circuit.elements.items():
+    for gate_label, gate_ in circuit.gates.items():
         if gate_.gate_type == gate.INPUT:
             continue
         result[gate_label] = len(result)

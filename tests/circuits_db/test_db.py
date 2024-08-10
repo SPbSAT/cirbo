@@ -115,15 +115,15 @@ def test_get_by_raw_truth_table_model_returns_minimal_size():
         db.add_circuit(large_circuit)
         truth_table = [[False, DontCare, DontCare, True]]
         retrieved_circuit = db.get_by_raw_truth_table_model(truth_table)
-        assert len(retrieved_circuit.elements) == 3
+        assert retrieved_circuit.gates_number() == 1
         assert retrieved_circuit.get_truth_table() == [[False, True, True, True]]
 
 
 @pytest.mark.parametrize(
     "use_label",
     [
-        (False,),
-        (True,),
+        False,
+        True,
     ],
 )
 def test_save_and_load_database(use_label):

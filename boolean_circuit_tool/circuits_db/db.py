@@ -1,5 +1,6 @@
 import io
 import itertools
+import lzma
 import typing as tp
 from pathlib import Path
 
@@ -57,8 +58,17 @@ class CircuitsDatabase:
         if self._db_source is None:
             self._dict = dict()
         elif isinstance(self._db_source, Path):
-            with self._db_source.open('rb') as stream:
-                self._dict = read_binary_dict(stream)
+            if self._db_source.suffix == '.xz':
+                with lzma.open(self._db_source, "rb") as lzma_file:
+                    self._dict = read_binary_dict(lzma_file)
+            elif self._db_source.suffix == ".bin":
+                with self._db_source.open('rb') as stream:
+                    self._dict = read_binary_dict(stream)
+            else:
+                raise CircuitDatabaseOpenError(
+                    f"Try to open database from unsupported file: "
+                    f"{self._db_source.suffix}"
+                )
         elif isinstance(self._db_source, io.BytesIO):
             self._db_source.seek(0)
             self._dict = read_binary_dict(self._db_source)
@@ -151,8 +161,6 @@ class CircuitsDatabase:
             normalized_truth_table = normalization.truth_table
             if normalized_truth_table != truth_table:
                 raise CircuitsDatabaseError("Cannot add not normalized circuit")
-                # TODO: For our goals support of all circuits is not needed.
-                #  Do we need to maintain any type of circuit?
             label = _truth_table_to_label(normalized_truth_table)
         if label in self._dict.keys():
             raise CircuitsDatabaseError(
@@ -192,13 +200,13 @@ class CircuitsDatabase:
             circuit = self.get_by_raw_truth_table(defined_truth_table)
             if circuit is None:
                 continue
-            circuit_size = _get_circuit_size(circuit)
+            circuit_size = circuit.gates_number()
             if result_size is None or circuit_size < result_size:
                 result_size = circuit_size
                 result = circuit
         return result
 
-    def save(self, stream: tp.BinaryIO) -> None:
+    def save(self, stream: tp.IO[bytes]) -> None:
         """
         Save the database to a binary stream.
 
@@ -231,6 +239,6 @@ def _get_circuit_size(circuit: Circuit) -> int:
     :return: The size of the circuit.
 
     """
-    gate_types = map(lambda x: x.gate_type, circuit.elements.values())
+    gate_types = map(lambda x: x.gate_type, circuit.gates.values())
     nontrivial_gates = list(filter(lambda x: x not in [NOT, IFF, INPUT], gate_types))
     return len(nontrivial_gates)

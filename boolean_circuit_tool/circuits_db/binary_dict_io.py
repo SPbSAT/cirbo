@@ -14,7 +14,7 @@ DICT_KEY_BYTE_SIZE = 2
 DICT_VALUE_BYTE_SIZE = 2
 
 
-def read_binary_dict(stream: tp.BinaryIO) -> tp.Dict[str, bytes]:
+def read_binary_dict(stream: tp.IO[bytes]) -> tp.Dict[str, bytes]:
     """
     Read a dictionary from a binary stream.
 
@@ -37,7 +37,7 @@ def read_binary_dict(stream: tp.BinaryIO) -> tp.Dict[str, bytes]:
     return data
 
 
-def write_binary_dict(data: tp.Dict[str, bytes], stream: tp.BinaryIO) -> None:
+def write_binary_dict(data: tp.Dict[str, bytes], stream: tp.IO[bytes]) -> None:
     """
     Write a dictionary to a binary stream.
 
@@ -55,24 +55,24 @@ def write_binary_dict(data: tp.Dict[str, bytes], stream: tp.BinaryIO) -> None:
         stream.write(val)
 
 
-def _read_unsigned_number(stream: tp.BinaryIO, byte_len: int) -> int:
+def _read_unsigned_number(stream: tp.IO[bytes], byte_len: int) -> int:
     int_bytes = _read_exact_number_of_bytes(stream, byte_len)
     return int.from_bytes(int_bytes, byteorder="big", signed=False)
 
 
-def _write_unsigned_number(stream: tp.BinaryIO, number: int, byte_len: int) -> None:
+def _write_unsigned_number(stream: tp.IO[bytes], number: int, byte_len: int) -> None:
     int_bytes = number.to_bytes(length=byte_len, byteorder="big", signed=False)
     stream.write(int_bytes)
 
 
-def _read_exact_number_of_bytes(stream: tp.BinaryIO, length: int) -> bytes:
+def _read_exact_number_of_bytes(stream: tp.IO[bytes], length: int) -> bytes:
     arr = stream.read(length)
     if len(arr) != length:
         raise BinaryDictIOError("Unexpected EOF")
     return arr
 
 
-def _expect_eof(stream: tp.BinaryIO) -> None:
+def _expect_eof(stream: tp.IO[bytes]) -> None:
     byte = stream.read(1)
     if byte:
         raise BinaryDictIOError("Expected end of file, but more data was found.")

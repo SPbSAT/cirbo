@@ -14,7 +14,11 @@ class _DontCare:
     yet to be determined."""
 
     def __bool__(self):
-        raise DontCareCastError("Bool can't be created from DontCare.")
+        raise DontCareCastError(
+            "Bool can't be created from DontCare. "
+            "Possibly function model is used in context "
+            "where full defined function is needed."
+        )
 
     def __eq__(self, rhs):
         return isinstance(rhs, _DontCare)
