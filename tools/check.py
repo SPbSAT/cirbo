@@ -33,11 +33,7 @@ def _call_command_with_buffer(command: str) -> CheckReturn:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
-    return CheckReturn(
-        
-        
-        
-            rc=_prc.returncode, stdout=_prc.stdout.decode('utf-8'))
+    return CheckReturn(rc=_prc.returncode, stdout=_prc.stdout.decode('utf-8'))
 
 
 def _is_bad_rc(rc: int) -> bool:
