@@ -25,17 +25,10 @@ def generate_pairwise_if_then_else(n) -> Circuit:
     else_labels = ['else_' + str(i) for i in range(n)]
     if_then_else_labels = ['if_then_else_' + str(i) for i in range(n)]
 
-    # circuit = (Circuit().add_block('if', CircuitBuilder.generate_inputs_with_labels(if_labels))
-    #                     .add_block('then', CircuitBuilder.generate_inputs_with_labels(then_labels))
-    #                     .add_block('else', CircuitBuilder.generate_inputs_with_labels(else_labels)))
-
     circuit = Circuit()
-    for if_label in if_labels:
-        circuit.add_gate(Gate(if_label, INPUT, tuple()))
-    for then_label in then_labels:
-        circuit.add_gate(Gate(then_label, INPUT, tuple()))
-    for else_label in else_labels:
-        circuit.add_gate(Gate(else_label, INPUT, tuple()))
+    circuit.add_inputs(if_labels)
+    circuit.add_inputs(then_labels)
+    circuit.add_inputs(else_labels)
 
     return add_pairwise_if_then_else_of(circuit, if_then_else_labels, if_labels, then_labels, else_labels)
 
@@ -45,13 +38,9 @@ def generate_pairwise_xor(n: int) -> Circuit:
     y_labels = ['y_' + str(i) for i in range(n)]
     xor_labels = ['xor_' + str(i) for i in range(n)]
 
-    # circuit = (Circuit().add_block('x', CircuitBuilder.generate_inputs_with_labels(x_labels))
-    #                     .add_block('y', CircuitBuilder.generate_inputs_with_labels(y_labels)))
     circuit = Circuit()
-    for x_label in x_labels:
-        circuit.add_gate(Gate(x_label, INPUT, tuple()))
-    for y_label in y_labels:
-        circuit.add_gate(Gate(y_label, INPUT, tuple()))
+    circuit.add_inputs(x_labels)
+    circuit.add_inputs(y_labels)
 
     return add_pairwise_xor(circuit, xor_labels, x_labels, y_labels)
 
@@ -66,13 +55,6 @@ def generate_inputs_with_labels(labels: list[Label]) -> Circuit:
 
 def generate_inputs(n: int) -> Circuit:
     return generate_inputs_with_labels(['x' + str(i) for i in range(n)])
-
-
-def add_or_of(circuit, or_inputs) -> Circuit:
-    circuit.add_gate(Gate('or', OR, tuple(or_inputs)))
-    circuit.unmark_outputs(or_inputs)
-    circuit.mark_as_output('or')
-    return circuit
 
 
 def add_plus_one(circuit : Circuit, result_labels, x_labels) -> Circuit:
