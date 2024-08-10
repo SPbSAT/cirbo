@@ -385,7 +385,6 @@ def minimize_subcircuits(
     for iter, subcircuit in enumerate(subcircuits):
         inputs: list[Label] = subcircuit.inputs
         inputs_set: set[Label] = set(inputs)
-        outputs_set: set[Label] = set(subcircuit.outputs)
         size: int = subcircuit.size
 
         if size > max_subcircuit_size:
@@ -476,19 +475,20 @@ def minimize_subcircuits(
         logger.debug("Improved circuit size")
 
         # Update the states
-        for output in filtered_outputs:
-            node_states[output] = NodeState.MODIFIED
+        for output in output_labels_mapping:
+            node_states[output] = NodeState.REMOVED  # todo: process carefully
 
-        for gate in subcircuit.gates:
-            if gate in inputs_set or gate in outputs_set:
-                continue
+        for gate in circuit.get_internal_gates(
+            list(input_labels_mapping.keys()), list(output_labels_mapping.keys())
+        ):
             node_states[gate] = NodeState.REMOVED
 
     if enable_validation:
         assignment: dict[Label, GateState] = {
             input: False for input in initial_circuit.inputs
         }
-        for i in range(1 << len(initial_circuit.inputs)):
+        inputs = initial_circuit.inputs
+        for i in range(1 << len(inputs)):
             if i:  # update assignment for new iteration
                 idx: int = len(inputs) - 1
                 while assignment[inputs[idx]]:

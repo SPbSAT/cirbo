@@ -426,6 +426,35 @@ class Circuit(BooleanFunction):
 
         return self._emplace_gate(label, gate_type, operands, **kwargs)
 
+    def get_internal_gates(
+        self, inputs: list[Label], outputs: list[Label]
+    ) -> list[Label]:
+        """
+        Get gates between given inputs and outputs in the circuit.
+
+        :param inputs: list with inputs.
+        :param outputs: list with outputs.
+        :return: list with gates from the circuit
+
+        """
+        internal_gates: list[Label] = []
+        label_is_visited: dict[Label, bool] = collections.defaultdict(bool)
+        for output_label in outputs:
+            queue: tp.Deque[Label] = collections.deque()
+            if not label_is_visited[output_label]:
+                label_is_visited[output_label]
+                queue.append(output_label)
+            while queue:
+                label = queue.popleft()
+                if label not in inputs and label not in outputs:
+                    internal_gates.append(label)
+                if label not in inputs:
+                    for operand in self.get_gate(label).operands:
+                        if not label_is_visited[operand]:
+                            label_is_visited[operand] = True
+                            queue.append(operand)
+        return internal_gates
+
     def replace_subcircuit(
         self,
         subcircuit: "Circuit",
@@ -443,43 +472,53 @@ class Circuit(BooleanFunction):
         :return: modified circuit.
 
         """
-        labels_to_remove: list[Label] = []
-        label_is_visited: dict[Label, bool] = collections.defaultdict(bool)
-        for output_label in outputs_mapping:
-            queue: tp.Deque[Label] = collections.deque()
-            if not label_is_visited[output_label]:
-                label_is_visited[output_label]
-                queue.append(output_label)
-            while queue:
-                label = queue.popleft()
-                if label not in inputs_mapping and label not in outputs_mapping:
-                    labels_to_remove.append(label)
-                if label not in inputs_mapping:
-                    for operand in self.get_gate(label).operands:
-                        if not label_is_visited[operand]:
-                            label_is_visited[operand] = True
-                            queue.append(operand)
-                            if label in outputs_mapping and (
-                                operand in inputs_mapping or operand in outputs_mapping
-                            ):
-                                self._remove_user(operand, label)
+        labels_to_remove: list[Label] = self.get_internal_gates(
+            list(inputs_mapping.keys()), list(outputs_mapping.keys())
+        )
+        for label in outputs_mapping:
+            if label in inputs_mapping:
+                continue
+            for operand in self.get_gate(label).operands:
+                if operand in inputs_mapping or operand in outputs_mapping:
+                    self._remove_user(operand, label)
         for label in labels_to_remove:
             self._remove_gate(label)
+
+        tmp_mapping: dict[Label, Label] = (
+            {}
+        )  # used to avoid duplicating labels for nodes
+        subcircuit_gates: list[Label] = list(subcircuit.gates.keys())
+        for i, label in enumerate(subcircuit_gates):
+            new_label: Label = (
+                f"tmp_{i}"  # assume subcircuit will not have nodes with such labels
+            )
+            tmp_mapping[label] = new_label
+            subcircuit.rename_gate(label, new_label)
+
         for label1, label2 in inputs_mapping.items():
-            subcircuit.rename_gate(old_label=label2, new_label=label1)
+            subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
         for label1, label2 in outputs_mapping.items():
             if label1 not in inputs_mapping:
-                subcircuit.rename_gate(old_label=label2, new_label=label1)
+                subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
+        labels_to_rename: list[Label] = list()
         for node in subcircuit.top_sort(inverse=True):
             label = node.label
             if label not in inputs_mapping and label not in outputs_mapping:
                 self.add_gate(subcircuit.get_gate(label))
+                labels_to_rename.append(label)
         for label in outputs_mapping:
+            if label in inputs_mapping:
+                continue
             self.get_gate(label)._operands = subcircuit.get_gate(label)._operands
             self.get_gate(label)._gate_type = subcircuit.get_gate(label)._gate_type
             for operand in self.get_gate(label)._operands:
-                if operand in inputs_mapping or operand in outputs_mapping:
-                    self._add_user(operand, label)
+                self._add_user(operand, label)
+        print(labels_to_remove)
+        print(labels_to_rename)
+        for i, label in enumerate(labels_to_rename):
+            new_label: Label = labels_to_remove[i]
+            self.rename_gate(label, new_label)
+
         return self
 
     def make_block_from_slice(
@@ -829,6 +868,7 @@ class Circuit(BooleanFunction):
             operand_users[operand_users.index(old_label)] = new_label
 
         del self._gates[old_label]
+        del self._gate_to_users[old_label]
 
         for block in self.blocks.values():
             block.rename_gate(old_label, new_label)
