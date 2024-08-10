@@ -11,12 +11,22 @@ import itertools
 import random
 
 from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import Gate, NOT
+from boolean_circuit_tool.core.circuit.gate import (
+    ALWAYS_FALSE,
+    ALWAYS_TRUE,
+    AND,
+    Gate,
+    NAND,
+    NOT,
+    NXOR,
+    OR,
+    XOR,
+)
 
 __all__ = [
     'remove_leaves_and_double_not',
-    'simplify_by_deleting_equivalent_gates',
-    'merge_same_gates',
+    'delete_equivalent_gates',
+    'merge_same_successors',
 ]
 
 
@@ -31,14 +41,12 @@ def remove_leaves_and_double_not(circuit: Circuit) -> Circuit:
 
     """
     new_circuit = Circuit()
-    visited = set()  # Stores the labels of gates that have already been visited
-    gate_map = (
-        {}
-    )  # Maps original gate labels to new gate labels or the labels of the gates that replace them
+    visited = set()  # Stores the labels of already visited gates
+    replace_map: dict[str, str] = {}  # Maps original gate labels to new gate labels
 
     def _dfs(gate_label):
         if gate_label in visited:
-            return gate_map.get(gate_label)
+            return replace_map.get(gate_label)
         visited.add(gate_label)
 
         original_gate = circuit.get_gate(gate_label)
@@ -49,20 +57,20 @@ def remove_leaves_and_double_not(circuit: Circuit) -> Circuit:
             operand_gate = circuit.get_gate(operand_label)
             if operand_gate.gate_type == NOT:
                 result_label = _dfs(operand_gate.operands[0])
-                gate_map[gate_label] = result_label
+                replace_map[gate_label] = result_label
                 return result_label
             else:
                 operands.append(_dfs(operand_label))
         else:
             operands = [_dfs(op_label) for op_label in original_gate.operands]
 
-        if gate_label not in gate_map:
+        if gate_label not in replace_map:
             new_gate_label = gate_label
             new_gate = Gate(new_gate_label, original_gate.gate_type, tuple(operands))
             new_circuit.add_gate(new_gate)
-            gate_map[gate_label] = new_gate_label
+            replace_map[gate_label] = new_gate_label
 
-        return gate_map[gate_label]
+        return replace_map[gate_label]
 
     for output_label in circuit.outputs:
         output_gate_label = _dfs(output_label)
@@ -71,39 +79,9 @@ def remove_leaves_and_double_not(circuit: Circuit) -> Circuit:
     return new_circuit
 
 
-def _evaluate_circuit(circuit: Circuit, inputs: list[bool]) -> dict:
-    """
-    Evaluate the circuit for a given set of input values and computes the output for all
-    gates. This function ensures all gates are calculated only once by caching their
-    values.
-
-    :param circuit: - the circuit to be evaluated
-    :param inputs: - list of boolean inputs corresponding to the circuit inputs
-    :return: - a dictionary with gate labels as keys and their computed values as values
-
-    """
-    gate_values = {gate: None for gate in circuit.gates}
-    for gate_label, value in zip(circuit.inputs, inputs):
-        gate_values[gate_label] = value
-
-    def compute_gate_value(gate_label):
-        if gate_values[gate_label] is not None:
-            return gate_values[gate_label]
-        gate = circuit.get_gate(gate_label)
-        operand_values = [compute_gate_value(operand) for operand in gate.operands]
-        gate_values[gate_label] = gate.operator(*operand_values)
-
-        return gate_values[gate_label]
-
-    for gate_label in circuit.gates:
-        compute_gate_value(gate_label)
-
-    return gate_values
-
-
 def _find_equivalent_gates(circuit: Circuit) -> list[list[str]]:
     """
-    Identifies and groups equivalent gates within the circuit based on their truth
+    Identifies and groups equivalent gates within the circuit based on their full truth
     tables.
 
     :param circuit: - the circuit to analyze for equivalent gates
@@ -115,8 +93,10 @@ def _find_equivalent_gates(circuit: Circuit) -> list[list[str]]:
     gate_truth_tables = collections.defaultdict(list)
 
     for inputs in input_combinations:
-        gate_values = _evaluate_circuit(circuit, inputs)
-
+        assignment = {
+            input_label: value for input_label, value in zip(circuit.inputs, inputs)
+        }
+        gate_values = circuit.evaluate_circuit(assignment)
         for gate_label, output in gate_values.items():
             gate_truth_tables[gate_label].append(output)
 
@@ -129,14 +109,6 @@ def _find_equivalent_gates(circuit: Circuit) -> list[list[str]]:
     ]
 
     return equivalent_groups
-
-
-def _replace_gate(old_label, new_label, circuit):
-    for gate in circuit.gates.values():
-        new_operands = [new_label if x == old_label else x for x in gate.operands]
-        if new_operands != gate.operands:
-            updated_gate = Gate(gate.label, gate.gate_type, tuple(new_operands))
-            circuit.replace_gate(gate.label, updated_gate)
 
 
 def _replace_equivalent_gates(
@@ -152,9 +124,7 @@ def _replace_equivalent_gates(
     :return: - a new circuit with equivalent gates replaced
 
     """
-    replacement_map = (
-        {}
-    )  # Maps each gate label that needs to be replaced to the label of the gate that will replace it
+    replacement_map = {}  # Maps original gate labels to new gate labels
     new_circuit = Circuit()
 
     for group in equivalent_groups:
@@ -180,13 +150,13 @@ def _replace_equivalent_gates(
     return new_circuit
 
 
-def simplify_by_deleting_equivalent_gates(circuit: Circuit) -> Circuit:
+def delete_equivalent_gates(circuit: Circuit) -> Circuit:
     """
     Finds groups of equivalent gates using the full truth table comparison and replaces
     them with a single gate, updating all the references to the old ones.
 
     Warning: the execution time grows exponentially as the number of inputs increases.
-    For circuits with more than 20 inputs it is recommended to use merge_same_gates().
+    For circuits with more than 20 inputs it is recommended to use merge_same_successors().
 
     :param circuit: - the original circuit to be simplified
     :return: - new simplified version of the circuit
@@ -196,7 +166,7 @@ def simplify_by_deleting_equivalent_gates(circuit: Circuit) -> Circuit:
     return _replace_equivalent_gates(circuit, equivalent_gate_groups)
 
 
-def merge_same_gates(circuit: Circuit, num_samples: int = 1000) -> Circuit:
+def merge_same_successors(circuit: Circuit, num_samples: int = 1000) -> Circuit:
     """
     Simplifies the circuit by first grouping gates based on partial truth tables using
     random input samples, then merging gates with the same operation and operands.
@@ -211,7 +181,10 @@ def merge_same_gates(circuit: Circuit, num_samples: int = 1000) -> Circuit:
         return random.choice([False, True])
 
     def get_partial_truth_table(circuit, inputs):
-        gate_values = _evaluate_circuit(circuit, inputs)
+        assignment = {
+            input_label: value for input_label, value in zip(circuit.inputs, inputs)
+        }
+        gate_values = circuit.evaluate_circuit(assignment)
         return {gate: gate_values[gate] for gate in circuit.gates}
 
     def group_gates_by_partial_truth_tables(circuit, num_samples):
@@ -230,7 +203,7 @@ def merge_same_gates(circuit: Circuit, num_samples: int = 1000) -> Circuit:
         return [group for group in grouped_gates.values() if len(group) > 1]
 
     def merge_identical_gates_in_group(circuit, group):
-        replacement_map = {}
+        replacement_map = {}  # Maps original gate labels to new gate labels
         while True:
             merged = False
             new_group = []
@@ -240,7 +213,7 @@ def merge_same_gates(circuit: Circuit, num_samples: int = 1000) -> Circuit:
                     continue
                 gate = circuit.get_gate(gate_label)
                 found_duplicate = False
-                for other_gate_label in group[i + 1:]:
+                for other_gate_label in group[i + 1 :]:
                     other_gate = circuit.get_gate(other_gate_label)
                     if gate.gate_type == other_gate.gate_type and set(
                         gate.operands
@@ -274,3 +247,124 @@ def merge_same_gates(circuit: Circuit, num_samples: int = 1000) -> Circuit:
         circuit = merge_identical_gates_in_group(circuit, group)
 
     return circuit
+
+
+def remove_identities(circuit: Circuit) -> Circuit:
+    """
+    Simplifies the circuit by removing identities. Traverses the circuit and checks for
+    identity conditions based on an internal dictionary.
+
+    :param circuit: - the original circuit to be simplified
+    :return: - new simplified version of the circuit
+
+    """
+
+    def get_sorted_gate_types(circuit: Circuit) -> list:
+        return sorted(str(gate.gate_type) for gate in circuit.gates.values())
+
+    while True:
+        original_gate_types = get_sorted_gate_types(circuit)
+
+        new_circuit = Circuit()
+        replace_map = {}  # Maps original gate labels to new gate labels
+        supported_identity_operations = {AND, NAND, XOR, NXOR, OR}
+        identities = {
+            AND: {
+                frozenset([0, 0]): 'NOT_IDENTITY',  # AND(NOT(X), NOT(X)) = NOT(X)
+                frozenset([0, 1]): 'ALWAYS_FALSE',  # AND(X, NOT(X)) = 0
+                frozenset([1, 1]): 'IDENTITY',  # AND(X, X) = X
+            },
+            NAND: {
+                frozenset([0, 0]): 'IDENTITY',  # NAND(NOT(X), NOT(X)) = X
+                frozenset([0, 1]): 'ALWAYS_TRUE',  # NAND(X, NOT(X)) = 1
+                frozenset([1, 1]): 'NOT_IDENTITY',  # NAND(X, X) = NOT(X)
+            },
+            XOR: {
+                frozenset([0, 0]): 'ALWAYS_FALSE',  # XOR(NOT(X), NOT(X)) = 0
+                frozenset([0, 1]): 'ALWAYS_TRUE',  # XOR(X, NOT(X)) = 1
+                frozenset([1, 1]): 'ALWAYS_FALSE',  # XOR(X, X) = 0
+            },
+            NXOR: {
+                frozenset([0, 0]): 'ALWAYS_TRUE',  # NXOR(NOT(X), NOT(X)) = 1
+                frozenset([0, 1]): 'ALWAYS_FALSE',  # NXOR(X, NOT(X)) = 0
+                frozenset([1, 1]): 'ALWAYS_TRUE',  # NXOR(X, X) = 1
+            },
+            OR: {
+                frozenset([0, 0]): 'NOT_IDENTITY',  # OR(NOT(X), NOT(X)) = NOT(X)
+                frozenset([0, 1]): 'ALWAYS_TRUE',  # OR(X, NOT(X)) = 1
+                frozenset([1, 1]): 'IDENTITY',  # OR(X, X) = X
+            },
+        }
+
+        def find_ancestor(gate_label):
+            not_count = 1  # Add initial 1 to label it as not inverted in 1
+            current_label = gate_label
+            while circuit.get_gate(current_label).gate_type == NOT:
+                not_count += 1
+                current_label = circuit.get_gate(current_label).operands[0]
+            return current_label, not_count % 2
+
+        for gate_label, gate in circuit.gates.items():
+            if gate.gate_type in supported_identity_operations:
+                ancestor_data = [find_ancestor(op) for op in gate.operands]
+
+                if len(ancestor_data) == 2:
+                    ancestor_labels = [ancestor_data[0][0], ancestor_data[1][0]]
+                    ancestor_states = [
+                        circuit.get_gate(label).gate_type for label in ancestor_labels
+                    ]
+
+                    if set(ancestor_states) in [
+                        {ALWAYS_TRUE},
+                        {ALWAYS_FALSE},
+                        {ALWAYS_TRUE, ALWAYS_FALSE},
+                    ]:
+                        values = []
+                        for i, (label, not_count) in enumerate(ancestor_data):
+                            value = ancestor_states[i] == ALWAYS_TRUE
+                            if not_count % 2 == 0:
+                                value = not value
+                            values.append(value)
+                        result_value = gate.operator(*values)
+                        new_gate_type = ALWAYS_TRUE if result_value else ALWAYS_FALSE
+                        new_gate = Gate(gate_label, new_gate_type, ())
+                        new_circuit.add_gate(new_gate)
+                        replace_map[gate_label] = gate_label
+
+                if ancestor_data[0][0] == ancestor_data[1][0]:
+                    operation_identity = identities.get(gate.gate_type)
+                    if operation_identity:
+                        identity_result = operation_identity.get(
+                            frozenset([ancestor_data[0][1], ancestor_data[1][1]])
+                        )
+
+                        if identity_result == 'IDENTITY':
+                            replace_map[gate_label] = ancestor_data[0][0]
+                        elif identity_result == 'NOT_IDENTITY':
+                            new_gate = Gate(gate_label, NOT, (ancestor_data[0][0],))
+                            new_circuit.add_gate(new_gate)
+                            replace_map[gate_label] = gate_label
+                        elif identity_result == 'ALWAYS_TRUE':
+                            new_gate = Gate(gate_label, ALWAYS_TRUE, ())
+                            new_circuit.add_gate(new_gate)
+                            replace_map[gate_label] = gate_label
+                        elif identity_result == 'ALWAYS_FALSE':
+                            new_gate = Gate(gate_label, ALWAYS_FALSE, ())
+                            new_circuit.add_gate(new_gate)
+                            replace_map[gate_label] = gate_label
+
+            if gate_label not in new_circuit.gates:
+                new_operands = tuple(replace_map.get(op, op) for op in gate.operands)
+                new_gate = Gate(gate_label, gate.gate_type, new_operands)
+                new_circuit.add_gate(new_gate)
+                replace_map[gate_label] = gate_label
+
+        for output_label in circuit.outputs:
+            output_gate_label = replace_map.get(output_label, output_label)
+            new_circuit.mark_as_output(output_gate_label)
+        new_gate_types = get_sorted_gate_types(new_circuit)
+        if original_gate_types == new_gate_types:
+            break
+        circuit = new_circuit
+
+    return new_circuit
