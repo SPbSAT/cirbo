@@ -8,7 +8,7 @@ Python >=3.9 is used to cover all currently
 
 1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
 1. Init and update repository submodules `git submodule update --init --recursive`
-1. Build extensions locally by running `poetry build` 
+1. Build extensions locally by running `poetry build`
 1. Setup virtual environment by running `poetry install`
 1. Set your env to the oldest supported Python version `poetry env use 3.9`
 1. Enable virtual environment using `poetry shell`
@@ -46,23 +46,63 @@ export of unwanted objects (e.g. export of imported objects).
 (e.g. `import itertools`).
 7. For package `typing` shortening `tp` should be used (`import typing as tp`).
 
+## Checks
+
+`mypy`, `flake8`, `pytest`, `black`, `docformatter` and `usort` are main checks
+used in CI.
+
+Those checks are available in poetry environment and can be invoked at once
+locally using tool script:
+
+`python ./tools/check.py`
+
+If everything is good, output is expected to be like the following:
+
+```
+(boolean-circuit-tool-py3.9) boolean-circuit-tool$ python ./tools/check.py
+1. MYPY CHECK SUCCEED
+2. FLAKE8 CHECK SUCCEED
+3. PYTEST CHECK SUCCEED
+4. USORT CHECK SUCCEED
+5. DOCFORMATTER CHECK SUCCEED
+6. BLACK CHECK SUCCEED
+```
+
+shorten outputs mode can also be activated using flag `-s`:
+
+`python ./tools/check.py -s`
+
 ## Formatters
 
 `black`, `docformatter` and `usort` are available in poetry environment
 and can be used to format code during development.
 
-All of them can be run at once using:
+All of them can be run at once using tool script:
 
 `python ./tools/formatter.py`
 
 ## Tests
 
-Tests are written and executed using `pytest`. 
+Tests are written and executed using `pytest`.
 To execute tests run `poetry run pytest`.
 
 Tests are located at the `tests` subdirectory, and should be written for all
 functionalities of the package. Also, directory structure of `tests` should
 repeat structure of main `boolean-circuit-tool` package.
+
+## Pre-commit checks
+
+`pre-commit` hooks are currently used to run required CI checks before each
+commit locally, to not spend cloud CI quota.
+
+To force-commit without pre-commit checks use `--no-verify` option, for
+example: `git commit -m "my fixes" --no-verify`.
+
+To update git hooks based on current `.pre-commit-config.yaml` run
+`pre-commit install`.
+
+To run all current `pre-commit` checks against staged files use `pre-commit run`.
+To run it against all files use `pre-commit run --all-files`.
 
 ## Updating dependencies
 
