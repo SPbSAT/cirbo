@@ -6,12 +6,14 @@
 Python >=3.9 is used to cover all currently
 [maintained versions](https://devguide.python.org/versions/).
 
-1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
+1. Install dev version of `python3.9` (e.g. `sudo apt install python3.9-dev`)
 1. Init and update repository submodules `git submodule update --init --recursive`
+1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
 1. Build extensions locally by running `poetry build`
 1. Setup virtual environment by running `poetry install`
 1. Set your env to the oldest supported Python version `poetry env use 3.9`
 1. Enable virtual environment using `poetry shell`
+1. Install pre-commit hooks using `pre-commit intsall`
 
 Note: probably one will need to restart an IDE after extensions are built and
 installed to refresh its index and stubs.
