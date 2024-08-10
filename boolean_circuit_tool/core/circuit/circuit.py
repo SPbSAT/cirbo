@@ -17,6 +17,7 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateAlreadyExistsError,
     CircuitGateIsAbsentError,
     CircuitIsCyclicalError,
+    CircuitValidationError,
     CreateBlockError,
     GateDoesntExistError,
     GateNotInputError,
@@ -107,7 +108,7 @@ class Block:
     def circuit_owner(self) -> 'Circuit':
         return self._owner
 
-    def rename_gate(self, old_label: Label, new_label: Label) -> tp_ext.Self:
+    def _rename_gate(self, old_label: Label, new_label: Label) -> tp_ext.Self:
         """
         Rename gate.
 
@@ -130,7 +131,7 @@ class Block:
 
         return self
 
-    def delete_gate(self, gate_label: Label) -> tp_ext.Self:
+    def _delete_gate(self, gate_label: Label) -> tp_ext.Self:
         """
         Delete gate from block.
 
@@ -362,6 +363,8 @@ class Circuit(BooleanFunction):
         :return: list of gates which use given gate as operand.
 
         """
+        if label not in self._gates:
+            raise GateDoesntExistError()
         return self._gate_to_users[label]
 
     def get_block(self, block_label: Label) -> Block:
@@ -546,23 +549,24 @@ class Circuit(BooleanFunction):
 
     def connect_circuit(
         self,
+        other: tp_ext.Self,
         this_connectors: tp.Sequence[Label],
-        circuit: tp_ext.Self,
         other_connectors: tp.Sequence[Label],
         *,
         right_connect: bool = False,
-        circuit_name: Label = '',
+        name: Label = '',
         add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
-        Connecting a new circuit to the base one, where `other_connectors` (gates of the
-        new circuit) will be connecting to `this_connectors` (gates of the base
-        circuit). All inputs and outputs of the new circuit which not be in connecting
-        are added to the inputs and outputs of the base circuit, respectively.
+        Connecting a new circuit (`other`) to the base one, where `other_connectors`
+        (gates of the new circuit) will be connecting to `this_connectors` (gates of the
+        base circuit). All inputs and outputs of the new circuit which not be in
+        connecting are added to the inputs and outputs of the base circuit,
+        respectively.
 
+        :param other: a new circuit that should expand the basic one
         :param this_connectors: list of gates from the base circuit that will be connecting
             with new circuit
-        :param circuit: a new circuit that should expand the basic one
         :param other_connectors: list of gates from the new circuit that will be connecting
             with the base one
         :param right_connect:
@@ -571,18 +575,18 @@ class Circuit(BooleanFunction):
             (from `self`).
             If `right_connect` == True, then `this_connectors` (from `self`) must be inputs,
             after connecting they will be replaced by `other_connectors` (from `circuit`).
-        :param circuit_name: new block's name. If `circuit_name` is an empty string, then
+        :param name: new block's name. If `name` is an empty string, then
             no new block is created, and the gates are added to the circuit without a prefix
         :param add_prefix: If add_prefix == False, than the gates are added to the circuit
-            without a prefix, and it doesn't matter if `circuit_name` is an empty string or
+            without a prefix, and it doesn't matter if `name` is an empty string or
             not. If add_prefix == True, the gates are added to the circuit with a prefix only
-            if `circuit_name` is not an empty string
+            if `name` is not an empty string
         :return: this circuit after modification
 
         """
-        check_block_doesnt_exist(circuit_name, self)
+        check_block_doesnt_exist(name, self)
         check_gates_exist(this_connectors, self)
-        check_gates_exist(other_connectors, circuit)
+        check_gates_exist(other_connectors, other)
         if len(this_connectors) != len(other_connectors):
             raise CreateBlockError()
         if right_connect:
@@ -591,12 +595,14 @@ class Circuit(BooleanFunction):
                     raise CreateBlockError()
         else:
             for gate_label in other_connectors:
-                if circuit.get_gate(gate_label).gate_type != INPUT:
+                if other.get_gate(gate_label).gate_type != INPUT:
                     raise CreateBlockError()
 
+        copy_order_self_inputs = [_input for _input in self._inputs]
+
         prefix: str = ''
-        if circuit_name != '' and add_prefix:
-            prefix = circuit_name + '@'
+        if name != '' and add_prefix:
+            prefix = name + '@'
 
         mapping: dict[Label, Label] = {}
         for i, old_name in enumerate(other_connectors):
@@ -604,7 +610,7 @@ class Circuit(BooleanFunction):
 
         old_to_new_names = copy.copy(mapping)
         gates_for_block: set[Label] = set()
-        for gate in circuit.top_sort(inverse=True):
+        for gate in other.top_sort(inverse=True):
             if gate.label not in mapping:
                 new_label: Label = prefix + gate.label
                 old_to_new_names[gate.label] = new_label
@@ -619,29 +625,37 @@ class Circuit(BooleanFunction):
                     gates_for_block.add(new_label)
             else:
                 if right_connect:
-                    new_label = old_to_new_names[gate.label]
-                    if (
-                        self.get_gate(new_label).gate_type == INPUT
-                        and gate.gate_type != INPUT
-                    ):
-                        self._inputs.remove(new_label)
-                    self._gates[new_label] = Gate(
-                        label=new_label,
+                    self._gates[old_to_new_names[gate.label]] = Gate(
+                        label=old_to_new_names[gate.label],
                         gate_type=gate.gate_type,
                         operands=tuple(
                             old_to_new_names[operand] for operand in gate.operands
                         ),
                     )
 
-        self._outputs = [
-            output for output in self._outputs if output not in this_connectors
-        ] + [
-            old_to_new_names[output]
-            for output in circuit.outputs
-            if output not in other_connectors
-        ]
+        self.set_outputs(
+            [output for output in self._outputs if output not in this_connectors]
+            + [
+                old_to_new_names[output]
+                for output in other.outputs
+                if output not in other_connectors
+            ]
+        )
 
-        for block in circuit.blocks.values():
+        self.set_inputs(
+            [
+                _input
+                for _input in copy_order_self_inputs
+                if self._gates[_input].gate_type == INPUT
+            ]
+            + [
+                old_to_new_names[_input]
+                for _input in other.inputs
+                if _input not in other_connectors
+            ]
+        )
+
+        for block in other.blocks.values():
             new_block_name = prefix + block.name
             check_block_doesnt_exist(new_block_name, self)
             self._blocks[new_block_name] = Block(
@@ -652,31 +666,121 @@ class Circuit(BooleanFunction):
                 outputs=[old_to_new_names[output] for output in block.outputs],
             )
 
-        if circuit_name != '':
+        if name != '':
             new_block = Block(
-                name=circuit_name,
+                name=name,
                 owner=self,
-                inputs=[old_to_new_names[_input] for _input in circuit.inputs],
+                inputs=[old_to_new_names[_input] for _input in other.inputs],
                 gates=list(gates_for_block),
-                outputs=[old_to_new_names[output] for output in circuit.outputs],
+                outputs=[old_to_new_names[output] for output in other.outputs],
             )
 
             self._blocks[new_block.name] = new_block
 
         return self
 
+    def left_connect_circuit(
+        self,
+        other: tp_ext.Self,
+        this_connectors: tp.Sequence[Label],
+        *,
+        name: Label = '',
+        add_prefix: bool = True,
+    ) -> tp_ext.Self:
+        """
+        Connecting a new circuit (`other`) to the base one, where inputs from `other`
+        will be connecting to `this_connectors` (gates of the base circuit). All outputs
+        of the new circuit which not be in connecting are added to the outputs of the
+        base circuit.
+
+        :param other: a new circuit that should expand the basic one
+        :param this_connectors: list of gates from the base circuit that will be connecting
+            with new circuit
+        :param right_connect:
+            If `right_connect` == False, it means that `other_connectors` (from `circuit`)
+            must be inputs, after connecting they will be replaced by `this_connectors`
+            (from `self`).
+            If `right_connect` == True, then `this_connectors` (from `self`) must be inputs,
+            after connecting they will be replaced by `other_connectors` (from `circuit`).
+        :param name: new block's name. If `name` is an empty string, then
+            no new block is created, and the gates are added to the circuit without a prefix
+        :param add_prefix: If add_prefix == False, than the gates are added to the circuit
+            without a prefix, and it doesn't matter if `name` is an empty string or
+            not. If add_prefix == True, the gates are added to the circuit with a prefix only
+            if `name` is not an empty string
+        :return: this circuit after modification
+
+        """
+
+        return self.connect_circuit(
+            other,
+            this_connectors,
+            other.inputs,
+            right_connect=False,
+            name=name,
+            add_prefix=add_prefix,
+        )
+
+    def right_connect_circuit(
+        self,
+        other: tp_ext.Self,
+        other_connectors: tp.Sequence[Label],
+        *,
+        name: Label = '',
+        add_prefix: bool = True,
+    ) -> tp_ext.Self:
+        """
+        Connecting a new circuit (`other`) to the base one, where `other_connectors`
+        (gates of the new circuit) will be connecting to inputs from base circuit. All
+        inputs and outputs of the new circuit which not be in connecting are added to
+        the inputs and outputs of the base circuit, respectively.
+
+        :param other: a new circuit that should expand the basic one
+        :param other_connectors: list of gates from the new circuit that will be connecting
+            with the base one
+        :param right_connect:
+            If `right_connect` == False, it means that `other_connectors` (from `circuit`)
+            must be inputs, after connecting they will be replaced by `this_connectors`
+            (from `self`).
+            If `right_connect` == True, then `this_connectors` (from `self`) must be inputs,
+            after connecting they will be replaced by `other_connectors` (from `circuit`).
+        :param name: new block's name. If `name` is an empty string, then
+            no new block is created, and the gates are added to the circuit without a prefix
+        :param add_prefix: If add_prefix == False, than the gates are added to the circuit
+            without a prefix, and it doesn't matter if `name` is an empty string or
+            not. If add_prefix == True, the gates are added to the circuit with a prefix only
+            if `name` is not an empty string
+        :return: this circuit after modification
+
+        """
+
+        return self.connect_circuit(
+            other,
+            self.inputs,
+            other_connectors,
+            right_connect=True,
+            name=name,
+            add_prefix=add_prefix,
+        )
+
     def extend_circuit(
         self,
-        circuit: tp_ext.Self,
+        other: tp_ext.Self,
         *,
+        this_connectors: tp.Optional[tp.Sequence[Label]] = None,
+        other_connectors: tp.Optional[tp.Sequence[Label]] = None,
         right_connect: bool = False,
-        circuit_name: Label = '',
+        name: Label = '',
         add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
         Extending a circuit from the new one.
 
-        :param circuit: a new circuit that should expand the basic one
+        :param other: a new circuit that should expand the basic one
+        :param this_connectors: list of gates from the base circuit that will be connecting
+            with new circuit
+        :param other_connectors: list of gates from the new circuit that will be connecting
+            with the base one
         :param right_connect: if right_connect == False, this means that the inputs
             of `circuit` will be replaced by the outputs of `self`, otherwise,
             then the outputs of `circuit` will become inputs for the `self`.
@@ -689,41 +793,48 @@ class Circuit(BooleanFunction):
         :return: this circuit after modification
 
         """
+
+        if this_connectors is None:
+            this_connectors = self.inputs if right_connect else self.outputs
+        if other_connectors is None:
+            other_connectors = other.outputs if right_connect else other.inputs
+
         return self.connect_circuit(
-            self.inputs if right_connect else self.outputs,
-            circuit,
-            circuit.outputs if right_connect else circuit.inputs,
+            other,
+            this_connectors,
+            other_connectors,
             right_connect=right_connect,
-            circuit_name=circuit_name,
+            name=name,
             add_prefix=add_prefix,
         )
 
     def add_circuit(
         self,
-        circuit: tp_ext.Self,
+        other: tp_ext.Self,
         *,
-        circuit_name: Label = '',
+        name: Label = '',
         add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
-        Extending a new circuit to the base one, where the inputs and outputs of the new
-        circuit are added to the inputs and outputs of the base circuit, respectively.
+        Extending a new circuit (`other`) to the base one, where the inputs and outputs
+        of the new circuit are added to the inputs and outputs of the base circuit,
+        respectively.
 
-        :param circuit: a new circuit that should expand the basic one
-        :param circuit_name: new block's name. If `circuit_name` is an empty string, then
+        :param other: a new circuit that should expand the basic one
+        :param name: new block's name. If `name` is an empty string, then
             no new block is created, and the gates are added to the circuit without a prefix
         :param add_prefix: If add_prefix == False, than the gates are added to the circuit
-            without a prefix, and it doesn't matter if `circuit_name` is an empty string or not.
+            without a prefix, and it doesn't matter if `name` is an empty string or not.
             If add_prefix == True, the gates are added to the circuit with a prefix only if
-            `circuit_name` is not an empty string
+            `name` is not an empty string
         :return: this circuit after modification
 
         """
         return self.connect_circuit(
+            other=other,
             this_connectors=[],
-            circuit=circuit,
             other_connectors=[],
-            circuit_name=circuit_name,
+            name=name,
             add_prefix=add_prefix,
         )
 
@@ -773,9 +884,10 @@ class Circuit(BooleanFunction):
             operand_users[operand_users.index(old_label)] = new_label
 
         del self._gates[old_label]
+        del self._gate_to_users[old_label]
 
         for block in self.blocks.values():
-            block.rename_gate(old_label, new_label)
+            block._rename_gate(old_label, new_label)
 
         return self
 
@@ -788,6 +900,14 @@ class Circuit(BooleanFunction):
         """Set new outputs in the circuit."""
         check_gates_exist(outputs, self)
         self._outputs = [output for output in outputs]
+
+    def set_inputs(self, inputs: tp.Sequence[Label]) -> None:
+        """Set new inputs in the circuit."""
+        check_gates_exist(inputs, self)
+        for gate in self.gates.values():
+            if gate.gate_type == INPUT and gate.label not in inputs:
+                raise CircuitValidationError()
+        self._inputs = [_input for _input in inputs]
 
     def add_inputs(self, inputs: tp.Sequence[Label]) -> None:
         """Add new inputs in the circuit."""
@@ -1362,7 +1482,7 @@ class Circuit(BooleanFunction):
             self._outputs = [output for output in self.outputs if output != gate_label]
 
         for block in self.blocks.values():
-            block.delete_gate(gate_label)
+            block._delete_gate(gate_label)
 
         return self
 
@@ -1529,6 +1649,7 @@ class Circuit(BooleanFunction):
                 operands=copy.copy(gate.operands),
             )
 
+        new_circuit.set_inputs(self.inputs)
         new_circuit.set_outputs(self.outputs)
 
         for block in self.blocks.values():

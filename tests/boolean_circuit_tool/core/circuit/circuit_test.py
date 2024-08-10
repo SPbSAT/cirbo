@@ -4,6 +4,7 @@ import pytest
 
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.exceptions import (
+    CircuitGateAlreadyExistsError,
     CircuitGateIsAbsentError,
     CircuitValidationError,
     CreateBlockError,
@@ -79,6 +80,10 @@ def test_create_circuit():
     assert instance.outputs == ['C', 'A', 'C', 'A']
     assert instance.output_size == 4
     assert instance.all_indexes_of_output('C') == [0, 2]
+
+    with pytest.raises(GateDoesntExistError):
+        instance.all_indexes_of_output('V')
+
     assert instance.index_of_output('A') == 1
 
     assert instance.gates == {
@@ -176,6 +181,8 @@ def test_rename_gate():
     assert instance.outputs == ['C']
     assert instance.input_size == 1
     assert instance.output_size == 1
+    with pytest.raises(GateDoesntExistError):
+        assert instance.get_gate_users('A')
 
     assert instance._gates.keys() == {'V', 'B', 'C'}
     assert instance.get_gate('V').label == 'V'
@@ -276,9 +283,10 @@ def test_block():
     C3.mark_as_output('F')
 
     manipulateC0 = copy.copy(C0)
+    assert manipulateC0.inputs == ['A', 'B']
 
     # this_connectors=outputs
-    manipulateC0.connect_circuit(['C'], C1, ['A'], circuit_name='C1')
+    manipulateC0.connect_circuit(C1, ['C'], ['A'], name='C1')
     assert manipulateC0.gates == {
         'A': Gate('A', INPUT),
         'B': Gate('B', INPUT),
@@ -286,11 +294,11 @@ def test_block():
         'C1@B': Gate('C1@B', INPUT),
         'C1@C': Gate('C1@C', AND, ('C', 'C1@B')),
     }
-    assert manipulateC0.inputs == ['B', 'A', 'C1@B']
+    assert manipulateC0.inputs == ['A', 'B', 'C1@B']
 
     # this_connectors=inputs
     manipulateC1 = copy.copy(C0)
-    manipulateC1.connect_circuit(['A'], C1, ['B'], circuit_name='C1')
+    manipulateC1.connect_circuit(C1, ['A'], ['B'], name='C1')
     assert manipulateC1.gates == {
         'A': Gate('A', INPUT),
         'B': Gate('B', INPUT),
@@ -298,11 +306,11 @@ def test_block():
         'C1@A': Gate('C1@A', INPUT),
         'C1@C': Gate('C1@C', AND, ('C1@A', 'A')),
     }
-    assert manipulateC1.inputs == ['B', 'A', 'C1@A']
+    assert manipulateC1.inputs == ['A', 'B', 'C1@A']
 
     # this_connectors=mix
     manipulateC2 = copy.copy(C2)
-    manipulateC2.connect_circuit(['B', 'D', 'F'], C3, C3.inputs, circuit_name='C3')
+    manipulateC2.left_connect_circuit(C3, ['B', 'D', 'F'], name='C3')
     assert manipulateC2.gates == {
         'A': Gate('A', INPUT),
         'B': Gate('B', INPUT),
@@ -314,18 +322,17 @@ def test_block():
         'C3@E': Gate('C3@E', AND, ('F', 'C3@D')),
         'C3@F': Gate('C3@F', AND, ('C3@D', 'C3@E')),
     }
-    assert manipulateC2.inputs == ['C', 'B', 'A']
+    assert manipulateC2.inputs == ['A', 'B', 'C']
 
     with pytest.raises(CreateBlockError):
-        manipulateC0.connect_circuit(
-            ['C'], C1, ['A'], right_connect=True, circuit_name='C2'
-        )
+        manipulateC0.connect_circuit(C1, ['C'], ['A'], right_connect=True, name='C2')
+
+    with pytest.raises(CreateBlockError):
+        manipulateC0.connect_circuit(C1, ['A'], ['C'], right_connect=False, name='C2')
 
     # other_connerctors=outputs
     manipulateC3 = copy.copy(C0)
-    manipulateC3.connect_circuit(
-        ['A'], C1, ['C'], right_connect=True, circuit_name='C1'
-    )
+    manipulateC3.connect_circuit(C1, ['A'], ['C'], right_connect=True, name='C1')
     assert manipulateC3.gates == {
         'A': Gate('A', AND, ('C1@A', 'C1@B')),
         'B': Gate('B', INPUT),
@@ -333,13 +340,11 @@ def test_block():
         'C1@A': Gate('C1@A', INPUT),
         'C1@B': Gate('C1@B', INPUT),
     }
-    assert manipulateC3.inputs == ['B', 'C1@B', 'C1@A']
+    assert manipulateC3.inputs == ['B', 'C1@A', 'C1@B']
 
     # other_connerctors=inputs
     manipulateC4 = copy.copy(C0)
-    manipulateC4.connect_circuit(
-        ['B'], C1, ['A'], right_connect=True, circuit_name='C1'
-    )
+    manipulateC4.connect_circuit(C1, ['B'], ['A'], right_connect=True, name='C1')
     assert manipulateC4.gates == {
         'A': Gate('A', INPUT),
         'B': Gate('B', INPUT),
@@ -347,12 +352,16 @@ def test_block():
         'C1@B': Gate('C1@B', INPUT),
         'C1@C': Gate('C1@C', AND, ('B', 'C1@B')),
     }
-    assert manipulateC4.inputs == ['B', 'A', 'C1@B']
+    assert manipulateC4.inputs == ['A', 'B', 'C1@B']
 
     # other_connerctors=mix
     manipulateC5 = copy.copy(C2)
+    with pytest.raises(CreateBlockError):
+        manipulateC5.connect_circuit(
+            C3, ['A', 'B'], ['B', 'D', 'F'], right_connect=True, name='C3'
+        )
     manipulateC5.connect_circuit(
-        ['A', 'B', 'C'], C3, ['B', 'D', 'F'], right_connect=True, circuit_name='C3'
+        C3, ['A', 'B', 'C'], ['B', 'D', 'F'], right_connect=True, name='C3'
     )
     assert manipulateC5.gates == {
         'A': Gate('A', INPUT),
@@ -365,13 +374,13 @@ def test_block():
         'C3@C': Gate('C3@C', INPUT),
         'C3@E': Gate('C3@E', AND, ('C3@C', 'B')),
     }
-    assert manipulateC5.inputs == ['A', 'C3@C', 'C3@A']
+    assert manipulateC5.inputs == ['A', 'C3@A', 'C3@C']
 
     manipulateC6 = copy.copy(C0)
     manipulateC6.make_block_from_slice('inp', C0.inputs, C0.inputs)
     assert manipulateC6.get_block('inp').gates == []
-    manipulateC6.connect_circuit(
-        manipulateC6.get_block('inp').inputs, C1, C1.inputs, circuit_name='C1'
+    manipulateC6.left_connect_circuit(
+        C1, manipulateC6.get_block('inp').inputs, name='C1'
     )
     assert manipulateC6.gates == {
         'A': Gate('A', INPUT),
@@ -379,7 +388,63 @@ def test_block():
         'C': Gate('C', OR, ('A', 'B')),
         'C1@C': Gate('C1@C', AND, ('A', 'B')),
     }
-    assert manipulateC6.inputs == ['B', 'A']
+    assert manipulateC6.inputs == ['A', 'B']
+    manipulateC6.set_outputs(['C', 'C1@C'])
+
+    manipulateC7 = copy.copy(manipulateC6)
+    manipulateC7.extend_circuit(
+        manipulateC6,
+        this_connectors=['C1@C', 'C'],
+        other_connectors=['B', 'A'],
+        right_connect=False,
+        name='1',
+    )
+    assert manipulateC7.gates == {
+        'A': Gate('A', INPUT),
+        'B': Gate('B', INPUT),
+        'C': Gate('C', OR, ('A', 'B')),
+        'C1@C': Gate('C1@C', AND, ('A', 'B')),
+        '1@C': Gate('1@C', OR, ('C', 'C1@C')),
+        '1@C1@C': Gate('1@C1@C', AND, ('C', 'C1@C')),
+    }
+    assert manipulateC7.inputs == ['A', 'B']
+    assert manipulateC7.outputs == ['1@C', '1@C1@C']
+
+    manipulateC8 = copy.copy(manipulateC6)
+    manipulateC8.extend_circuit(
+        manipulateC6,
+        this_connectors=['B', 'A'],
+        other_connectors=['C1@C', 'C'],
+        right_connect=True,
+        name='1',
+    )
+    assert manipulateC8.gates == {
+        '1@A': Gate('1@A', INPUT),
+        '1@B': Gate('1@B', INPUT),
+        'C': Gate('C', OR, ('A', 'B')),
+        'C1@C': Gate('C1@C', AND, ('A', 'B')),
+        'A': Gate('A', OR, ('1@A', '1@B')),
+        'B': Gate('B', AND, ('1@A', '1@B')),
+    }
+    assert manipulateC8.inputs == ['1@A', '1@B']
+    assert manipulateC8.outputs == ['C', 'C1@C']
+
+    with pytest.raises(CircuitValidationError):
+        manipulateC8.right_connect_circuit(manipulateC6, manipulateC6.inputs)
+
+    manipulateC8.right_connect_circuit(manipulateC6, manipulateC6.inputs, name='2')
+    assert manipulateC8.gates == {
+        '1@A': Gate('1@A', INPUT),
+        '1@B': Gate('1@B', INPUT),
+        'C': Gate('C', OR, ('A', 'B')),
+        'C1@C': Gate('C1@C', AND, ('A', 'B')),
+        'A': Gate('A', OR, ('1@A', '1@B')),
+        'B': Gate('B', AND, ('1@A', '1@B')),
+        '2@C': Gate('2@C', OR, ('1@A', '1@B')),
+        '2@C1@C': Gate('2@C1@C', AND, ('1@A', '1@B')),
+    }
+    assert manipulateC8.inputs == ['1@A', '1@B']
+    assert manipulateC8.outputs == ['C', 'C1@C', '2@C', '2@C1@C']
 
 
 def test_block2():
@@ -405,29 +470,33 @@ def test_block2():
 
     C = Circuit()
 
-    C.add_circuit(C0, circuit_name='C0')
+    C.add_circuit(C0, name='C0')
     assert C.size == 3
     assert C.gates_number() == 1
-    assert C.inputs == ['C0@B', 'C0@A']
+    assert C.inputs == ['C0@A', 'C0@B']
     assert C.outputs == ['C0@C']
     assert C._gates.keys() == {'C0@A', 'C0@B', 'C0@C'}
     assert C.get_gate('C0@C').gate_type == OR
     assert C.get_gate('C0@C').operands == ('C0@A', 'C0@B')
 
+    assert C.get_block('C0').circuit_owner.inputs == ['C0@A', 'C0@B']
+    assert C.get_block('C0').circuit_owner.outputs == ['C0@C']
+    assert C.get_block('C0').circuit_owner._gates.keys() == {'C0@A', 'C0@B', 'C0@C'}
+
     C.make_block_from_slice('backup_C0', C.inputs, C.outputs)
     BackUpC0 = C.get_block('backup_C0').into_circuit()
     assert BackUpC0.size == 3
     assert BackUpC0.gates_number() == 1
-    assert BackUpC0.inputs == ['C0@B', 'C0@A']
+    assert BackUpC0.inputs == ['C0@A', 'C0@B']
     assert BackUpC0.outputs == ['C0@C']
     assert BackUpC0._gates.keys() == {'C0@A', 'C0@B', 'C0@C'}
     assert BackUpC0.get_gate('C0@C').gate_type == OR
     assert BackUpC0.get_gate('C0@C').operands == ('C0@A', 'C0@B')
 
-    C.extend_circuit(C1, circuit_name='C1')
+    C.extend_circuit(C1, name='C1')
     assert C.size == 6
     assert C.gates_number() == 3
-    assert C.inputs == ['C0@B', 'C0@A']
+    assert C.inputs == ['C0@A', 'C0@B']
     assert C.outputs == ['C1@C', 'C1@D']
     assert C.get_block('backup_C0').outputs == ['C0@C']
     assert C._gates.keys() == {'C0@A', 'C0@B', 'C0@C', 'C1@B', 'C1@C', 'C1@D'}
@@ -442,10 +511,10 @@ def test_block2():
     C.make_block_from_slice('backup_C0_C1', C.inputs, C.outputs)
     with pytest.raises(CreateBlockError):
         C.make_block_from_slice('make_B1', C.inputs[1:], ['C1@C'])
-    C.connect_circuit(C.outputs[1:], C2, C2.inputs[:1], circuit_name='C2')
+    C.connect_circuit(C2, C.outputs[1:], C2.inputs[:1], name='C2')
     assert C.size == 8
     assert C.gates_number() == 4
-    assert C.inputs == ['C0@B', 'C0@A', 'C2@B']
+    assert C.inputs == ['C0@A', 'C0@B', 'C2@B']
     assert C.outputs == ['C1@C', 'C2@C']
     assert C._gates.keys() == {
         'C0@A',
@@ -459,10 +528,10 @@ def test_block2():
     }
     C.make_block_from_slice('make_B1', C.inputs[:2], ['C1@C'])
 
-    C2.connect_circuit(C2.outputs, C, ['C0@A'], circuit_name='C')
+    C2.connect_circuit(C, C2.outputs, ['C0@A'], name='C')
     assert C2.size == 10
     assert C2.gates_number() == 5
-    assert C2.inputs == ['A', 'B', 'C@C2@B', 'C@C0@B']
+    assert C2.inputs == ['A', 'B', 'C@C0@B', 'C@C2@B']
     assert C2.outputs == ['C@C1@C', 'C@C2@C']
     assert C2.input_size == 4
     assert C2.output_size == 2
@@ -535,10 +604,10 @@ def test_block2():
     C3.add_gate(Gate('C', AND, ('A', 'B')))
     C3.mark_as_output('C')
 
-    C3.connect_circuit(C3.outputs, C, ['C0@A'], circuit_name='')
+    C3.connect_circuit(C, C3.outputs, ['C0@A'], name='')
     assert C3.size == 10
     assert C3.gates_number() == 5
-    assert C3.inputs == ['A', 'B', 'C2@B', 'C0@B']
+    assert C3.inputs == ['A', 'B', 'C0@B', 'C2@B']
     assert C3.outputs == ['C1@C', 'C2@C']
     assert C3.input_size == 4
     assert C3.output_size == 2
@@ -615,6 +684,9 @@ def test_block2():
         'make_B1',
     ]
 
+    with pytest.raises(CircuitGateAlreadyExistsError):
+        C3.rename_gate('C0@C', 'C2@C')
+
     C3.rename_gate('C0@C', 'my_favorite_gate')
     assert C3.size == 10
     assert C3.gates_number() == 5
@@ -637,6 +709,24 @@ def test_block2():
     assert C3.get_block('C0').gates == ['my_favorite_gate']
     assert C3.get_block('C0').outputs == ['my_favorite_gate']
 
+    C4 = Circuit()
+    C4.add_inputs(['C', 'C0@B'])
+    C4.add_gate(Gate('my_favorite_gate', AND, ('C', 'C0@B')))
+    C4.mark_as_output('my_favorite_gate')
+    C4.make_block_from_slice('C0', C4.inputs, C4.outputs)
+
+    with pytest.raises(GateHasUsersError):
+        C4.remove_gate('C')
+
+    with pytest.raises(CircuitValidationError):
+        C4.set_inputs('my_favorite_gate')
+
+    C4.remove_gate('my_favorite_gate')
+    C4.remove_gate('C')
+    assert C4.gates == {'C0@B': Gate('C0@B', INPUT)}
+    assert C4.inputs == ['C0@B']
+    assert C4.outputs == []
+
 
 def test_block3():
     C0 = Circuit()
@@ -653,9 +743,7 @@ def test_block3():
 
     manipulateC0 = copy.copy(C0)
 
-    manipulateC0.connect_circuit(
-        ['x3'], C1, ['y1'], circuit_name='C1', add_prefix=False
-    )
+    manipulateC0.connect_circuit(C1, ['x3'], ['y1'], name='C1', add_prefix=False)
     assert manipulateC0.gates == {
         'x1': Gate('x1', INPUT),
         'x2': Gate('x2', INPUT),
