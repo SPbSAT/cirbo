@@ -10,7 +10,7 @@ import collections
 import itertools
 import random
 
-from boolean_circuit_tool.core.circuit import Circuit
+from boolean_circuit_tool.core.circuit import Circuit, GateState
 from boolean_circuit_tool.core.circuit.gate import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -27,6 +27,7 @@ __all__ = [
     'remove_leaves_and_double_not',
     'delete_equivalent_gates',
     'merge_same_successors',
+    'remove_identities',
 ]
 
 
@@ -93,7 +94,7 @@ def _find_equivalent_gates(circuit: Circuit) -> list[list[str]]:
     gate_truth_tables = collections.defaultdict(list)
 
     for inputs in input_combinations:
-        assignment = {
+        assignment: dict[str, GateState] = {
             input_label: value for input_label, value in zip(circuit.inputs, inputs)
         }
         gate_values = circuit.evaluate_circuit(assignment)
