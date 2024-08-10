@@ -29,9 +29,14 @@ from boolean_circuit_tool.core.circuit.gate import (
     ALWAYS_TRUE,
     Gate,
     GateType,
+    IFF,
     INPUT,
     Label,
+    LIFF,
+    LNOT,
     NOT,
+    RIFF,
+    RNOT,
 )
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
 from boolean_circuit_tool.core.circuit.utils import (
@@ -296,7 +301,7 @@ class Circuit(BooleanFunction):
 
         """
         if exclusion_list is None:
-            exclusion_list = [INPUT, NOT]
+            exclusion_list = [INPUT, NOT, LNOT, RNOT, IFF, LIFF, RIFF]
         return sum(
             1 for gate in self._gates.values() if gate.gate_type not in exclusion_list
         )
@@ -506,9 +511,9 @@ class Circuit(BooleanFunction):
         new_block = Block(
             name=name,
             owner=self,
-            inputs=[_input for _input in inputs],
-            gates=[gate for gate in gates],
-            outputs=[output for output in outputs],
+            inputs=list(inputs),
+            gates=list(gates),
+            outputs=list(outputs),
         )
 
         self._blocks[name] = new_block
@@ -598,7 +603,7 @@ class Circuit(BooleanFunction):
                 if other.get_gate(gate_label).gate_type != INPUT:
                     raise CreateBlockError()
 
-        copy_order_self_inputs = [_input for _input in self._inputs]
+        copy_order_self_inputs = list(self._inputs)
 
         prefix: str = ''
         if name != '' and add_prefix:
@@ -696,12 +701,6 @@ class Circuit(BooleanFunction):
         :param other: a new circuit that should expand the basic one
         :param this_connectors: list of gates from the base circuit that will be connecting
             with new circuit
-        :param right_connect:
-            If `right_connect` == False, it means that `other_connectors` (from `circuit`)
-            must be inputs, after connecting they will be replaced by `this_connectors`
-            (from `self`).
-            If `right_connect` == True, then `this_connectors` (from `self`) must be inputs,
-            after connecting they will be replaced by `other_connectors` (from `circuit`).
         :param name: new block's name. If `name` is an empty string, then
             no new block is created, and the gates are added to the circuit without a prefix
         :param add_prefix: If add_prefix == False, than the gates are added to the circuit
@@ -738,12 +737,6 @@ class Circuit(BooleanFunction):
         :param other: a new circuit that should expand the basic one
         :param other_connectors: list of gates from the new circuit that will be connecting
             with the base one
-        :param right_connect:
-            If `right_connect` == False, it means that `other_connectors` (from `circuit`)
-            must be inputs, after connecting they will be replaced by `this_connectors`
-            (from `self`).
-            If `right_connect` == True, then `this_connectors` (from `self`) must be inputs,
-            after connecting they will be replaced by `other_connectors` (from `circuit`).
         :param name: new block's name. If `name` is an empty string, then
             no new block is created, and the gates are added to the circuit without a prefix
         :param add_prefix: If add_prefix == False, than the gates are added to the circuit
@@ -899,15 +892,22 @@ class Circuit(BooleanFunction):
     def set_outputs(self, outputs: tp.Sequence[Label]) -> None:
         """Set new outputs in the circuit."""
         check_gates_exist(outputs, self)
-        self._outputs = [output for output in outputs]
+        self._outputs = list(outputs)
 
     def set_inputs(self, inputs: tp.Sequence[Label]) -> None:
-        """Set new inputs in the circuit."""
+        """Set new order of inputs in the circuit."""
         check_gates_exist(inputs, self)
         for gate in self.gates.values():
             if gate.gate_type == INPUT and gate.label not in inputs:
                 raise CircuitValidationError()
-        self._inputs = [_input for _input in inputs]
+
+        new_inputs = list()
+        for _input in inputs:
+            if self.get_gate(_input).gate_type != INPUT or _input in new_inputs:
+                raise CircuitValidationError()
+            new_inputs.append(_input)
+
+        self._inputs = list(new_inputs)
 
     def add_inputs(self, inputs: tp.Sequence[Label]) -> None:
         """Add new inputs in the circuit."""

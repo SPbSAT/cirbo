@@ -23,7 +23,7 @@ from boolean_circuit_tool.circuits_db.exceptions import (
 from boolean_circuit_tool.circuits_db.normalization import NormalizationInfo
 from boolean_circuit_tool.core.boolean_function import RawTruthTable, RawTruthTableModel
 from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import IFF, INPUT, NOT
+from boolean_circuit_tool.core.circuit.gate import GateType, IFF, INPUT, NOT
 from boolean_circuit_tool.core.logic import DontCare
 
 __all__ = ['CircuitsDatabase']
@@ -170,7 +170,9 @@ class CircuitsDatabase:
         self._dict[label] = encoded_circuit
 
     def get_by_raw_truth_table_model(
-        self, truth_table: RawTruthTableModel
+        self,
+        truth_table: RawTruthTableModel,
+        exclusion_list: tp.Optional[tp.Container[GateType]] = None,
     ) -> tp.Optional[Circuit]:
         """
         Retrieve a circuit by its raw truth table model.
@@ -200,7 +202,7 @@ class CircuitsDatabase:
             circuit = self.get_by_raw_truth_table(defined_truth_table)
             if circuit is None:
                 continue
-            circuit_size = circuit.gates_number()
+            circuit_size = circuit.gates_number(exclusion_list)
             if result_size is None or circuit_size < result_size:
                 result_size = circuit_size
                 result = circuit
