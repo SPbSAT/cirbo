@@ -60,6 +60,14 @@ All of them can be run at once using:
 Tests are written and executed using `pytest`. 
 To execute tests run `poetry run pytest`.
 
+In addition to the standard tests, there are optional slow tests that interact with circuit databases. 
+These tests require the corresponding database files. To execute these tests, use the following command:
+
+```
+poetry run pytest tests/ --db-xaig-verify --db-xaig-path /path/to/xaig_db.bin --db-aig-verify --db-aig-path /path/to/aig_db.bin
+```
+Replace `/path/to/xaig_db.bin` and `/path/to/aig_db.bin` with the actual paths to your XAIG and AIG database files, respectively.
+
 Tests are located at the `tests` subdirectory, and should be written for all
 functionalities of the package. Also, directory structure of `tests` should
 repeat structure of main `boolean-circuit-tool` package.

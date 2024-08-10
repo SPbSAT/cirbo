@@ -133,11 +133,11 @@ def test_sum_with_precomputed_xor(inputs: int, outputs: int, size: int):
             return f"s{gate_n}"
         return str(gate_n)
 
-    gate = circuit.get_element(f"s{inputs}")
+    gate = circuit.get_gate(f"s{inputs}")
     assert gate.gate_type == _tt_to_gate_type[(0, 1, 1, 0)]
     assert gate.operands == ('0', '1')
     for k in range(inputs - 2):
-        gate = circuit.get_element(add_s(inputs + k + 1))
+        gate = circuit.get_gate(add_s(inputs + k + 1))
         assert gate.gate_type == _tt_to_gate_type[(0, 1, 1, 0)]
         assert gate.operands == (add_s(k + 2), add_s(inputs + k))
 
@@ -230,7 +230,7 @@ def test_fix_gate_exceptions():
     circuit_finder.fix_gate(4, 1)
     ckt = circuit_finder.find_circuit()
     check_correctness(ckt, tt)
-    assert '1' in ckt.get_element('s4').operands
+    assert '1' in ckt.get_gate('s4').operands
 
 
 def test_forbid_wire_exceptions():
@@ -245,7 +245,7 @@ def test_forbid_wire_exceptions():
     circuit_finder.forbid_wire(1, 3)
     ckt = circuit_finder.find_circuit()
     check_correctness(ckt, tt)
-    assert '1' not in ckt.get_element('s3').operands
+    assert '1' not in ckt.get_gate('s3').operands
 
 
 def test_fix_forbid():

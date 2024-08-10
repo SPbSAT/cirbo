@@ -81,14 +81,14 @@ def test_synthesis_vs_db_xaig(tt_str, db_xaig_connection):
         ttm.get_model_truth_table()
     )
     circuit_from_synthesis = CircuitFinderSat(
-        ttm, ckt_from_db.elements_number, basis=Basis.XAIG
+        ttm, ckt_from_db.gates_number(), basis=Basis.XAIG
     ).find_circuit()
     check_correctness(circuit_from_synthesis, tt_str, hasdontcares=True)
     check_correctness(ckt_from_db, tt_str, hasdontcares=True)
 
     with pytest.raises(NoSolutionError):
         CircuitFinderSat(
-            ttm, ckt_from_db.elements_number - 1, basis=Basis.XAIG
+            ttm, ckt_from_db.gates_number() - 1, basis=Basis.XAIG
         ).find_circuit()
 
 
@@ -100,14 +100,14 @@ def test_synthesis_vs_db_aig(tt_str, db_aig_connection):
         ttm.get_model_truth_table()
     )
     circuit_from_synthesis = CircuitFinderSat(
-        ttm, ckt_from_db.elements_number, basis=Basis.AIG
+        ttm, ckt_from_db.gates_number(), basis=Basis.AIG
     ).find_circuit()
     check_correctness(circuit_from_synthesis, tt_str, hasdontcares=True)
     check_correctness(ckt_from_db, tt_str, hasdontcares=True)
 
     with pytest.raises((NoSolutionError, SolverTimeOutError)):
         CircuitFinderSat(
-            ttm, ckt_from_db.elements_number - 1, basis=Basis.AIG
+            ttm, ckt_from_db.gates_number() - 1, basis=Basis.AIG
         ).find_circuit(time_limit=2)
 
 
@@ -119,7 +119,7 @@ def test_synthesis_with_db(tt_str, db_xaig_connection):
         ttm.get_model_truth_table()
     )
     circuit_from_synthesis = CircuitFinderSat(
-        ttm, ckt_from_db.elements_number, basis=Basis.XAIG
+        ttm, ckt_from_db.gates_number(), basis=Basis.XAIG
     ).find_circuit(circuit_db=db_xaig_connection)
     assert ckt_from_db.format_circuit() == circuit_from_synthesis.format_circuit()
 
