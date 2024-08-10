@@ -22,25 +22,24 @@ def add_sub_with_per_equal_size(circuit: Circuit, input_labels_a: list[str], inp
 
 def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
     """
-        Function find sqrt of integer.
+    Function find sqrt of integer.
 
-        :param circuit: The general circuit.
-        :param input_labels: the bits of the integer we want to find the sqrt for.
-        """
+    :param circuit: The general circuit.
+    :param input_labels: the bits of the integer we want to find the sqrt for.
+    :return: the sqrt of integer.
+    """
     n = len(input_labels)
     half = n // 2
-    for input_label in input_labels:
-        assert circuit.has_element(input_label)
-    x = input_labels.copy()
+    x = input_labels
     ZERO = add_gate_with_TT(circuit, x[0], x[0], "0110")
     UNO = add_gate_with_TT(circuit, x[0], x[0], "1001")
 
     if n % 2 == 1:
         half += 1
         n += 1
-        input_labels.append(ZERO)
+        x.append(ZERO)
 
-    c = [ZERO for i in range(n)]
+    c = [ZERO for _ in range(n)]
     for st in range(half - 1, -1, -1):
         sm = add_sum_two_numbers(circuit, c[(2 * st):], [UNO])
         sm = sm[:-1]

@@ -1,9 +1,13 @@
 import pytest
 import random
+import math
 from boolean_circuit_tool.core.boolean_function import BooleanFunction
 from boolean_circuit_tool.core.circuit import Circuit, Gate
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
 from boolean_circuit_tool.generation.arithmetics.add_equal import add_equal
+from boolean_circuit_tool.generation.arithmetics.add_n_bits_sum import add_sum_n_bits
+from boolean_circuit_tool.generation.arithmetics.add_sqrt import add_sqrt
+from boolean_circuit_tool.generation.arithmetics.add_div_mod import add_div_mod
 from boolean_circuit_tool.generation.arithmetics.add_mul import (
     add_mul,
     add_mul_alter,
@@ -16,6 +20,8 @@ from boolean_circuit_tool.generation.arithmetics.add_square import (
     add_square,
     add_square_pow2_m1
 )
+
+TEST_SIZE = 100
 random.seed(42)
 
 def to_bin(n, out_len):
@@ -50,6 +56,22 @@ def square_naive(inputs_a):
         out_len -= 1
 
     return to_bin(a**2, out_len)
+
+def sqrt_naive(inputs_a):
+    a = to_num(inputs_a)
+    out_len = (len(inputs_a) + 1) // 2
+    return to_bin(int(a**0.5), out_len)
+
+def div_mod_naive(inputs_a, inputs_b):
+    a = to_num(inputs_a)
+    b = to_num(inputs_b)
+    return to_bin(a % b, len(inputs_b)) + to_bin(a // b, len(inputs_b))
+
+def sum_naive(inputs_a):
+    a = sum(inputs_a)
+    len_res = int(math.log2(len(inputs_a))) + 1
+    return to_bin(a, len_res)
+
 
 @pytest.mark.parametrize("func", [
         add_mul,
@@ -100,7 +122,8 @@ def test_add_equal(num):
     r = 7
     ckt = Circuit()
     inputs = [f"x{i}" for i in range(r)]
-    ckt.add_inputs(inputs)
+    for i in range(r):
+        ckt.add_gate(Gate(inputs[i], INPUT))
     out_gate = add_equal(ckt, inputs, num)
     ckt.mark_as_output(out_gate)
     for i, b in enumerate(ckt.get_truth_table()[0]):
@@ -108,3 +131,48 @@ def test_add_equal(num):
             assert b
         else:
             assert not b
+
+@pytest.mark.parametrize("x", [2, 4, 9, 21, 40, 64])
+def test_sqrt(x):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x)]
+    for i in range(x):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+    res = add_sqrt(ckt, input_labels)
+    for i in res:
+        ckt.mark_as_output(i)
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        assert sqrt_naive(input_labels_a) == ckt.evaluate(input_labels_a)[::-1]
+
+
+@pytest.mark.parametrize("x", [2, 5, 7, 17, 60, 128])
+def test_div_mod(x):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(2 * x)]
+    for i in range(2 * x):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+    res_div, res_mod = add_div_mod(ckt, input_labels[:x], input_labels[x:])
+    for i in res_div:
+        ckt.mark_as_output(i)
+    for i in res_mod:
+        ckt.mark_as_output(i)
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(x)]
+        if sum(input_labels_b) == 0:
+            continue
+        assert div_mod_naive(input_labels_a, input_labels_b) == ckt.evaluate(input_labels_a + input_labels_b)[::-1]
+
+@pytest.mark.parametrize("x", [2, 5, 7, 17, 60, 128, 1000])
+def test_sum_n_bits(x):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x)]
+    for i in range(x):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+    res = add_sum_n_bits(ckt, input_labels)
+    for i in res:
+        ckt.mark_as_output(i)
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        assert sum_naive(input_labels_a) == ckt.evaluate(input_labels_a)[::-1]

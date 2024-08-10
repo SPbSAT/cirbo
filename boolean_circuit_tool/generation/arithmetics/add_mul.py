@@ -1,6 +1,6 @@
 from boolean_circuit_tool.generation.arithmetics.add_n_bits_sum import (
     add_sum_two_numbers_with_shift,
-    add_sum,
+    add_sum_n_bits,
     add_sum_two_numbers,
     add_sub_two_numbers,
     add_sum2, 
@@ -39,7 +39,7 @@ def add_mul(circuit, input_labels_a, input_labels_b):
         for j in range(i):
             if j + len(d[j]) > i:
                 inp.append(d[j][i - j])
-        d[i] = add_sum(circuit, inp)
+        d[i] = add_sum_n_bits(circuit, inp)
     return [d[i][0] for i in range(n + m)]
 
 
@@ -181,7 +181,7 @@ def add_mul_wallace(circuit, input_labels_a, input_labels_b):
                         inp.append(c[col][k])
 
                 if(len(inp) > 0):
-                    res = add_sum(circuit, inp)
+                    res = add_sum_n_bits(circuit, inp)
                     for i in range(len(res)):
                         if(col+i < n+m):
                             cn[col+i][2*(row//3)+i] = res[i]
