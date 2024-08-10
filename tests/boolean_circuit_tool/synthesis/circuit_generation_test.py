@@ -1,4 +1,5 @@
-from boolean_circuit_tool.core.combining.combining_circuits import CircuitBuilder
+from boolean_circuit_tool.synthesis.generation import generate_plus_one, generate_if_then_else, \
+    generate_pairwise_if_then_else, generate_pairwise_xor
 
 
 def to_list_of_bool(n, bit_len):
@@ -13,7 +14,7 @@ def to_list_of_bool(n, bit_len):
 def test_generate_plus_one():
     for n in range(1, 10):
         for m in range(1, 20):
-            circuit = CircuitBuilder.generate_plus_one(n, m)
+            circuit = generate_plus_one(n, m)
             for i in range(2**n):
                 inp = to_list_of_bool(i, n)
                 out = to_list_of_bool(i+1, m)
@@ -23,7 +24,7 @@ def test_generate_plus_one():
 
 
 def test_generate_if_then_else():
-    circuit = CircuitBuilder.generate_if_then_else()
+    circuit = generate_if_then_else()
     for if_inp in [True, False]:
         for then_inp in [True, False]:
             for else_inp in [True, False]:
@@ -38,7 +39,7 @@ def test_generate_if_then_else():
 def test_generate_pairwise_if_then_else():
     for n in range(5):
         all_bit_strings = [to_list_of_bool(i, n) for i in range(2**n)]
-        circuit = CircuitBuilder.generate_pairwise_if_then_else(n)
+        circuit = generate_pairwise_if_then_else(n)
         for if_inp in all_bit_strings:
             for then_inp in all_bit_strings:
                 for else_inp in all_bit_strings:
@@ -55,7 +56,7 @@ def test_generate_pairwise_if_then_else():
 def test_generate_pairwise_xor():
     for n in range(5):
         all_bit_strings = [to_list_of_bool(i, n) for i in range(2 ** n)]
-        circuit = CircuitBuilder.generate_pairwise_xor(n)
+        circuit = generate_pairwise_xor(n)
 
         for x in all_bit_strings:
             for y in all_bit_strings:
