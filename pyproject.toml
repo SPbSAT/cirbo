@@ -37,6 +37,7 @@ mypy = "^1.9.0"
 pytest = "^8.2.2"
 usort = "^1.0.8.post1"
 docformatter = "^1.7.5"
+coverage = "^7.6.1"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^7.4.7"
