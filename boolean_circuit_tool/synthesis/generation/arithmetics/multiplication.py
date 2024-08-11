@@ -1,4 +1,5 @@
-from collections import deque
+import collections
+import typing as tp
 
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
@@ -31,7 +32,7 @@ def add_mul(circuit, input_labels_a, input_labels_b):
     m = len(input_labels_b)
 
     # in my mind a[0] is the smallest bit in a
-    c = [[0] * n for _ in range(m)]
+    c = [[''] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
@@ -43,7 +44,7 @@ def add_mul(circuit, input_labels_a, input_labels_b):
     if m == 1:
         return c[0]
 
-    d = [[0] for _ in range(n + m)]
+    d = [[''] for _ in range(n + m)]
     d[0] = [c[0][0]]
     for i in range(1, n + m):
         inp = []
@@ -62,7 +63,7 @@ def add_mul_alter(circuit, input_labels_a, input_labels_b):
     m = len(input_labels_b)
 
     # in my mind a[0] is the smallest bit in a
-    c = [[0] * n for _ in range(m)]
+    c = [[''] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
@@ -132,7 +133,7 @@ def add_mul_dadda(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
 
-    c = [deque() for _ in range(n + m)]
+    c: list[tp.Deque[str]] = [collections.deque() for _ in range(n + m)]
     for i in range(m):
         for j in range(n):
             c[i + j].append(
@@ -227,7 +228,7 @@ def add_mul_pow2_m1(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
 
-    c = [[0] * n for _ in range(m)]
+    c = [[''] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
@@ -239,7 +240,7 @@ def add_mul_pow2_m1(circuit, input_labels_a, input_labels_b):
     if m == 1:
         return c[0]
 
-    out = [[0] for _ in range(n + m)]
+    out = [[['']] for _ in range(n + m)]
     out[0] = [[c[0][0]]]
     for i in range(1, n + m):
         inp = []

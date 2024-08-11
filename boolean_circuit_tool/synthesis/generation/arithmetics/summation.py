@@ -64,7 +64,7 @@ def add_sum_two_numbers_with_shift(
     if (
         shift >= n
     ):  # if shift so big for first number (in out cases I hope we will not use this)
-        d = [[0] for _ in range(m + shift)]
+        d = [[''] for _ in range(m + shift)]
         for i in range(n):
             d[i] = [input_labels_a[i]]
         if shift != n:
@@ -79,7 +79,7 @@ def add_sum_two_numbers_with_shift(
         for i in range(m):
             d[i + shift] = [input_labels_b[i]]
         return [i[0] for i in d]
-    d = [[0] for _ in range(max(n, m + shift) + 1)]
+    d = [[''] for _ in range(max(n, m + shift) + 1)]
     for i in range(shift):
         d[i] = [input_labels_a[i]]
     res_sum = add_sum_two_numbers(circuit, input_labels_a[shift:n], input_labels_b)

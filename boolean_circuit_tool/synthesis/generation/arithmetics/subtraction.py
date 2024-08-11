@@ -80,8 +80,8 @@ def add_subtract_with_compare(
 
     n = len(input_labels_a)
 
-    res = [0] * n
-    bal = [0] * n
+    res = [''] * n
+    bal = [''] * n
 
     res[0], bal[0] = add_sub2(
         circuit,
