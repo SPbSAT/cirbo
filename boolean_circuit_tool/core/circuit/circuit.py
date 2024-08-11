@@ -1564,7 +1564,7 @@ class Circuit(BooleanFunction):
 
     def _remove_gate(self, gate_label: Label) -> tp_ext.Self:
         """
-        C Remove gate from the circuit without any checks (!!!).
+        Remove gate from the circuit without any checks (!!!).
 
         :param gate_label: gate's label for deleting.
         :return: this circuit after modification.
