@@ -1,4 +1,4 @@
-from boolean_circuit_tool.generation.arithmetics.add_n_bits_sum import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
     add_sum_two_numbers_with_shift,
     add_sum_n_bits,
     add_sum_two_numbers,
@@ -8,7 +8,7 @@ from boolean_circuit_tool.generation.arithmetics.add_n_bits_sum import (
     add_sum_pow2_m1, 
 )
 from collections import deque
-from boolean_circuit_tool.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
 
 def add_mul(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)

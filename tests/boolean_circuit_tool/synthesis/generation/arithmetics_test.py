@@ -4,11 +4,11 @@ import math
 from boolean_circuit_tool.core.boolean_function import BooleanFunction
 from boolean_circuit_tool.core.circuit import Circuit, Gate
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
-from boolean_circuit_tool.generation.arithmetics.add_equal import add_equal
-from boolean_circuit_tool.generation.arithmetics.add_n_bits_sum import add_sum_n_bits
-from boolean_circuit_tool.generation.arithmetics.add_sqrt import add_sqrt
-from boolean_circuit_tool.generation.arithmetics.add_div_mod import add_div_mod
-from boolean_circuit_tool.generation.arithmetics.add_mul import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_equal import add_equal
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import add_sum_n_bits
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_sqrt import add_sqrt
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_div_mod import add_div_mod
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_mul import (
     add_mul,
     add_mul_alter,
     add_mul_dadda,
@@ -16,7 +16,7 @@ from boolean_circuit_tool.generation.arithmetics.add_mul import (
     add_mul_pow2_m1,
     add_mul_karatsuba
 )
-from boolean_circuit_tool.generation.arithmetics.add_square import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_square import (
     add_square,
     add_square_pow2_m1
 )

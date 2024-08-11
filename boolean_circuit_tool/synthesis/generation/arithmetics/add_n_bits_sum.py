@@ -2,7 +2,7 @@ from boolean_circuit_tool.core.circuit import Circuit
 from itertools import product, zip_longest
 
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
-from boolean_circuit_tool.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
 
 
 def add_sum_two_numbers(circuit, input_labels_a, input_labels_b):

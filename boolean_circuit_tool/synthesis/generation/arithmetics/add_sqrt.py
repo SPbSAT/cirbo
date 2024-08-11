@@ -1,5 +1,5 @@
-from boolean_circuit_tool.generation.arithmetics.add_n_bits_sum import add_sub2, add_sub3, add_sum_two_numbers
-from boolean_circuit_tool.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import add_sub2, add_sub3, add_sum_two_numbers
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
 from boolean_circuit_tool.core.circuit import Circuit
 
 
