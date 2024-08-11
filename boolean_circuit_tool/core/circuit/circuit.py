@@ -849,6 +849,13 @@ class Circuit(BooleanFunction):
             if old_label != new_label:
                 self.rename_gate(old_label, new_label)
 
+        copy_outputs = copy.copy(self.outputs)
+        copy_outputs_users = {
+            output_label: self.get_gate_users(output_label)
+            for output_label in outputs_mapping.values()
+            if output_label in self._gate_to_users
+        }
+
         block_for_deleting = self.make_block_from_slice(
             'block_for_deleting',
             list(inputs_mapping.values()),
@@ -857,8 +864,11 @@ class Circuit(BooleanFunction):
         self._remove_block(block_for_deleting.name)
 
         for new_gate_label in subcircuit.top_sort(inverse=True):
-            if new_gate_label not in inputs_mapping.values():
+            if new_gate_label.label not in inputs_mapping.values():
                 self.add_gate(new_gate_label)
+
+        self._outputs = copy_outputs
+        self._gate_to_users = self._gate_to_users | copy_outputs_users
 
         return self
 
@@ -884,31 +894,30 @@ class Circuit(BooleanFunction):
             for idx in self.all_indexes_of_output(old_label):
                 self._outputs[idx] = new_label
 
-        self._gates[new_label] = Gate(
-            new_label,
-            self._gates[old_label].gate_type,
-            self._gates[old_label].operands,
-        )
-
-        self._gate_to_users[new_label] = self._gate_to_users[old_label]
-
-        for user_label in self._gate_to_users[old_label]:
-            self._gates[user_label] = Gate(
-                user_label,
-                self._gates[user_label].gate_type,
-                tuple(
-                    new_label if operand == old_label else operand
-                    for operand in self._gates[user_label].operands
-                ),
-            )
+        if old_label in self._gate_to_users:
+            for user_label in self._gate_to_users[old_label]:
+                self._gates[user_label] = Gate(
+                    user_label,
+                    self._gates[user_label].gate_type,
+                    tuple(
+                        new_label if operand == old_label else operand
+                        for operand in self._gates[user_label].operands
+                    ),
+                )
+            self._gate_to_users[new_label] = self._gate_to_users[old_label]
+            del self._gate_to_users[old_label]
 
         for operand_label in self._gates[old_label].operands:
             operand_users = self._gate_to_users[operand_label]
             assert old_label in operand_users
             operand_users[operand_users.index(old_label)] = new_label
 
+        self._gates[new_label] = Gate(
+            new_label,
+            self._gates[old_label].gate_type,
+            self._gates[old_label].operands,
+        )
         del self._gates[old_label]
-        del self._gate_to_users[old_label]
 
         for block in self.blocks.values():
             block._rename_gate(old_label, new_label)
@@ -1515,6 +1524,9 @@ class Circuit(BooleanFunction):
         for block in self.blocks.values():
             block._delete_gate(gate_label)
 
+        if gate_label in self._gate_to_users:
+            del self._gate_to_users[gate_label]
+
         return self
 
     def _remove_block(self, block_label: Label) -> tp_ext.Self:
@@ -1584,9 +1596,8 @@ class Circuit(BooleanFunction):
 
     def _remove_user(self, gate: Label, user: Label):
         """Remove user from `gate`."""
-        self._gate_to_users[gate].remove(user)
-        if self._gate_to_users[gate] == []:
-            del self._gate_to_users[gate]
+        if gate in self._gate_to_users and user in self._gate_to_users[gate]:
+            self._gate_to_users[gate].remove(user)
 
     def _add_user(self, gate: Label, user: Label):
         """Add user for `gate`."""
