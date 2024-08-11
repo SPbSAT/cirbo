@@ -46,7 +46,7 @@ One should follow simple rules:
    3. wrong usage behaviour.
 2. Type hints must be specified for all arguments and return values, as well
 as for class attributes. Typehints for local variables are also welcome when
-well-placed, `but not` obligatory.
+well-placed, but not obligatory.
 3. All public Python objects (functions, classes, modules) must have docstrings.
 For private and protected objects docstrings are encouraged but not obligatory.
 4. All Python modules should include `__all__` definition, to avoid occasional
