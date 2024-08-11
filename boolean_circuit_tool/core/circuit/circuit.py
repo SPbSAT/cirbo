@@ -2,6 +2,7 @@
 
 import collections
 import copy
+import graphviz
 import enum
 import io
 import itertools
@@ -1536,6 +1537,30 @@ class Circuit(BooleanFunction):
             )
         ]
 
+    def draw(self) -> None:
+
+        from boolean_circuit_tool.core.parser.bench import BenchToGraphviz
+
+        # s = """INPUT(x1)"""
+        # parser = BenchToGraphviz()
+        # circuit: graphviz.Digraph = parser.convert_to_graphviz(s)
+        # # integer_to_gate_dict = parser.integer_to_gate_dict
+        # # if original_name:
+        # #     for node in circuit.nodes():
+        # #         label = node.attr['label'].split(',')
+        # #         if len(label) == 2:
+        # #             node.attr.update(label=integer_to_gate_dict[int(label[0])] + ', ' + label[1])
+        # circuit.view() #draw(dest_stream, prog="dot")
+
+
+        _parser = BenchToGraphviz()
+
+        path = pathlib.Path("/Users/vikria/Main/projects/boolean-circuit-tool/tests/boolean_circuit_tool/core/parser/benches/test_trivial_instance.bench")
+        with path.open() as file:
+            circuit: graphviz.Digraph = _parser.convert_to_graphviz(file)
+        circuit.view()
+        
+
     def save_to_file(self, path: str) -> None:
         """
         Save circuit to file.
@@ -1778,3 +1803,12 @@ class Circuit(BooleanFunction):
             width=100,
         )
         return f"{self.__class__.__name__}\n\t{input_str}\n\t{output_str}"
+
+if __name__ == '__main__':
+    from boolean_circuit_tool.core.circuit.gate import AND
+
+    C = Circuit()
+
+    C.add_inputs(['x1', 'x2'])
+    C.add_gate(Gate('x3', AND, ('x1', 'x2')))
+    C.draw()

@@ -1,6 +1,7 @@
 """Implementation of .bench parsing."""
 
 import abc
+import graphviz
 import logging
 import typing as tp
 
@@ -23,7 +24,7 @@ from boolean_circuit_tool.core.parser.abstract import AbstractParser
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['AbstractBenchParser', 'BenchToCircuit']
+__all__ = ['AbstractBenchParser', 'BenchToCircuit', 'BenchToGraphviz']
 
 
 class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
@@ -225,3 +226,74 @@ class BenchToCircuit(AbstractBenchParser):
 
     def _process_iff(self, out: str, arg: str):
         return self._add_gate(out, IFF, arg)
+
+
+class BenchToGraphviz(AbstractBenchParser):
+    """Parser that processes stream of .bench file lines and returns a graph."""
+
+    def __init__(self, *args, **kwargs):
+        super(BenchToGraphviz, self).__init__(*args, **kwargs)
+        self.circuit: graphviz.Digraph = graphviz.Digraph('Circuit')
+
+    def convert_to_graphviz(self, stream: tp.Iterable[str]) -> graphviz.Digraph:
+        for _ in self.convert(stream):
+            pass
+        return self.circuit
+
+    def _eof(self) -> tp.Iterable:
+        return []
+    
+    def _process_input_gate(self, line: str) -> list:
+        """Parses line with input gate."""
+        _gate = line[6:].strip(') \n')
+        self.circuit.node(_gate, label=line, shape="diamond")
+        return []
+
+    def _process_output_gate(self, line: str) -> list:
+        """Parses line with output gate."""
+        _gate = line[7:].strip(') \n')
+        self.circuit.node(_gate, shape='square')
+        return []
+    
+    def _add_node(self, node_label: str, gate_type: str, arg1: str, *args: str):
+        args_line = ', '.join([arg1] + list(args))
+        self.circuit.node(node_label, label=f'{gate_type}({args_line})')
+    
+    def _add_edges(self, out: str, gate_type: str, arg1: str, *args: str):
+        self._add_node(out, gate_type, arg1, *args)
+        self.circuit.edge(arg1, out)
+        for arg in args:
+            self.circuit.edge(arg, out)
+        return []
+    
+    def _process_xor(self, out: str, arg1: str, arg2: str):
+        return self._add_edges(out, 'XOR', arg1, arg2)
+
+    def _process_nxor(self, out: str, arg1: str, arg2: str):
+        return self._add_edges(out, 'NXOR', arg1, arg2)
+
+    def _process_or(self, out: str, arg1: str, arg2: str, *args: str):
+        return self._add_edges(out, 'OR', arg1, arg2, *args)
+
+    def _process_nor(self, out: str, arg1: str, arg2: str, *args: str):
+        return self._add_edges(out, 'NOR', arg1, arg2, *args)
+
+    def _process_and(self, out: str, arg1: str, arg2: str, *args: str):
+        return self._add_edges(out, 'AND', arg1, arg2, *args)
+
+    def _process_nand(self, out: str, arg1: str, arg2: str, *args: str):
+        return self._add_edges(out, 'NAND', arg1, arg2, *args)
+
+    def _process_iff(self, out: str, arg: str):
+        return self._add_edges(out, 'IFF', arg)
+
+    def _process_not(self, out: str, arg: str):
+        return self._add_edges(out, 'NOT', arg)
+
+    def _process_const_false(self, out: str):
+        self._add_node(out, 'CONST_FALSE')
+        return []
+
+    def _process_const_true(self, out: str):
+        self._add_node(out, 'CONST_TRUE')
+        return []

@@ -1,0 +1,14 @@
+digraph Circuit {
+	A [label="INPUT(A)
+" shape=diamond]
+	D [label="INPUT(D)
+" shape=diamond]
+	E [label="INPUT(E)
+" shape=diamond]
+	B [label="NOT(A)"]
+	A -> B
+	C [label="AND(A, B)"]
+	A -> C
+	B -> C
+	C [shape=square]
+}
