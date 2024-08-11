@@ -8,6 +8,7 @@ from boolean_circuit_tool.minimization.exception import UnsupportedOperationErro
 from boolean_circuit_tool.minimization.subcircuit import (
     _generate_inputs_tt,
     _get_subcircuits,
+    get_internal_gates,
     minimize_subcircuits,
 )
 from boolean_circuit_tool.synthesis.circuit_search import Basis
@@ -101,6 +102,51 @@ def test_get_subcircuits():
         ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
         ['G'],
     )
+
+
+def test_get_internal_gates():
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', NOT, ('A',)))
+    instance.add_gate(Gate('F', AND, ('E', 'B')))
+    instance.add_gate(Gate('G', OR, ('B', 'C')))
+    instance.add_gate(Gate('H', XOR, ('F', 'G')))
+    instance.add_gate(Gate('I', AND, ('D', 'A')))
+    instance.add_gate(Gate('J', OR, ('I', 'E')))
+
+    assert sorted(get_internal_gates(instance, inputs=['A'], outputs=['E'])) == []
+    assert sorted(
+        get_internal_gates(instance, inputs=['A', 'B', 'C', 'D'], outputs=['H'])
+    ) == ['E', 'F', 'G']
+    assert sorted(get_internal_gates(instance, inputs=['A', 'B'], outputs=['F'])) == [
+        'E'
+    ]
+    assert sorted(
+        get_internal_gates(instance, inputs=['A', 'B', 'C'], outputs=['H'])
+    ) == ['E', 'F', 'G']
+    assert sorted(
+        get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+    ) == ['F', 'G']
+    assert sorted(
+        get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+    ) == ['F', 'G']
+    assert sorted(
+        get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+    ) == ['F', 'G']
+    assert sorted(
+        get_internal_gates(instance, inputs=['A', 'B', 'C', 'D'], outputs=['H', 'J'])
+    ) == ['E', 'F', 'G', 'I']
+    assert sorted(get_internal_gates(instance, inputs=[], outputs=['J'])) == [
+        'A',
+        'D',
+        'E',
+        'I',
+    ]  # strange but valid query
 
 
 def test_minimize_subcircuits():

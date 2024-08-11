@@ -812,51 +812,6 @@ def test_block3():
     }
 
 
-def test_get_internal_gates():
-
-    instance = Circuit()
-
-    instance.add_gate(Gate('A', INPUT))
-    instance.add_gate(Gate('B', INPUT))
-    instance.add_gate(Gate('C', INPUT))
-    instance.add_gate(Gate('D', INPUT))
-    instance.add_gate(Gate('E', NOT, ('A',)))
-    instance.add_gate(Gate('F', AND, ('E', 'B')))
-    instance.add_gate(Gate('G', OR, ('B', 'C')))
-    instance.add_gate(Gate('H', XOR, ('F', 'G')))
-    instance.add_gate(Gate('I', AND, ('D', 'A')))
-    instance.add_gate(Gate('J', OR, ('I', 'E')))
-
-    assert sorted(instance.get_internal_gates(inputs=['A'], outputs=['E'])) == []
-    assert sorted(
-        instance.get_internal_gates(inputs=['A', 'B', 'C', 'D'], outputs=['H'])
-    ) == ['E', 'F', 'G']
-    assert sorted(instance.get_internal_gates(inputs=['A', 'B'], outputs=['F'])) == [
-        'E'
-    ]
-    assert sorted(
-        instance.get_internal_gates(inputs=['A', 'B', 'C'], outputs=['H'])
-    ) == ['E', 'F', 'G']
-    assert sorted(
-        instance.get_internal_gates(inputs=['B', 'E', 'C'], outputs=['H'])
-    ) == ['F', 'G']
-    assert sorted(
-        instance.get_internal_gates(inputs=['B', 'E', 'C'], outputs=['H'])
-    ) == ['F', 'G']
-    assert sorted(
-        instance.get_internal_gates(inputs=['B', 'E', 'C'], outputs=['H'])
-    ) == ['F', 'G']
-    assert sorted(
-        instance.get_internal_gates(inputs=['A', 'B', 'C', 'D'], outputs=['H', 'J'])
-    ) == ['E', 'F', 'G', 'I']
-    assert sorted(instance.get_internal_gates(inputs=[], outputs=['J'])) == [
-        'A',
-        'D',
-        'E',
-        'I',
-    ]  # strange but valid query
-
-
 def test_replace_subcircuit():
     # Full checks on simple case
     instance = Circuit()
