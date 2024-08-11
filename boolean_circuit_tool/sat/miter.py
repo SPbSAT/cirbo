@@ -1,26 +1,40 @@
-from boolean_circuit_tool.core.circuit import Circuit, OR
+from boolean_circuit_tool.core.circuit import Circuit, gate
+from boolean_circuit_tool.sat.exceptions import MiterDifferentShapesError
 from boolean_circuit_tool.synthesis.generation import generate_pairwise_xor
 
 
-def build_miter(circuit1: Circuit, circuit2: Circuit) -> Circuit:
-    assert circuit1.input_size == circuit2.input_size
-    assert circuit1.output_size == circuit2.output_size
+__all__ = [
+    'build_miter',
+]
 
-    miter = Circuit().add_circuit(circuit1, circuit_name='circuit1')
+
+def build_miter(
+    left: Circuit,
+    right: Circuit,
+    *,
+    left_name: gate.Label = 'circuit1',
+    right_name: gate.Label = 'circuit2'
+) -> Circuit:
+    if (left.input_size != right.input_size) or (left.output_size != right.output_size):
+        raise MiterDifferentShapesError()
+
+    miter = Circuit().add_circuit(left, name=left_name)
     miter.connect_circuit(
-        miter.get_block('circuit1').inputs,
-        circuit2,
-        circuit2.inputs,
-        circuit_name='circuit2',
+        right,
+        miter.get_block(left_name).inputs,
+        right.inputs,
+        name=right_name,
     )
-    pairwise_xor = generate_pairwise_xor(circuit1.output_size)
+    pairwise_xor = generate_pairwise_xor(left.output_size)
     miter.connect_circuit(
-        miter.get_block('circuit1').outputs + miter.get_block('circuit2').outputs,
         pairwise_xor,
+        miter.get_block(left_name).outputs + miter.get_block(right_name).outputs,
         pairwise_xor.inputs,
-        circuit_name='pairwise_xor',
+        name='pairwise_xor',
     )
-    miter.emplace_gate('big_or', OR, tuple(miter.get_block('pairwise_xor').outputs))
+    miter.emplace_gate(
+        'big_or', gate.OR, tuple(miter.get_block('pairwise_xor').outputs)
+    )
     miter.set_outputs(['big_or'])
 
     return miter

@@ -1,3 +1,4 @@
+from boolean_circuit_tool.core.utils import canonical_index_to_input
 from boolean_circuit_tool.synthesis.generation import (
     generate_if_then_else,
     generate_pairwise_if_then_else,
@@ -42,7 +43,7 @@ def test_generate_if_then_else():
 
 def test_generate_pairwise_if_then_else():
     for n in range(5):
-        all_bit_strings = [to_list_of_bool(i, n) for i in range(2**n)]
+        all_bit_strings = [canonical_index_to_input(i, n) for i in range(2**n)]
         circuit = generate_pairwise_if_then_else(n)
         for if_inp in all_bit_strings:
             for then_inp in all_bit_strings:
@@ -53,17 +54,19 @@ def test_generate_pairwise_if_then_else():
                             real_res.append(then_inp[i])
                         else:
                             real_res.append(else_inp[i])
-                    test_out = circuit.evaluate(if_inp + then_inp + else_inp)
+                    test_out = circuit.evaluate(
+                        list(if_inp) + list(then_inp) + list(else_inp)
+                    )
                     assert test_out == real_res
 
 
 def test_generate_pairwise_xor():
     for n in range(5):
-        all_bit_strings = [to_list_of_bool(i, n) for i in range(2**n)]
+        all_bit_strings = [canonical_index_to_input(i, n) for i in range(2**n)]
         circuit = generate_pairwise_xor(n)
 
         for x in all_bit_strings:
             for y in all_bit_strings:
-                test_out = circuit.evaluate(x + y)
+                test_out = circuit.evaluate(list(x) + list(y))
                 real_res = [x[i] ^ y[i] for i in range(n)]
                 assert test_out == real_res

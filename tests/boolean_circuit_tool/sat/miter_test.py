@@ -18,13 +18,11 @@ def test_miter():
         plus_one = generate_plus_one(inp_len=n, out_len=n)
         plus_two = (
             Circuit()
-            .add_circuit(plus_one, circuit_name='first')
-            .extend_circuit(plus_one, circuit_name='second')
+            .add_circuit(plus_one, name='first')
+            .extend_circuit(plus_one, name='second')
         )
         plus_three = (
-            Circuit()
-            .add_circuit(plus_two)
-            .extend_circuit(plus_one, circuit_name='third')
+            Circuit().add_circuit(plus_two).extend_circuit(plus_one, name='third')
         )
 
         circuits = [plus_zero, plus_one, plus_two, plus_three]
