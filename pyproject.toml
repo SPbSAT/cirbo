@@ -118,11 +118,13 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pysat.*", "pebble.*"]
+module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*"]
 
 
 [tool.pytest.ini_options]
 # Suppress warnings for invalid escape sequences in pysat package
+
+addopts = "-m 'not db_aig and not db_xaig'"
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"
 ]
