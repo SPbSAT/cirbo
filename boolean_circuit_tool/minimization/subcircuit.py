@@ -325,6 +325,20 @@ def rename_subcircuit_gates(
     inputs_mapping: dict[Label, Label],
     outputs_mapping: dict[Label, Label],
 ):
+    """
+    Rename subcircuit gates.
+
+    :param circuit: circuit for finding new labels.
+    :param subcircuit: subcircuit in which we will change the names.
+    :param inputs_mapping: label to label mapping between circuit nodes and subcitcuit
+        inputs. The nodes of the circuit will participate in the search for new labels,
+        and this mapping will also be used in the future replacement of the subcircuit.
+    :param outputs_mapping: label to label mapping between circuit nodes and subcitcuit
+        outputs. The nodes of the circuit will participate in the search for new labels,
+        and this mapping will also be used in the future replacement of the subcircuit.
+    :return: modified subcircuit.
+
+    """
     labels_to_remove: list[Label] = get_internal_gates(
         circuit,
         list(inputs_mapping.keys()),
