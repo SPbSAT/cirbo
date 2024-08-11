@@ -80,7 +80,6 @@ def add_mul_alter(circuit, input_labels_a, input_labels_b):
 
 
 def add_mul_karatsuba(circuit, input_labels_a, input_labels_b):  # work on equal sizes
-
     out_size = len(input_labels_a) + len(input_labels_b)
     if len(input_labels_a) == 1 or len(input_labels_b) == 1:
         out_size -= 1
@@ -220,6 +219,7 @@ def add_mul_wallace(circuit, input_labels_a, input_labels_b):
             labels_b.append(c[i][1])
         elif len(labels_b) == 0:
             shift += 1
+
     return add_sum_two_numbers_with_shift(circuit, shift, labels_a, labels_b)[: n + m]
 
 

@@ -24,13 +24,21 @@ def add_equal(circuit: Circuit, input_labels: tp.Sequence[str], num: int) -> str
     bits = bin(num)[2:].zfill(len(input_labels))[::-1]
     if len(bits) > len(input_labels):
         new_label = generate_random_label(circuit)
-        circuit.add_gate(gate.Gate(new_label, gate.ALWAYS_FALSE))
+        circuit.emplace_gate(
+            label=new_label,
+            gate_type=gate.ALWAYS_FALSE,
+        )
         return new_label
+
     gates_for_and = []
     for i, (bit, inp) in enumerate(zip(bits, input_labels)):
         if bit == '0':
             new_label = generate_random_label(circuit)
-            circuit.add_gate(gate.Gate(new_label, gate.NOT, (inp,)))
+            circuit.emplace_gate(
+                label=new_label,
+                gate_type=gate.NOT,
+                operands=(inp,),
+            )
             gates_for_and.append(new_label)
         else:
             gates_for_and.append(inp)
@@ -38,11 +46,18 @@ def add_equal(circuit: Circuit, input_labels: tp.Sequence[str], num: int) -> str
     last_label = generate_random_label(circuit)
     if len(gates_for_and) == 1:
         return gates_for_and[0]
-    circuit.add_gate(
-        gate.Gate(last_label, gate.AND, (gates_for_and[0], gates_for_and[1]))
+
+    circuit.emplace_gate(
+        label=last_label,
+        gate_type=gate.AND,
+        operands=(gates_for_and[0], gates_for_and[1]),
     )
     for i, (b, out) in enumerate(zip(bits[2:], gates_for_and[2:])):
         new_label = generate_random_label(circuit)
-        circuit.add_gate(gate.Gate(new_label, gate.AND, (last_label, out)))
+        circuit.emplace_gate(
+            label=new_label,
+            gate_type=gate.AND,
+            operands=(last_label, out),
+        )
         last_label = new_label
     return last_label

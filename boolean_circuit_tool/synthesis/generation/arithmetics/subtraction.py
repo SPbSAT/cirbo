@@ -64,7 +64,7 @@ def add_subtract_with_compare(
     circuit: Circuit,
     input_labels_a: list[gate.Label],
     input_labels_b: list[gate.Label],
-) -> (list[gate.Label], gate.Label):
+) -> tuple[list[gate.Label], gate.Label]:
     """
     Subtracts given integer b from integer a and return residual bit representing if
     subtraction was successful (equivalent to a>=b).

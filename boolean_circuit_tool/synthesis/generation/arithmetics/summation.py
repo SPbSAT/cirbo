@@ -4,9 +4,6 @@ from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     validate_const_size,
 )
-from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
-    add_sub_two_numbers,
-)
 
 
 __all__ = [
@@ -72,7 +69,10 @@ def add_sum_two_numbers_with_shift(
             d[i] = [input_labels_a[i]]
         if shift != n:
             zero = add_gate_from_tt(
-                circuit, input_labels_a[0], input_labels_a[0], '0000'
+                circuit,
+                input_labels_a[0],
+                input_labels_a[0],
+                '0000',
             )
             for i in range(n, shift - n):
                 d[i] = [zero]

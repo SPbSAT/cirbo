@@ -1,23 +1,23 @@
-from boolean_circuit_tool.core.circuit import Circuit
+from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     validate_equal_sizes,
 )
+from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
+    add_subtract_with_compare,
+)
+
 
 __all__ = [
     'add_div_mod',
 ]
-
-from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
-    add_subtract_with_compare,
-)
 
 
 def add_div_mod(
     circuit: Circuit,
     input_labels_a: list[str],
     input_labels_b: list[str],
-) -> (list[str], list[str]):
+) -> tuple[list[gate.Label], list[gate.Label]]:
     """
     Function make div two integers with equal size.
 
@@ -32,10 +32,19 @@ def add_div_mod(
 
     a = input_labels_a
     b = input_labels_b
-    pref = [b[n - 1]]  # larger bit in b
+
+    pref = [b[n - 1]]  # largest bit in b
     for i in range(n - 2, 0, -1):
-        pref.append(add_gate_from_tt(circuit, pref[-1], b[i], "0111"))
-    result = [0] * n
+        pref.append(
+            add_gate_from_tt(
+                circuit,
+                pref[-1],
+                b[i],
+                "0111",
+            )
+        )
+
+    result = [''] * n
     now = a
     for i in range(n - 1, 0, -1):  # chose shift for sub (> 0)
         prov = pref[i - 1]
@@ -49,6 +58,7 @@ def add_div_mod(
                 add_gate_from_tt(circuit, now[j + n - m], result[i], "0010"),
                 "0111",
             )
+
     m = n  # intersection
     sub_res, per = add_subtract_with_compare(circuit, now, b)
     result[0] = add_gate_from_tt(circuit, per, per, "1000")
