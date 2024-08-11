@@ -538,19 +538,9 @@ class Circuit(BooleanFunction):
         :return: this circuit after modification
 
         """
-        block: Block = self.get_block(block_label)
-        check_block_has_not_users(block, self)
+        check_block_has_not_users(self.get_block(block_label), self)
 
-        for gate in block.gates:
-            self._remove_gate(self.get_gate(gate).label)
-
-        self._blocks = {
-            block_label: block
-            for block_label, block in self.blocks.items()
-            if len(block.gates) != 0
-        }
-
-        return self
+        return self._remove_block(block_label)
 
     def connect_circuit(
         self,
@@ -831,6 +821,47 @@ class Circuit(BooleanFunction):
             add_prefix=add_prefix,
         )
 
+    def replace_subcircuit(
+        self,
+        subcircuit: "Circuit",
+        inputs_mapping: dict[Label, Label],
+        outputs_mapping: dict[Label, Label],
+    ) -> tp_ext.Self:
+        """
+        Replace subcircuit with a new one.
+
+        :param subcircuit: new subcircuit.
+        :param inputs_mapping: label to label mapping between subcitcuit inputs and
+            circuit nodes.
+        :param outputs_mapping: label to label mapping between subcitcuit outputs and
+            circuit nodes.
+        :return: modified circuit.
+
+        """
+        check_gates_exist(list(inputs_mapping.keys()), self)
+        check_gates_exist(list(outputs_mapping.keys()), self)
+
+        for old_label, new_label in inputs_mapping.items():
+            if old_label != new_label:
+                self.rename_gate(old_label, new_label)
+
+        for old_label, new_label in outputs_mapping.items():
+            if old_label != new_label:
+                self.rename_gate(old_label, new_label)
+
+        block_for_deleting = self.make_block_from_slice(
+            'block_for_deleting',
+            list(inputs_mapping.values()),
+            list(outputs_mapping.values()),
+        )
+        self._remove_block(block_for_deleting.name)
+
+        for new_gate_label in subcircuit.top_sort(inverse=True):
+            if new_gate_label not in inputs_mapping.values():
+                self.add_gate(new_gate_label)
+
+        return self
+
     def rename_gate(self, old_label: Label, new_label: Label) -> tp_ext.Self:
         """
         Rename gate.
@@ -1081,10 +1112,10 @@ class Circuit(BooleanFunction):
 
     def evaluate_circuit(
         self,
-        assignment: dict[str, GateState],
+        assignment: dict[Label, GateState],
         *,
         outputs: tp.Optional[tp.Sequence[Label]] = None,
-    ) -> dict[str, GateState]:
+    ) -> dict[Label, GateState]:
         """
         Evaluate the circuit with the given input values and return full assignment.
 
@@ -1097,7 +1128,7 @@ class Circuit(BooleanFunction):
 
         """
 
-        assignment_dict: dict[str, GateState] = dict(assignment)
+        assignment_dict: dict[Label, GateState] = dict(assignment)
         for _input in self._inputs:
             assignment_dict.setdefault(_input, Undefined)
 
@@ -1128,8 +1159,8 @@ class Circuit(BooleanFunction):
 
     def evaluate_circuit_outputs(
         self,
-        assignment: dict[str, GateState],
-    ) -> dict[str, GateState]:
+        assignment: dict[Label, GateState],
+    ) -> dict[Label, GateState]:
         """
         Evaluate the circuit with the given input values and return outputs assignment.
 
@@ -1139,7 +1170,7 @@ class Circuit(BooleanFunction):
         `assignment` can be on any gate of the circuit.
 
         """
-        assignment_dict: dict[str, GateState] = self.evaluate_circuit(assignment)
+        assignment_dict: dict[Label, GateState] = self.evaluate_circuit(assignment)
 
         return {output: assignment_dict[output] for output in self._outputs}
 
@@ -1483,6 +1514,28 @@ class Circuit(BooleanFunction):
 
         for block in self.blocks.values():
             block._delete_gate(gate_label)
+
+        return self
+
+    def _remove_block(self, block_label: Label) -> tp_ext.Self:
+        """
+        Delete all gates from block from the circuit and block from list of block
+        without any checks (!!!).
+
+        :param block_label: block's label for deleting
+        :return: this circuit after modification
+
+        """
+        block: Block = self.get_block(block_label)
+
+        for gate in block.gates:
+            self._remove_gate(self.get_gate(gate).label)
+
+        self._blocks = {
+            block_label: block
+            for block_label, block in self.blocks.items()
+            if len(block.gates) != 0
+        }
 
         return self
 
