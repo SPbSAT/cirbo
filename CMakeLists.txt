@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ version selection")  # or 11, 14, 17
 set(CMAKE_CXX_STANDARD_REQUIRED ON)  # optional, ensure standard is supported
 set(CMAKE_CXX_EXTENSIONS OFF)  # optional, keep compiler extensions off
 
+option(DISABLE_ABC_CEXT "Controls if ABC should be compiled." OFF)
+
 # Force mockturtle to not compile heavy examples.
 # Note: must be before mockturtle's CMakeLists is added.
 SET(MOCKTURTLE_EXAMPLES OFF CACHE BOOL "Build examples" FORCE)
@@ -25,7 +27,7 @@ target_include_directories(mockturtle_wrapper PRIVATE third_party)
 
 
 # ABC related libs can be disabled using environment variable.
-IF("$ENV{DISABLE_ABC_CEXT}" STREQUAL "0")
+IF(NOT DISABLE_ABC_CEXT)
     add_subdirectory(third_party/abc)
     # Needed for correct library compilation.
     target_compile_options(libabc PRIVATE -fPIC)
@@ -34,4 +36,4 @@ IF("$ENV{DISABLE_ABC_CEXT}" STREQUAL "0")
 
     target_link_libraries(abc_wrapper PRIVATE libabc)
     target_include_directories(abc_wrapper PRIVATE third_party)
-ENDIF("$ENV{DISABLE_ABC_CEXT}" STREQUAL "0")
+ENDIF(NOT DISABLE_ABC_CEXT)
