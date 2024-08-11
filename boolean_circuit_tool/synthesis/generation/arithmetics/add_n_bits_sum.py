@@ -1,9 +1,6 @@
-from itertools import product, zip_longest
+from itertools import zip_longest
 
-from boolean_circuit_tool.core.circuit import Circuit
-
-from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
     add_gate_with_TT,
 )
 

@@ -1,7 +1,7 @@
 import typing as tp
 
 from boolean_circuit_tool.core.circuit import ALWAYS_FALSE, AND, Circuit, Gate, NOT
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
     get_new_label,
 )
 

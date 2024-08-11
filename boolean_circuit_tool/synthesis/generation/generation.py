@@ -1,3 +1,6 @@
+"""Module defines several general, including generation of "plus-one" circuit, "it-then-
+else" gadget  and "pairwise xor", useful for miter construction."""
+
 import typing as tp
 import uuid
 

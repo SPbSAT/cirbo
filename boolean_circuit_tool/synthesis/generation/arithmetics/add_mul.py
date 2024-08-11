@@ -1,6 +1,6 @@
 from collections import deque
 
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
     add_gate_with_TT,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
