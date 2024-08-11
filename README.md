@@ -13,7 +13,7 @@ Python >=3.9 is used to cover all currently
 1. Setup virtual environment by running `poetry install`
 1. Set your env to the oldest supported Python version `poetry env use 3.9`
 1. Enable virtual environment using `poetry shell`
-1. Install pre-commit hooks using `pre-commit intsall`
+1. Install pre-commit hooks using `pre-commit install`
 
 Note: probably one will need to restart an IDE after extensions are built and
 installed to refresh its index and stubs.

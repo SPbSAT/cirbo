@@ -120,17 +120,18 @@ def test_sum_with_precomputed_xor(inputs: int, outputs: int, size: int):
         for i in range(outputs)
     ]
     circuit_finder = CircuitFinderSat(TruthTableModel(tt), size, basis=Basis.XAIG)
-    circuit_finder.fix_gate(gate=inputs,
-                            first_predecessor=0,
-                            second_predecessor=1,
-                            gate_type=_tt_to_gate_type[(0, 1, 1, 0)]
-                            )
+    circuit_finder.fix_gate(
+        gate=inputs,
+        first_predecessor=0,
+        second_predecessor=1,
+        gate_type=_tt_to_gate_type[(0, 1, 1, 0)],
+    )
     for k in range(inputs - 2):
         circuit_finder.fix_gate(
             gate=inputs + k + 1,
             first_predecessor=k + 2,
             second_predecessor=inputs + k,
-            gate_type=_tt_to_gate_type[(0, 1, 1, 0)]
+            gate_type=_tt_to_gate_type[(0, 1, 1, 0)],
         )
     circuit = circuit_finder.find_circuit()
     check_correctness(circuit, tt)
