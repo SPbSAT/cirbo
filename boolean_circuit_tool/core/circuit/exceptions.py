@@ -16,6 +16,7 @@ __all__ = [
     'TraverseMethodError',
     'CreateBlockError',
     'DeleteBlockError',
+    'ReplaceSubcircuitError',
 ]
 
 
@@ -95,5 +96,11 @@ class CreateBlockError(CircuitError):
 
 class DeleteBlockError(CircuitError):
     """Represents error in deleting block in the circuit."""
+
+    pass
+
+
+class ReplaceSubcircuitError(CircuitError):
+    """Represents error in replacing subcircuit in circuit."""
 
     pass

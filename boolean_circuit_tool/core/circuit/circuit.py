@@ -22,6 +22,7 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     GateDoesntExistError,
     GateNotInputError,
     GateStateError,
+    ReplaceSubcircuitError,
     TraverseMethodError,
 )
 from boolean_circuit_tool.core.circuit.gate import (
@@ -341,6 +342,8 @@ class Circuit(BooleanFunction):
         :return: a specific gate from the circuit by `label`.
 
         """
+        if label not in self._gates:
+            raise GateDoesntExistError()
         return self._gates[label]
 
     def get_gate_users(self, label: Label) -> list[Label]:
@@ -817,26 +820,35 @@ class Circuit(BooleanFunction):
         outputs_mapping: dict[Label, Label],
     ) -> tp_ext.Self:
         """
-        Replace subcircuit with a new one.
+        Replace subcircuit with a new one. In this case, the new subcircuit is added
+        completely (the subcircuit of the subcircuit is not allocated by
+        `inputs_mapping` and `outputs_mapping`), therefore all inputs from the new
+        subcircuit must be in `inputs_mapping`
 
         :param subcircuit: new subcircuit.
-        :param inputs_mapping: label to label mapping between subcitcuit inputs and
-            circuit nodes.
-        :param outputs_mapping: label to label mapping between subcitcuit outputs and
-            circuit nodes.
+        :param inputs_mapping: label to label mapping between circuit nodes and
+            subcitcuit inputs.
+        :param outputs_mapping: label to label mapping between circuit nodes and
+            subcitcuit outputs.
         :return: modified circuit.
 
         """
         check_gates_exist(list(inputs_mapping.keys()), self)
         check_gates_exist(list(outputs_mapping.keys()), self)
-        # add some checks
+        check_gates_exist(list(outputs_mapping.values()), subcircuit)
+        for _input in inputs_mapping.values():
+            if subcircuit.get_gate(_input).gate_type != INPUT:
+                raise ReplaceSubcircuitError()
+        for _input in subcircuit.inputs:
+            if _input not in inputs_mapping.values():
+                raise ReplaceSubcircuitError()
 
         for old_label, new_label in inputs_mapping.items():
             if old_label != new_label:
                 self.rename_gate(old_label, new_label)
 
         for old_label, new_label in outputs_mapping.items():
-            if old_label != new_label:
+            if old_label != new_label and old_label not in inputs_mapping:
                 self.rename_gate(old_label, new_label)
 
         copy_outputs = copy.copy(self.outputs)
