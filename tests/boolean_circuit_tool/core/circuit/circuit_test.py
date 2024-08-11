@@ -30,7 +30,6 @@ from boolean_circuit_tool.core.circuit.gate import (
     XOR,
 )
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
-from boolean_circuit_tool.core.logic import DontCare
 
 
 def test_create_circuit():

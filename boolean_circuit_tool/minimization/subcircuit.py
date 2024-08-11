@@ -6,11 +6,14 @@ import logging
 import typing as tp
 
 import mockturtle_wrapper as mw
+import more_itertools
 
 from boolean_circuit_tool.core.boolean_function import RawTruthTableModel
 from boolean_circuit_tool.core.circuit import Circuit
+from boolean_circuit_tool.core.circuit.exceptions import CircuitValidationError
 from boolean_circuit_tool.core.circuit.gate import Label
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
+from boolean_circuit_tool.core.circuit.validation import check_circuit_has_no_cycles
 from boolean_circuit_tool.core.logic import DontCare
 from boolean_circuit_tool.core.truth_table import TruthTableModel
 from boolean_circuit_tool.minimization.exception import (
@@ -27,7 +30,7 @@ logger = logging.getLogger(__name__)
 __all__ = ['minimize_subcircuits']
 
 
-class NodeState(enum.Enum):
+class _NodeState(enum.Enum):
     UNCHANGED = 'UNCHANGED'
     MODIFIED = 'MODIFIED'
     REMOVED = 'REMOVED'
@@ -63,7 +66,7 @@ class _Subcircuit:
 
         """
         output_patterns: list[int] = [self.patterns[gate] for gate in self.outputs]
-        truth_table: RawTruthTableModel = [list() for _ in range(len(output_patterns))]
+        truth_table: RawTruthTableModel = [list() for _ in output_patterns]
         n = len(self.inputs)
 
         for i in itertools.product(('0', '1'), repeat=n):
@@ -75,46 +78,6 @@ class _Subcircuit:
                 )
 
         return truth_table
-
-
-def _read_cuts(
-    cuts_raw: str, mapping: dict[Label, Label]
-) -> tp.DefaultDict[Cut, set[Label]]:
-    """
-    Read mockturtle cuts into dictionary, where cut is a key and set of nodes for which
-    it was selected as a value.
-
-    :param cuts_raw: cuts found.
-    :param mapping: mapping betwen node names in mockturtle klut_network and in names
-        circuit.
-    :return: found cuts.
-
-    """
-    cut_nodes: tp.DefaultDict[Cut, set[Label]] = collections.defaultdict(set)
-    for line in cuts_raw.split('\n'):
-        if line == '\n' or not line:
-            continue
-        data: list[str] = line.split()
-        if data[0] == 'Node:':
-            node: Label = mapping[data[1]]
-        else:
-            cut: Cut = tuple(mapping[x] for x in data[1:-1])
-            cut_nodes[cut].add(node)
-    return cut_nodes
-
-
-def _powerset(iterable: tp.Iterable) -> itertools.chain:
-    """
-    Get all subsets from an iterable set.
-
-    :param iterable: given set.
-    :return: all subsets from set (including empty set).
-
-    """
-    lst = list(iterable)
-    return itertools.chain.from_iterable(
-        itertools.combinations(lst, x) for x in range(len(lst) + 1)
-    )
 
 
 def _generate_inputs_tt(size: int) -> list[int]:
@@ -132,25 +95,12 @@ def _generate_inputs_tt(size: int) -> list[int]:
     return inputs_tt
 
 
-def _is_cyclic(circuit: Circuit) -> bool:
-    """
-    Check whether circuit has oriented cycles (i.e. wrong circuit).
-
-    :param circuit: circuit to check.
-    :return: True if circuit has any oriented cycles, otherwise False.
-
-    """
-    sorted_gates: list[Label] = [node.label for node in circuit.top_sort(inverse=True)]
-    gate_position: dict[Label, int] = {gate: i for i, gate in enumerate(sorted_gates)}
-    for gate in sorted_gates:
-        for operand in circuit.get_gate(gate).operands:
-            if gate_position[gate] < gate_position[operand]:
-                return True
-    return False
-
-
 def _get_subcircuits(
-    circuit: Circuit, cuts: list[Cut], cut_nodes: tp.DefaultDict[Cut, set[Label]]
+    circuit: Circuit,
+    cuts: list[Cut],
+    cut_nodes: tp.DefaultDict[Cut, set[Label]],
+    max_subcircuit_size: int,
+    cut_size: int,
 ) -> list[_Subcircuit]:
     """
     Get subcircuits for simplification. Function processes given cuts and gets the most
@@ -165,7 +115,7 @@ def _get_subcircuits(
 
     def is_nested_cut(cut1: Cut, cut2: Cut) -> bool:
         """
-        Check whether `cut1` is nesten in `cut2`.
+        Check whether `cut1` is nested in `cut2`.
 
         :param cut1:
         :param cut2:
@@ -174,7 +124,7 @@ def _get_subcircuits(
         """
         for gate in cut1:
             in_cut: bool = False
-            for subcut in _powerset(cut2):
+            for subcut in more_itertools.powerset(cut2):
                 if gate in cut_nodes[subcut]:
                     in_cut = True
                     break
@@ -185,7 +135,9 @@ def _get_subcircuits(
     good_cuts: list[Cut] = list()
     is_removed: dict[Cut, bool] = collections.defaultdict(bool)
     for i, cut in enumerate(cuts):
-        for subcut in _powerset(cut):  # check whether cut should be removed
+        for subcut in more_itertools.powerset(
+            cut
+        ):  # check whether cut should be removed
             if is_removed[subcut]:
                 is_removed[cut] = True
                 break
@@ -198,7 +150,8 @@ def _get_subcircuits(
         if is_removed[cut]:
             continue
 
-        for next_cut in cuts[i + 1 :]:
+        for j in range(i + 1, len(cuts)):
+            next_cut = cuts[j]
             if len(next_cut) > len(cut):
                 break
             if is_nested_cut(cut, next_cut):
@@ -212,19 +165,21 @@ def _get_subcircuits(
 
     # Fill cuts with all its gates
     for cut in good_cuts:
-        for subcut in _powerset(cut):
+        for subcut in more_itertools.powerset(cut):
             cut_nodes[cut].update(cut_nodes[subcut])
 
     node_pos: dict[Label, int] = {
         node.label: i for i, node in enumerate(circuit.top_sort(inverse=True))
     }
     subcircuits: list[_Subcircuit] = list()
-    good_cuts = [cut for cut in good_cuts if len(cut) > 2]  # skip small cuts
+    good_cuts = [cut for cut in good_cuts if 1 < len(cut) <= max_subcircuit_size]
 
     logger.debug(f"Process: {len(good_cuts)} cuts")
 
     outputs_set: set[Label] = set(circuit.outputs)
-    inputs_tt: dict[int, list[int]] = {x: _generate_inputs_tt(x) for x in [3, 4, 5]}
+    inputs_tt: dict[int, list[int]] = {
+        x: _generate_inputs_tt(x) for x in range(cut_size + 1)
+    }
 
     for cut in good_cuts:
         n: int = len(cut)
@@ -282,7 +237,7 @@ def _get_subcircuits(
         outputs.sort(key=lambda x: circuit_tt[x])
         subcircuits.append(
             _Subcircuit(
-                inputs=list(inputs_lst)[::-1],
+                inputs=inputs_lst[::-1],
                 gates=nodes,
                 outputs=outputs,
                 size=circuit_size,
@@ -335,7 +290,7 @@ def minimize_subcircuits(
     *,
     enable_validation: bool = False,
     max_subcircuit_size: int = 9,
-    solver_time_limit: int = 15,
+    solver_time_limit_sec: int = 15,
     cut_size: int = 5,
     cut_limit: int = 25,
     fanout_size: int = 10000,
@@ -350,7 +305,7 @@ def minimize_subcircuits(
     :param max_subcircuit_size: the maximum size of subcircuits for simplification.
         Important: simplification is based on SAT-Solver and can take a long time to
         work for sizes >=12.
-    :param solver_time_limit: time limit in seconds for single subcicircuit minimization
+    :param solver_time_limit_sec: time limit in seconds for single subcicircuit minimization
         using SAT-Solver.
     :param cut_size: [mockturtle params] Maximum number of leaves for a cut.
     :param cut_limit: [mockturtle params] Maximum number of cuts for a node.
@@ -362,24 +317,29 @@ def minimize_subcircuits(
         circuit.
 
     """
-    cuts_raw: str
-    mapping: dict[Label, Label]
-    cuts_raw, mapping = mw.enumerate_cuts(
+    node_cuts: dict[Label : list[Cut]] = mw.enumerate_cuts(
         circuit.format_circuit(),
         cut_size,
         cut_limit,
         fanout_size,
     )
-    cut_nodes: tp.DefaultDict[Cut, set[str]] = _read_cuts(cuts_raw, mapping)
+    cut_nodes: tp.DefaultDict[Cut, set[str]] = collections.defaultdict(
+        set
+    )  # _read_cuts(cuts_raw, mapping)
+    for node, cuts in node_cuts.items():
+        for cut in cuts:
+            cut_nodes[tuple(cut)].add(node)
     cuts: list[Cut] = sorted(cut_nodes.keys(), key=lambda x: len(x))
 
     logger.debug(f"Found {len(cuts)} cuts")
 
     initial_circuit: Circuit = copy.deepcopy(circuit)
-    subcircuits: list[_Subcircuit] = _get_subcircuits(circuit, cuts, cut_nodes)
+    subcircuits: list[_Subcircuit] = _get_subcircuits(
+        circuit, cuts, cut_nodes, max_subcircuit_size, cut_size
+    )
     subcircuits = _eval_dont_cares(circuit, subcircuits)
-    node_states: dict[Label, NodeState] = {
-        label: NodeState.UNCHANGED for label in circuit.gates
+    node_states: dict[Label, _NodeState] = {
+        label: _NodeState.UNCHANGED for label in circuit.gates
     }
 
     for iter, subcircuit in enumerate(subcircuits):
@@ -392,8 +352,8 @@ def minimize_subcircuits(
 
         skip_subcircuit: bool = False
         for gate in subcircuit.gates:
-            if node_states[gate] == NodeState.REMOVED or (
-                node_states[gate] == NodeState.MODIFIED and gate not in inputs_set
+            if node_states[gate] == _NodeState.REMOVED or (
+                node_states[gate] == _NodeState.MODIFIED and gate not in inputs_set
             ):
                 skip_subcircuit = True
                 break
@@ -431,7 +391,7 @@ def minimize_subcircuits(
         try:
             new_subcircuit: Circuit = CircuitFinderSat(
                 TruthTableModel(outputs_tt), size - 1, basis=basis
-            ).find_circuit(time_limit=solver_time_limit)
+            ).find_circuit(time_limit=solver_time_limit_sec)
         except NoSolutionError:
             logger.debug("Smaller subcircuit not found")
             continue
@@ -467,7 +427,9 @@ def minimize_subcircuits(
             new_subcircuit, input_labels_mapping, output_labels_mapping
         )
 
-        if _is_cyclic(new_circuit):
+        try:
+            check_circuit_has_no_cycles(new_circuit)
+        except CircuitValidationError:
             logger.debug("Circuit becomes cyclic")
             continue
 
@@ -476,12 +438,12 @@ def minimize_subcircuits(
 
         # Update the states
         for output in output_labels_mapping:
-            node_states[output] = NodeState.REMOVED  # todo: process carefully
+            node_states[output] = _NodeState.REMOVED  # todo: process carefully
 
         for gate in circuit.get_internal_gates(
             list(input_labels_mapping.keys()), list(output_labels_mapping.keys())
         ):
-            node_states[gate] = NodeState.REMOVED
+            node_states[gate] = _NodeState.REMOVED
 
     if enable_validation:
         assignment: dict[Label, GateState] = {

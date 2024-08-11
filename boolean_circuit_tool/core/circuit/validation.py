@@ -15,10 +15,16 @@ __all__ = [
     'check_block_doesnt_exist',
     'check_gate_has_not_users',
     'check_block_has_not_users',
+    'check_circuit_has_no_cycles',
 ]
 
 if tp.TYPE_CHECKING:
-    from boolean_circuit_tool.core.circuit.circuit import Block, Circuit
+    from boolean_circuit_tool.core.circuit.circuit import (
+        Block,
+        Circuit,
+        Gate,
+        TraverseState,
+    )
     from boolean_circuit_tool.core.circuit.gate import Label
 
 
@@ -60,3 +66,17 @@ def check_block_has_not_users(block: 'Block', circuit: 'Circuit') -> None:
         for user in circuit.get_gate_users(gate):
             if user not in gates_set:
                 raise DeleteBlockError()
+
+
+def check_circuit_has_no_cycles(circuit: 'Circuit') -> None:
+    """Check that there are no cycles in the circuit."""
+
+    def on_discover_hook(
+        gate: 'Gate', gate_states: tp.DefaultDict['Label', 'TraverseState']
+    ):
+        if gate_states[gate.label].as_int == 1:  #  TraverseState.ENTERED
+            raise CircuitValidationError(
+                f'Circuit has orinted cycle',
+            )
+
+    list(circuit.dfs(on_discover_hook=on_discover_hook))

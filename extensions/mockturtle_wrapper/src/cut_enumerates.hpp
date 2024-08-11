@@ -148,24 +148,25 @@ private:
 }
 
 
-inline std::pair<std::string, std::map<std::string, std::string>> enumerate_cuts(const std::string &circuit, int cut_size, int cut_limit, int fanout_size) {
+inline std::map <std::string, std::vector<std::vector<std::string>>> enumerate_cuts(const std::string &circuit, int cut_size, int cut_limit, int fanout_size) {
     mockturtle::klut_network aig;
     auto bench_reader = mockturtle::public_bench_reader(aig);
     std::istringstream in(circuit);
     auto const result = lorina::read_bench(in, bench_reader);
     auto signals = bench_reader.signals;
 
-    std::map <std::string, std::string> index_to_node;
+    std::map <uint32_t, std::string> index_to_node;
+    std::map <std::string, std::vector<std::vector<std::string>>> node_cuts;
     for (auto signal: signals)
     {
-        index_to_node[std::to_string(signal.second)] = signal.first;
+        index_to_node[signal.second] = signal.first;
     }
 
     std::cerr << "bench file is read" << std::endl;
     if (result != lorina::return_code::success)
     {
         std::cerr << "Read benchmark failed" << std::endl;
-        return std::make_pair("", index_to_node);
+        return node_cuts;
     }
     mockturtle::cut_enumeration_params ps;
     ps.cut_size = cut_size;
@@ -180,10 +181,20 @@ inline std::pair<std::string, std::map<std::string, std::string>> enumerate_cuts
     {
         if (node >= 2)
         {
-            out << "Node: " << aig.node_to_index(node) << "\n";
-            out << cuts.cuts(aig.node_to_index(node)) << "\n";
+            uint32_t index = aig.node_to_index(node);
+            std::vector<std::vector<std::string>> curr_cuts;
+            for (auto aig_cut: cuts.cuts(index))
+            {
+                std::vector<std::string> cut;
+                for (uint32_t cut_node: *aig_cut)
+                {
+                    cut.push_back(index_to_node[cut_node]);
+                }
+                curr_cuts.push_back(cut);
+            }
+            node_cuts[index_to_node[index]] = curr_cuts;
         }
     });
 
-    return std::make_pair(out.str(), index_to_node);
+    return node_cuts;
 }

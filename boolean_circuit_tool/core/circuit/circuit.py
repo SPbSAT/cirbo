@@ -56,6 +56,9 @@ class TraverseMode(enum.Enum):
 
 
 class TraverseState(enum.Enum):
+    def __init__(self, value):
+        self.as_int = value
+
     UNVISITED = 0
     ENTERED = 1
     VISITED = 2
@@ -513,8 +516,6 @@ class Circuit(BooleanFunction):
             self.get_gate(label)._gate_type = subcircuit.get_gate(label)._gate_type
             for operand in self.get_gate(label)._operands:
                 self._add_user(operand, label)
-        print(labels_to_remove)
-        print(labels_to_rename)
         for i, label in enumerate(labels_to_rename):
             new_label: Label = labels_to_remove[i]
             self.rename_gate(label, new_label)
@@ -996,6 +997,7 @@ class Circuit(BooleanFunction):
         *,
         inverse: bool = False,
         on_enter_hook: TraverseHookT = lambda _, __: None,
+        on_discover_hook: TraverseHookT = lambda _, __: None,
         on_exit_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
     ) -> tp.Iterable[Gate]:
@@ -1009,6 +1011,8 @@ class Circuit(BooleanFunction):
             Iterator will start from inputs and traverse the circuit to the outputs,
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
+        :param on_discover_hook: callable function which applies for gate when we try to
+            viist it from another one
         :param on_exit_hook: callable function which applies after visiting the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
@@ -1020,6 +1024,7 @@ class Circuit(BooleanFunction):
             start_gates,
             inverse=inverse,
             on_enter_hook=on_enter_hook,
+            on_discover_hook=on_discover_hook,
             on_exit_hook=on_exit_hook,
             unvisited_hook=unvisited_hook,
         )
@@ -1030,6 +1035,7 @@ class Circuit(BooleanFunction):
         *,
         inverse: bool = False,
         on_enter_hook: TraverseHookT = lambda _, __: None,
+        on_discover_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
     ) -> tp.Iterable[Gate]:
         """
@@ -1042,6 +1048,8 @@ class Circuit(BooleanFunction):
             Iterator will start from inputs and traverse the circuit to the outputs,
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
+        :param on_discover_hook: callable function which applies for gate when we try to
+            viist it from another one
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
         :return: Iterator of gates, which traverse the circuit in dfs order.
@@ -1052,6 +1060,7 @@ class Circuit(BooleanFunction):
             start_gates,
             inverse=inverse,
             on_enter_hook=on_enter_hook,
+            on_discover_hook=on_discover_hook,
             unvisited_hook=unvisited_hook,
         )
 
@@ -1520,6 +1529,7 @@ class Circuit(BooleanFunction):
         *,
         inverse: bool = False,
         on_enter_hook: TraverseHookT = lambda _, __: None,
+        on_discover_hook: TraverseHookT = lambda _, __: None,
         on_exit_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
     ) -> tp.Iterable[Gate]:
@@ -1534,6 +1544,8 @@ class Circuit(BooleanFunction):
             Iterator will start from inputs and traverse the circuit to the outputs,
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
+        :param on_discover_hook: callable function which applies for gate when we try to
+            viist it from another one
         :param on_exit_hook: callable function which applies after visiting all children
             of the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
@@ -1591,6 +1603,7 @@ class Circuit(BooleanFunction):
                 gate_states[current_elem.label] = TraverseState.ENTERED
 
                 for child in _next_getter(current_elem):
+                    on_discover_hook(self.get_gate(child), gate_states)
                     if gate_states[child] == TraverseState.UNVISITED:
                         queue.append(child)
 
