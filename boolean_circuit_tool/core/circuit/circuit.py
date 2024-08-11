@@ -810,6 +810,74 @@ class Circuit(BooleanFunction):
             add_prefix=add_prefix,
         )
 
+    def get_internal_gates(
+        self, inputs: list[Label], outputs: list[Label]
+    ) -> list[Label]:
+        """
+        Get gates between given inputs and outputs in the circuit.
+
+        :param inputs: list with inputs.
+        :param outputs: list with outputs.
+        :return: list with gates from the circuit
+
+        """
+        internal_gates: list[Label] = []
+        label_is_visited: dict[Label, bool] = collections.defaultdict(bool)
+        for output_label in outputs:
+            queue: tp.Deque[Label] = collections.deque()
+            if not label_is_visited[output_label]:
+                label_is_visited[output_label]
+                queue.append(output_label)
+            while queue:
+                label = queue.popleft()
+                if label not in inputs and label not in outputs:
+                    internal_gates.append(label)
+                if label not in inputs:
+                    for operand in self.get_gate(label).operands:
+                        if not label_is_visited[operand]:
+                            label_is_visited[operand] = True
+                            queue.append(operand)
+        return internal_gates
+
+    def _rename_for_replace_subcircuit(
+        self,
+        subcircuit: "Circuit",
+        inputs_mapping: dict[Label, Label],
+        outputs_mapping: dict[Label, Label],
+    ):
+        labels_to_remove: list[Label] = self.get_internal_gates(
+            list(inputs_mapping.keys()), list(outputs_mapping.keys())
+        )
+
+        tmp_mapping: dict[Label, Label] = (
+            {}
+        )  # used to avoid duplicating labels for nodes
+        subcircuit_gates: list[Label] = list(subcircuit.gates.keys())
+        for i, label in enumerate(subcircuit_gates):
+            new_label: Label = (
+                f"tmp_{i}"  # assume subcircuit will not have nodes with such labels
+            )
+            tmp_mapping[label] = new_label
+            subcircuit.rename_gate(label, new_label)
+
+        print('\n2:\n', subcircuit.format_circuit())
+
+        for label1, label2 in inputs_mapping.items():
+            subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
+        for label1, label2 in outputs_mapping.items():
+            if label1 not in inputs_mapping:
+                subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
+
+        i = 0
+        for node in subcircuit.top_sort(inverse=True):
+            label = node.label
+            if label not in inputs_mapping and label not in outputs_mapping:
+                new_label = labels_to_remove[i]
+                subcircuit.rename_gate(label, new_label)
+                i += 1
+
+        return subcircuit
+
     def replace_subcircuit(
         self,
         subcircuit: "Circuit",
@@ -830,6 +898,9 @@ class Circuit(BooleanFunction):
         check_gates_exist(list(inputs_mapping.keys()), self)
         check_gates_exist(list(outputs_mapping.keys()), self)
         # add some checks
+        print('\n1:\n', subcircuit.format_circuit())
+        self._rename_for_replace_subcircuit(subcircuit, inputs_mapping, outputs_mapping)
+        print('\n2:\n', subcircuit.format_circuit())
 
         for old_label, new_label in inputs_mapping.items():
             if old_label != new_label:
@@ -1733,3 +1804,42 @@ class Circuit(BooleanFunction):
             width=100,
         )
         return f"{self.__class__.__name__}\n\t{input_str}\n\t{output_str}"
+
+
+if __name__ == '__main__':
+
+    from boolean_circuit_tool.core.circuit.gate import AND, OR, XOR
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('A', 'B')))
+    instance.add_gate(Gate('F', OR, ('B', 'C')))
+    instance.add_gate(Gate('G', XOR, ('E', 'F')))
+    instance.add_gate(Gate('H', AND, ('D', 'G')))
+    instance.mark_as_output('H')
+
+    instance_to_replace_with = Circuit()
+
+    instance_to_replace_with.add_gate(Gate('K', INPUT))
+    instance_to_replace_with.add_gate(Gate('L', INPUT))
+    instance_to_replace_with.add_gate(Gate('M', INPUT))
+    instance_to_replace_with.add_gate(Gate('N', NOT, ('K',)))
+    instance_to_replace_with.add_gate(Gate('O', OR, ('L', 'N')))
+    instance_to_replace_with.add_gate(Gate('P', AND, ('O', 'M')))
+    instance_to_replace_with.mark_as_output('P')
+
+    inputs_mapping = {
+        'A': 'K',
+        'B': 'L',
+        'C': 'M',
+    }
+    outputs_mapping = {'G': 'P'}
+    new_instance = instance.replace_subcircuit(
+        subcircuit=instance_to_replace_with,
+        inputs_mapping=inputs_mapping,
+        outputs_mapping=outputs_mapping,
+    )
