@@ -1,5 +1,5 @@
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
-    add_gate_with_TT,
+    add_gate_from_tt,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_mul import (
     add_mul,
@@ -43,7 +43,7 @@ def add_square_pow2_m1(circuit, input_labels):
     c = [[0] * n for _ in range(n)]
     for i in range(n):
         for j in range(i + 1, n):
-            c[i][j] = add_gate_with_TT(
+            c[i][j] = add_gate_from_tt(
                 circuit, input_labels[i], input_labels[j], '0001'
             )
     for i in range(n):
@@ -51,7 +51,7 @@ def add_square_pow2_m1(circuit, input_labels):
 
     d = [[0] for _ in range(2 * n)]
     d[0] = [[c[0][0]]]
-    zero = add_gate_with_TT(circuit, input_labels[0], input_labels[0], '0000')
+    zero = add_gate_from_tt(circuit, input_labels[0], input_labels[0], '0000')
     d[1] = [[zero]]
     for i in range(2, 2 * n):
         inp = []

@@ -3,7 +3,7 @@ from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_sub_with_per_equal_size,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
-    add_gate_with_TT,
+    add_gate_from_tt,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
     add_sum_two_numbers,
@@ -22,8 +22,8 @@ def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
     n = len(input_labels)
     half = n // 2
     x = input_labels
-    ZERO = add_gate_with_TT(circuit, x[0], x[0], "0110")
-    UNO = add_gate_with_TT(circuit, x[0], x[0], "1001")
+    ZERO = add_gate_from_tt(circuit, x[0], x[0], "0110")
+    UNO = add_gate_from_tt(circuit, x[0], x[0], "1001")
 
     if n % 2 == 1:
         half += 1
@@ -36,20 +36,20 @@ def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
         sm = sm[:-1]
         sub_res, per = add_sub_with_per_equal_size(circuit, x[(2 * st) :], sm)
         for i in range(st * 2, n):
-            x[i] = add_gate_with_TT(
+            x[i] = add_gate_from_tt(
                 circuit,
-                add_gate_with_TT(circuit, per, sub_res[i - 2 * st], "0100"),
-                add_gate_with_TT(circuit, x[i], per, "0001"),
+                add_gate_from_tt(circuit, per, sub_res[i - 2 * st], "0100"),
+                add_gate_from_tt(circuit, x[i], per, "0001"),
                 "0111",
             )
         c = c[1:]
         c.append(ZERO)
         sm = add_sum_two_numbers(circuit, c[(2 * st) :], [UNO])[:-1]
         for i in range(st * 2, n):
-            c[i] = add_gate_with_TT(
+            c[i] = add_gate_from_tt(
                 circuit,
-                add_gate_with_TT(circuit, per, sm[i - 2 * st], "0100"),
-                add_gate_with_TT(circuit, c[i], per, "0001"),
+                add_gate_from_tt(circuit, per, sm[i - 2 * st], "0100"),
+                add_gate_from_tt(circuit, c[i], per, "0001"),
                 "0111",
             )
     return c[:half]

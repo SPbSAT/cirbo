@@ -5,7 +5,9 @@ from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt impo
     get_new_label,
 )
 
-__all__ = ['add_equal']
+__all__ = [
+    'add_equal',
+]
 
 
 def add_equal(circuit: Circuit, input_labels: tp.Sequence[str], num: int) -> str:

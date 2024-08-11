@@ -1,7 +1,7 @@
 from itertools import zip_longest
 
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
-    add_gate_with_TT,
+    add_gate_from_tt,
 )
 
 
@@ -56,7 +56,7 @@ def add_sum_two_numbers_with_shift(
         for i in range(n):
             d[i] = [input_labels_a[i]]
         if shift != n:
-            zero = add_gate_with_TT(
+            zero = add_gate_from_tt(
                 circuit, input_labels_a[0], input_labels_a[0], '0000'
             )
             for i in range(n, shift - n):
@@ -76,27 +76,27 @@ def add_sum_two_numbers_with_shift(
 def add_sum2(circuit, input_labels):
     assert len(input_labels) == 2
     [x1, x2] = input_labels
-    g1 = add_gate_with_TT(circuit, x1, x2, '0110')
-    g2 = add_gate_with_TT(circuit, x1, x2, '0001')
+    g1 = add_gate_from_tt(circuit, x1, x2, '0110')
+    g2 = add_gate_from_tt(circuit, x1, x2, '0001')
     return g1, g2
 
 
 def add_sum3(circuit, input_labels):
     assert len(input_labels) == 3
     x1, x2, x3 = input_labels
-    g1 = add_gate_with_TT(circuit, x1, x2, '0110')
-    g2 = add_gate_with_TT(circuit, g1, x3, '0110')
-    g3 = add_gate_with_TT(circuit, x1, x2, '0001')
-    g4 = add_gate_with_TT(circuit, g1, x3, '0001')
-    g5 = add_gate_with_TT(circuit, g3, g4, '0110')
+    g1 = add_gate_from_tt(circuit, x1, x2, '0110')
+    g2 = add_gate_from_tt(circuit, g1, x3, '0110')
+    g3 = add_gate_from_tt(circuit, x1, x2, '0001')
+    g4 = add_gate_from_tt(circuit, g1, x3, '0001')
+    g5 = add_gate_from_tt(circuit, g3, g4, '0110')
     return g2, g5
 
 
 def add_sub2(circuit, input_labels):
     assert len(input_labels) == 2
     [x1, x2] = input_labels
-    g1 = add_gate_with_TT(circuit, x1, x2, '0110')
-    g2 = add_gate_with_TT(circuit, x1, x2, '0100')
+    g1 = add_gate_from_tt(circuit, x1, x2, '0110')
+    g2 = add_gate_from_tt(circuit, x1, x2, '0100')
 
     return g1, g2  # res and balance
 
@@ -104,11 +104,11 @@ def add_sub2(circuit, input_labels):
 def add_sub3(circuit, input_labels):
     assert len(input_labels) == 3
     x0, x1, x2 = input_labels  # A, B and balance (we do A - B)
-    x3 = add_gate_with_TT(circuit, x0, x1, '0110')
-    x4 = add_gate_with_TT(circuit, x1, x2, '0110')
-    x5 = add_gate_with_TT(circuit, x3, x4, '0111')
-    x6 = add_gate_with_TT(circuit, x2, x3, '0110')
-    x7 = add_gate_with_TT(circuit, x0, x5, '0110')
+    x3 = add_gate_from_tt(circuit, x0, x1, '0110')
+    x4 = add_gate_from_tt(circuit, x1, x2, '0110')
+    x5 = add_gate_from_tt(circuit, x3, x4, '0111')
+    x6 = add_gate_from_tt(circuit, x2, x3, '0110')
+    x7 = add_gate_from_tt(circuit, x0, x5, '0110')
     return x6, x7
 
 
@@ -143,24 +143,24 @@ def add_sub_two_numbers(circuit, input_labels_a, input_labels_b):
 def add_stockmeyer_block(circuit, input_labels):
     assert len(input_labels) == 3
     x1, x2, x23 = input_labels
-    w0 = add_gate_with_TT(circuit, x1, x23, '0110')
-    g2 = add_gate_with_TT(circuit, x2, x23, '0010')
-    g3 = add_gate_with_TT(circuit, x1, x23, '0001')
-    w1 = add_gate_with_TT(circuit, g2, g3, '0110')
+    w0 = add_gate_from_tt(circuit, x1, x23, '0110')
+    g2 = add_gate_from_tt(circuit, x2, x23, '0010')
+    g3 = add_gate_from_tt(circuit, x1, x23, '0001')
+    w1 = add_gate_from_tt(circuit, g2, g3, '0110')
     return w0, w1
 
 
 def add_mdfa(circuit, input_labels):
     assert len(input_labels) == 5
     z, x1, xy1, x2, xy2 = input_labels
-    g1 = add_gate_with_TT(circuit, x1, z, '0110')
-    g2 = add_gate_with_TT(circuit, xy1, g1, '0111')
-    g3 = add_gate_with_TT(circuit, xy1, z, '0110')
-    g4 = add_gate_with_TT(circuit, g2, g3, '0110')
-    g5 = add_gate_with_TT(circuit, x2, g3, '0110')
-    g6 = add_gate_with_TT(circuit, g3, xy2, '0110')
-    g7 = add_gate_with_TT(circuit, g5, xy2, '0010')
-    g8 = add_gate_with_TT(circuit, g2, g7, '0110')
+    g1 = add_gate_from_tt(circuit, x1, z, '0110')
+    g2 = add_gate_from_tt(circuit, xy1, g1, '0111')
+    g3 = add_gate_from_tt(circuit, xy1, z, '0110')
+    g4 = add_gate_from_tt(circuit, g2, g3, '0110')
+    g5 = add_gate_from_tt(circuit, x2, g3, '0110')
+    g6 = add_gate_from_tt(circuit, g3, xy2, '0110')
+    g7 = add_gate_from_tt(circuit, g5, xy2, '0010')
+    g8 = add_gate_from_tt(circuit, g2, g7, '0110')
     return g6, g4, g8
 
 
@@ -168,12 +168,12 @@ def add_mdfa(circuit, input_labels):
 def add_simplified_mdfa(circuit, input_labels):
     assert len(input_labels) == 4
     x1, xy1, x2, xy2 = input_labels
-    g2 = add_gate_with_TT(circuit, xy1, x1, '0111')
-    g4 = add_gate_with_TT(circuit, g2, xy1, '0110')
-    g5 = add_gate_with_TT(circuit, x2, xy1, '0110')
-    g6 = add_gate_with_TT(circuit, xy1, xy2, '0110')
-    g7 = add_gate_with_TT(circuit, g5, xy2, '0010')
-    g8 = add_gate_with_TT(circuit, g2, g7, '0110')
+    g2 = add_gate_from_tt(circuit, xy1, x1, '0111')
+    g4 = add_gate_from_tt(circuit, g2, xy1, '0110')
+    g5 = add_gate_from_tt(circuit, x2, xy1, '0110')
+    g6 = add_gate_from_tt(circuit, xy1, xy2, '0110')
+    g7 = add_gate_from_tt(circuit, g5, xy2, '0010')
+    g8 = add_gate_from_tt(circuit, g2, g7, '0110')
     return g6, g4, g8
 
 
@@ -221,7 +221,7 @@ def add_sum_n_bits(circuit, input_lables):
     now_x_xy = []
     now_solo = input_lables
     while len(now_solo) > 1:
-        xy = add_gate_with_TT(circuit, now_solo[-1], now_solo[-2], "0110")
+        xy = add_gate_from_tt(circuit, now_solo[-1], now_solo[-2], "0110")
         now_x_xy.append((now_solo[-1], xy))
         for _ in range(2):
             now_solo.pop()
@@ -274,7 +274,7 @@ def add_sum_n_bits(circuit, input_lables):
             else:
                 now_solo.append(now_x_xy[-1][1])
                 next_solo.append(
-                    add_gate_with_TT(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010")
+                    add_gate_from_tt(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010")
                 )
                 now_x_xy.pop()
 

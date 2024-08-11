@@ -1,7 +1,7 @@
 from collections import deque
 
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
-    add_gate_with_TT,
+    add_gate_from_tt,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
     add_sub_two_numbers,
@@ -26,7 +26,7 @@ def add_mul(circuit, input_labels_a, input_labels_b):
     c = [[0] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
-            c[i][j] = add_gate_with_TT(
+            c[i][j] = add_gate_from_tt(
                 circuit, input_labels_a[j], input_labels_b[i], '0001'
             )
 
@@ -61,7 +61,7 @@ def add_mul_alter(circuit, input_labels_a, input_labels_b):
     c = [[0] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
-            c[i][j] = add_gate_with_TT(
+            c[i][j] = add_gate_from_tt(
                 circuit, input_labels_a[j], input_labels_b[i], '0001'
             )
 
@@ -91,7 +91,7 @@ def add_mul_karatsuba(circuit, input_labels_a, input_labels_b):  # work on equal
         n = len(input_labels_a)
     while n != len(input_labels_b):
         input_labels_b.append(
-            add_gate_with_TT(circuit, input_labels_a[0], input_labels_a[0], '0110')
+            add_gate_from_tt(circuit, input_labels_a[0], input_labels_a[0], '0110')
         )
 
     if n < 20 and n != 18:
@@ -141,7 +141,7 @@ def add_mul_dadda(circuit, input_labels_a, input_labels_b):
     for i in range(m):
         for j in range(n):
             c[i + j].append(
-                add_gate_with_TT(circuit, input_labels_a[j], input_labels_b[i], '0001')
+                add_gate_from_tt(circuit, input_labels_a[j], input_labels_b[i], '0001')
             )
 
     if n == 1 or m == 1:
@@ -188,7 +188,7 @@ def add_mul_wallace(circuit, input_labels_a, input_labels_b):
     c = [[0] * m for _ in range(n + m)]
     for i in range(m):
         for j in range(n):
-            c[i + j][i] = add_gate_with_TT(
+            c[i + j][i] = add_gate_from_tt(
                 circuit, input_labels_a[j], input_labels_b[i], '0001'
             )
 
@@ -242,7 +242,7 @@ def add_mul_pow2_m1(circuit, input_labels_a, input_labels_b):
     c = [[0] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
-            c[i][j] = add_gate_with_TT(
+            c[i][j] = add_gate_from_tt(
                 circuit, input_labels_a[j], input_labels_b[i], '0001'
             )
 
