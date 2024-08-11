@@ -1,3 +1,6 @@
+"""Module defines several general, including generation of "plus-one" circuit, "it-then-
+else" gadget  and "pairwise xor", useful for miter construction."""
+
 import typing as tp
 import uuid
 
@@ -53,7 +56,7 @@ def generate_if_then_else() -> Circuit:
 def generate_pairwise_if_then_else(n: int) -> Circuit:
     """
     Generates a circuit with `3n` inputs `[if_0, .., if_{n-1}, then_0, .., then_{n-1},
-    else_0, .., else_{n-1}]` and `n` outputs `[if_then_else_0, .., if_then_else_{n-1}]`
+    else_0, ..., else_{n-1}]` and `n` outputs `[if_then_else_0, .., if_then_else_{n-1}]`
     that computes `if then else` function for every 0 <= i < n.
 
     :param n: 3n -- number of inputs, n -- number of outputs
@@ -132,7 +135,7 @@ def add_plus_one(
     input_labels: list[gate.Label],
     *,
     result_labels: tp.Optional[list[gate.Label]] = None,
-    add_outputs=False
+    add_outputs=False,
 ) -> list[gate.Label]:
     """
     For a given circuit, adds a subcircuit that adds 1 to a number corresponding to the
@@ -202,7 +205,7 @@ def add_if_then_else(
     else_label: gate.Label,
     *,
     result_label: tp.Optional[gate.Label] = None,
-    add_outputs=False
+    add_outputs=False,
 ) -> gate.Label:
     """
     For a given circuit, adds a subcircuit that computes `if then else` function of
@@ -243,7 +246,7 @@ def add_pairwise_if_then_else(
     else_labels: list[gate.Label],
     *,
     result_labels: tp.Optional[list[gate.Label]] = None,
-    add_outputs=False
+    add_outputs=False,
 ) -> list[gate.Label]:
     """
     For a given circuit, adds a subcircuit with `3n` given inputs `if`, `then` and
@@ -295,7 +298,7 @@ def add_pairwise_xor(
     y_labels: list[gate.Label],
     *,
     result_labels: tp.Optional[list[gate.Label]] = None,
-    add_outputs=False
+    add_outputs=False,
 ) -> list[gate.Label]:
     """
     For a given circuit, adds a subcircuit with `2n` given inputs `x` and `y`, and `n`
@@ -337,7 +340,9 @@ def _generate_labels(prefix: str, n: int) -> list[str]:
 
 
 def _get_new_label(
-    circuit: Circuit, *, other_restrictions: tp.Optional[list[gate.Label]] = None
+    circuit: Circuit,
+    *,
+    other_restrictions: tp.Optional[list[gate.Label]] = None,
 ) -> gate.Label:
     if other_restrictions is None:
         other_restrictions = []
@@ -351,7 +356,7 @@ def _get_new_labels(
     circuit: Circuit,
     n: int,
     *,
-    other_restrictions: tp.Optional[list[gate.Label]] = None
+    other_restrictions: tp.Optional[list[gate.Label]] = None,
 ) -> list[gate.Label]:
     if other_restrictions is None:
         other_restrictions = []
