@@ -1,3 +1,4 @@
+import typing as tp
 import uuid
 
 from boolean_circuit_tool.core.circuit import Circuit, Gate, gate
@@ -130,7 +131,7 @@ def add_plus_one(
     circuit: Circuit,
     input_labels: list[gate.Label],
     *,
-    result_labels: list[gate.Label] = None,
+    result_labels: tp.Optional[list[gate.Label]] = None,
     add_outputs=False
 ) -> list[gate.Label]:
     """
@@ -200,7 +201,7 @@ def add_if_then_else(
     then_label: gate.Label,
     else_label: gate.Label,
     *,
-    result_label: gate.Label = None,
+    result_label: tp.Optional[gate.Label] = None,
     add_outputs=False
 ) -> gate.Label:
     """
@@ -241,7 +242,7 @@ def add_pairwise_if_then_else(
     then_labels: list[gate.Label],
     else_labels: list[gate.Label],
     *,
-    result_labels: list[gate.Label] = None,
+    result_labels: tp.Optional[list[gate.Label]] = None,
     add_outputs=False
 ) -> list[gate.Label]:
     """
@@ -293,7 +294,7 @@ def add_pairwise_xor(
     x_labels: list[gate.Label],
     y_labels: list[gate.Label],
     *,
-    result_labels: list[gate.Label] = None,
+    result_labels: tp.Optional[list[gate.Label]] = None,
     add_outputs=False
 ) -> list[gate.Label]:
     """
@@ -336,7 +337,7 @@ def _generate_labels(prefix: str, n: int) -> list[str]:
 
 
 def _get_new_label(
-    circuit: Circuit, *, other_restrictions: list[gate.Label] = None
+    circuit: Circuit, *, other_restrictions: tp.Optional[list[gate.Label]] = None
 ) -> gate.Label:
     if other_restrictions is None:
         other_restrictions = []
@@ -347,11 +348,14 @@ def _get_new_label(
 
 
 def _get_new_labels(
-    circuit: Circuit, n: int, *, other_restrictions: list[gate.Label] = None
+    circuit: Circuit,
+    n: int,
+    *,
+    other_restrictions: tp.Optional[list[gate.Label]] = None
 ) -> list[gate.Label]:
     if other_restrictions is None:
         other_restrictions = []
-    ans = []
+    ans: list[gate.Label] = []
     for i in range(n):
         ans.append(_get_new_label(circuit, other_restrictions=other_restrictions + ans))
     return ans
