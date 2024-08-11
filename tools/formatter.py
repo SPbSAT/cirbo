@@ -6,7 +6,7 @@ import subprocess
 
 def _format_project():
     usort_rc = subprocess.call(
-        "poetry run usort format boolean_circuit_tool tests tools docs", shell=True
+        "poetry run usort format boolean_circuit_tool tests/ tools/ docs/", shell=True
     )
     docformatter_rc = subprocess.call(
         "poetry run docformatter --in-place boolean_circuit_tool/ tools/ tests/ docs/",
