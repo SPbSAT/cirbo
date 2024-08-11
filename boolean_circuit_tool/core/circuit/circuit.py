@@ -136,26 +136,6 @@ class Block:
 
         return self
 
-    def _delete_gate(self, gate_label: Label) -> tp_ext.Self:
-        """
-        Delete gate from block.
-
-        :param gate_label: gate's label to delete.
-        :return: modified block.
-
-        """
-
-        if gate_label in self.inputs:
-            self._inputs = [_input for _input in self._inputs if _input != gate_label]
-
-        if gate_label in self.gates:
-            self._gates = [gate for gate in self._gates if gate != gate_label]
-
-        if gate_label in self.outputs:
-            self._outputs = [output for output in self._outputs if output != gate_label]
-
-        return self
-
     def into_circuit(self):
         """
         Creates a new circuit by block's gates.
@@ -582,8 +562,17 @@ class Circuit(BooleanFunction):
         check_block_doesnt_exist(name, self)
         check_gates_exist(this_connectors, self)
         check_gates_exist(other_connectors, other)
+
+        if right_connect:
+            if len(this_connectors) != len(set(this_connectors)):
+                raise CreateBlockError()
+        else:
+            if len(other_connectors) != len(set(other_connectors)):
+                raise CreateBlockError()
+
         if len(this_connectors) != len(other_connectors):
             raise CreateBlockError()
+
         if right_connect:
             for gate_label in this_connectors:
                 if self.get_gate(gate_label).gate_type != INPUT:
@@ -840,6 +829,7 @@ class Circuit(BooleanFunction):
         """
         check_gates_exist(list(inputs_mapping.keys()), self)
         check_gates_exist(list(outputs_mapping.keys()), self)
+        # add some checks
 
         for old_label, new_label in inputs_mapping.items():
             if old_label != new_label:
@@ -1510,8 +1500,12 @@ class Circuit(BooleanFunction):
 
         """
         gate = self.get_gate(gate_label)
+
         for operand in gate.operands:
             self._remove_user(operand, gate_label)
+
+        if gate_label in self._gate_to_users:
+            del self._gate_to_users[gate_label]
 
         del self._gates[gate_label]
 
@@ -1521,11 +1515,14 @@ class Circuit(BooleanFunction):
         if gate_label in self.outputs:
             self._outputs = [output for output in self.outputs if output != gate_label]
 
-        for block in self.blocks.values():
-            block._delete_gate(gate_label)
-
-        if gate_label in self._gate_to_users:
-            del self._gate_to_users[gate_label]
+        blocks = list(self.blocks.values())
+        for block in blocks:
+            if gate_label in block.gates or gate_label in block.inputs:
+                logger.info(
+                    f"Block {block.name} was removed because gate {gate_label} "
+                    "was removed from circuit"
+                )
+                self.delete_block(block.name)
 
         return self
 
@@ -1540,14 +1537,11 @@ class Circuit(BooleanFunction):
         """
         block: Block = self.get_block(block_label)
 
-        for gate in block.gates:
+        # since when deleting the first gate from our block, the block itself will be
+        # deleted, let's remember everything we need to delete in advance
+        remove_gates = block.gates
+        for gate in remove_gates:
             self._remove_gate(self.get_gate(gate).label)
-
-        self._blocks = {
-            block_label: block
-            for block_label, block in self.blocks.items()
-            if len(block.gates) != 0
-        }
 
         return self
 

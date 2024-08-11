@@ -446,6 +446,52 @@ def test_block():
     assert manipulateC8.inputs == ['1@A', '1@B']
     assert manipulateC8.outputs == ['C', 'C1@C', '2@C', '2@C1@C']
 
+    manipulateC9 = copy.copy(manipulateC6)
+    with pytest.raises(CreateBlockError):
+        manipulateC9.extend_circuit(
+            manipulateC6,
+            this_connectors=['C1@C', 'C'],
+            other_connectors=['B', 'B'],
+            right_connect=False,
+            name='1',
+        )
+
+    with pytest.raises(CreateBlockError):
+        manipulateC9.extend_circuit(
+            manipulateC6,
+            this_connectors=['C', 'C'],
+            other_connectors=['B', 'A'],
+            right_connect=True,
+            name='1',
+        )
+
+    manipulateC6.set_outputs(['C', 'C'])
+    with pytest.raises(CreateBlockError):
+        manipulateC9.extend_circuit(
+            manipulateC6,
+            other_connectors=manipulateC6.outputs,
+            right_connect=False,
+            name='1',
+        )
+
+    manipulateC9.extend_circuit(
+        manipulateC6,
+        this_connectors=['C', 'C'],
+        other_connectors=['A', 'B'],
+        right_connect=False,
+        name='1',
+    )
+    assert manipulateC9.gates == {
+        'A': Gate('A', INPUT),
+        'B': Gate('B', INPUT),
+        'C': Gate('C', OR, ('A', 'B')),
+        'C1@C': Gate('C1@C', AND, ('A', 'B')),
+        '1@C': Gate('1@C', OR, ('C', 'C')),
+        '1@C1@C': Gate('1@C1@C', AND, ('C', 'C')),
+    }
+    assert manipulateC9.inputs == ['A', 'B']
+    assert manipulateC9.outputs == ['C1@C', '1@C', '1@C']
+
 
 def test_block2():
     C0 = Circuit()
@@ -762,6 +808,185 @@ def test_block3():
         'y2': Gate('y2', INPUT),
         'x3': Gate('x3', OR, ('x1', 'x2')),
     }
+
+
+#################################################################
+import collections
+import itertools
+
+
+def test_replace_subcircuit1():
+    # Full checks on simple case
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('A', 'B')))
+    instance.add_gate(Gate('F', OR, ('B', 'C')))
+    instance.add_gate(Gate('G', XOR, ('E', 'F')))
+    instance.add_gate(Gate('H', AND, ('D', 'G')))
+    instance.mark_as_output('H')
+
+    instance_to_replace_with = Circuit()
+
+    instance_to_replace_with.add_gate(Gate('A', INPUT))
+    instance_to_replace_with.add_gate(Gate('B', INPUT))
+    instance_to_replace_with.add_gate(Gate('C', INPUT))
+    instance_to_replace_with.add_gate(Gate('N', NOT, ('A',)))
+    instance_to_replace_with.add_gate(Gate('O', OR, ('B', 'N')))
+    instance_to_replace_with.add_gate(Gate('G', AND, ('O', 'C')))
+    instance_to_replace_with.mark_as_output('G')
+
+    inputs_mapping = {
+        'A': 'A',
+        'B': 'B',
+        'C': 'C',
+    }
+    outputs_mapping = {'G': 'G'}
+    new_instance = instance.replace_subcircuit(
+        subcircuit=instance_to_replace_with,
+        inputs_mapping=inputs_mapping,
+        outputs_mapping=outputs_mapping,
+    )
+    assert new_instance.size == 8
+
+    operations_counter = collections.defaultdict(int)
+    # Check that operations have changed
+    for gate in new_instance.gates.values():
+        operations_counter[gate.gate_type.name] += 1
+    assert operations_counter['INPUT'] == 4
+    assert operations_counter['AND'] == 2
+    assert operations_counter['NOT'] == 1
+    assert operations_counter['OR'] == 1
+    assert operations_counter['XOR'] == 0
+    assert len(new_instance._gate_to_users) == 7
+
+    edges_in = 0
+    edges_out = 0
+    for gate in new_instance.gates.values():
+        edges_in += len(gate.operands)
+        edges_out += len(new_instance._gate_to_users[gate.label])
+    assert edges_in == edges_out
+
+    for gate in new_instance.gates.values():
+        label = gate.label
+        for operand in gate.operands:
+            assert label in new_instance._gate_to_users[operand]
+
+    # Check assignments
+    for assignment in itertools.product([False, True], repeat=3):
+        assert (
+            new_instance.evaluate_circuit(
+                {
+                    'A': assignment[0],
+                    'B': assignment[1],
+                    'C': assignment[2],
+                    'D': False,
+                }
+            )['G']
+            == instance_to_replace_with.evaluate(assignment)[0]
+        )
+
+
+def test_replace_subcircuit2():
+    # Case with multiple outputs
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', NOT, ('A',)))
+    instance.add_gate(Gate('F', AND, ('E', 'B')))
+    instance.add_gate(Gate('G', NOT, ('C',)))
+    instance.add_gate(Gate('H', OR, ('G', 'D')))
+    instance.add_gate(Gate('I', LEQ, ('F', 'H')))
+    instance.add_gate(Gate('J', GEQ, ('E', 'D')))
+    instance.mark_as_output('I')
+    instance.mark_as_output('J')
+
+    instance_to_replace_with = Circuit()
+
+    instance_to_replace_with.add_gate(Gate('E', INPUT))
+    instance_to_replace_with.add_gate(Gate('B', INPUT))
+    instance_to_replace_with.add_gate(Gate('G', INPUT))
+    instance_to_replace_with.add_gate(Gate('D', INPUT))
+    instance_to_replace_with.add_gate(Gate('F', NOT, ('E',)))
+    instance_to_replace_with.add_gate(Gate('I', OR, ('B', 'D')))
+    instance_to_replace_with.add_gate(Gate('H', AND, ('F', 'G')))
+    instance_to_replace_with.add_gate(Gate('J', AND, ('I', 'H')))
+    instance_to_replace_with.mark_as_output('I')
+    instance_to_replace_with.mark_as_output('J')
+
+    inputs_mapping = {
+        'E': 'E',
+        'B': 'B',
+        'G': 'G',
+        'D': 'D',
+    }
+    outputs_mapping = {'I': 'I', 'J': 'J'}
+    new_instance = instance.replace_subcircuit(
+        subcircuit=instance_to_replace_with,
+        inputs_mapping=inputs_mapping,
+        outputs_mapping=outputs_mapping,
+    )
+    assert new_instance.size == 10
+    assert len(new_instance.outputs) == 2
+
+    operations_counter = collections.defaultdict(int)
+    # Check that operations have changed
+    for gate in new_instance.gates.values():
+        operations_counter[gate.gate_type.name] += 1
+    assert operations_counter['INPUT'] == 4
+    assert operations_counter['AND'] == 2
+    assert operations_counter['NOT'] == 3
+    assert operations_counter['OR'] == 1
+    assert operations_counter['LEQ'] == 0
+    assert operations_counter['GEQ'] == 0
+    assert len(new_instance._gate_to_users) == 9
+
+    edges_in = 0
+    edges_out = 0
+    for gate in new_instance.gates.values():
+        edges_in += len(gate.operands)
+        edges_out += len(new_instance._gate_to_users[gate.label])
+    assert edges_in == edges_out
+
+    for gate in new_instance.gates.values():
+        label = gate.label
+        for operand in gate.operands:
+            assert label in new_instance._gate_to_users[operand]
+
+    # Check assignments
+    for assignment in itertools.product([False, True], repeat=4):
+        assert (
+            new_instance.evaluate_circuit(
+                {
+                    'A': not assignment[0],
+                    'B': assignment[1],
+                    'C': not assignment[2],
+                    'D': assignment[3],
+                }
+            )['I']
+            == instance_to_replace_with.evaluate(assignment)[0]
+        )
+
+        assert (
+            new_instance.evaluate_circuit(
+                {
+                    'A': not assignment[0],
+                    'B': assignment[1],
+                    'C': not assignment[2],
+                    'D': assignment[3],
+                }
+            )['J']
+            == instance_to_replace_with.evaluate(assignment)[1]
+        )
+
+
+#################################################################
 
 
 def test_evaluate_circuit():
