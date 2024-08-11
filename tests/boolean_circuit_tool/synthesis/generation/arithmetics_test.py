@@ -2,8 +2,7 @@ import math
 import random
 
 import pytest
-from boolean_circuit_tool.core.boolean_function import BooleanFunction
-from boolean_circuit_tool.core.circuit import Circuit, Gate
+from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_div_mod import (
     add_div_mod,
@@ -97,7 +96,16 @@ def sum_naive(inputs_a):
     ],
 )
 @pytest.mark.parametrize(
-    "size", [[1, 1], [1, 7], [7, 1], [3, 6], [8, 2], [16, 16], [24, 15]]
+    "size",
+    [
+        [1, 1],
+        [1, 7],
+        [7, 1],
+        [3, 6],
+        pytest.param([8, 2], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([24, 15], marks=pytest.mark.slow),
+    ],
 )
 def test_mul(func, size):
     x, y = size
@@ -120,7 +128,17 @@ def test_mul(func, size):
 
 
 @pytest.mark.parametrize("func", [add_square, add_square_pow2_m1])
-@pytest.mark.parametrize("x", [1, 2, 5, 7, 17, 60])
+@pytest.mark.parametrize(
+    "x",
+    [
+        1,
+        2,
+        5,
+        7,
+        pytest.param(17, marks=pytest.mark.slow),
+        pytest.param(60, marks=pytest.mark.slow),
+    ],
+)
 def test_square(func, x):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
@@ -152,7 +170,17 @@ def test_add_equal(num):
             assert not b
 
 
-@pytest.mark.parametrize("x", [2, 4, 9, 21, 40, 64])
+@pytest.mark.parametrize(
+    "x",
+    [
+        2,
+        4,
+        9,
+        pytest.param(21, marks=pytest.mark.slow),
+        pytest.param(40, marks=pytest.mark.slow),
+        pytest.param(64, marks=pytest.mark.slow),
+    ],
+)
 def test_sqrt(x):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
@@ -166,7 +194,17 @@ def test_sqrt(x):
         assert sqrt_naive(input_labels_a) == ckt.evaluate(input_labels_a)[::-1]
 
 
-@pytest.mark.parametrize("x", [2, 5, 7, 17, 60, 128])
+@pytest.mark.parametrize(
+    "x",
+    [
+        2,
+        5,
+        7,
+        pytest.param(17, marks=pytest.mark.slow),
+        pytest.param(60, marks=pytest.mark.slow),
+        pytest.param(128, marks=pytest.mark.slow),
+    ],
+)
 def test_div_mod(x):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(2 * x)]
@@ -188,7 +226,18 @@ def test_div_mod(x):
         )
 
 
-@pytest.mark.parametrize("x", [2, 5, 7, 17, 60, 128, 1000])
+@pytest.mark.parametrize(
+    "x",
+    [
+        2,
+        5,
+        7,
+        17,
+        60,
+        128,
+        pytest.param(1000, marks=pytest.mark.slow),
+    ],
+)
 def test_sum_n_bits(x):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]

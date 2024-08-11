@@ -150,7 +150,13 @@ def test_sum_with_precomputed_xor(inputs: int, outputs: int, size: int):
         assert gate.operands == (add_s(k + 2), add_s(inputs + k))
 
 
-@pytest.mark.parametrize("inputs, size", [(3, 6), (4, 9)])
+@pytest.mark.parametrize(
+    "inputs, size",
+    [
+        (3, 6),
+        pytest.param(4, 9, marks=pytest.mark.slow),
+    ],
+)
 def test_aig_basis(inputs: int, size: int):
     tt = [''.join(str(sum(x) % 2) for x in itertools.product(range(2), repeat=inputs))]
     circuit = CircuitFinderSat(

@@ -2,13 +2,13 @@ def pytest_addoption(parser):
     parser.addoption(
         "--db-xaig-path",
         action="store",
-        default="./data/xaig_db.bin",
+        default="./data/xaig_db.bin.xz",
         help="Path to the xaig database file",
     )
     parser.addoption(
         "--db-aig-path",
         action="store",
-        default="./data/aig_db.bin",
+        default="./data/aig_db.bin.xz",
         help="Path to the aig database file",
     )
 
