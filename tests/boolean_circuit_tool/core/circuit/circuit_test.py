@@ -873,20 +873,20 @@ def test_replace_subcircuit():
 
     instance_to_replace_with = Circuit()
 
-    instance_to_replace_with.add_gate(Gate('K', INPUT))
-    instance_to_replace_with.add_gate(Gate('L', INPUT))
-    instance_to_replace_with.add_gate(Gate('M', INPUT))
-    instance_to_replace_with.add_gate(Gate('N', NOT, ('K',)))
-    instance_to_replace_with.add_gate(Gate('O', OR, ('L', 'N')))
-    instance_to_replace_with.add_gate(Gate('P', AND, ('O', 'M')))
-    instance_to_replace_with.mark_as_output('P')
+    instance_to_replace_with.add_gate(Gate('A', INPUT))
+    instance_to_replace_with.add_gate(Gate('B', INPUT))
+    instance_to_replace_with.add_gate(Gate('C', INPUT))
+    instance_to_replace_with.add_gate(Gate('E', NOT, ('A',)))
+    instance_to_replace_with.add_gate(Gate('F', OR, ('B', 'E')))
+    instance_to_replace_with.add_gate(Gate('G', AND, ('F', 'C')))
+    instance_to_replace_with.mark_as_output('G')
 
     inputs_mapping = {
-        'A': 'K',
-        'B': 'L',
-        'C': 'M',
+        'A': 'A',
+        'B': 'B',
+        'C': 'C',
     }
-    outputs_mapping = {'G': 'P'}
+    outputs_mapping = {'G': 'G'}
     new_instance = instance.replace_subcircuit(
         subcircuit=instance_to_replace_with,
         inputs_mapping=inputs_mapping,
@@ -951,24 +951,24 @@ def test_replace_subcircuit2():
 
     instance_to_replace_with = Circuit()
 
-    instance_to_replace_with.add_gate(Gate('K', INPUT))
-    instance_to_replace_with.add_gate(Gate('L', INPUT))
-    instance_to_replace_with.add_gate(Gate('M', INPUT))
-    instance_to_replace_with.add_gate(Gate('N', INPUT))
-    instance_to_replace_with.add_gate(Gate('O', NOT, ('K',)))
-    instance_to_replace_with.add_gate(Gate('P', OR, ('L', 'N')))
-    instance_to_replace_with.add_gate(Gate('Q', AND, ('O', 'M')))
-    instance_to_replace_with.add_gate(Gate('R', AND, ('P', 'Q')))
-    instance_to_replace_with.mark_as_output('P')
-    instance_to_replace_with.mark_as_output('R')
+    instance_to_replace_with.add_gate(Gate('E', INPUT))
+    instance_to_replace_with.add_gate(Gate('B', INPUT))
+    instance_to_replace_with.add_gate(Gate('G', INPUT))
+    instance_to_replace_with.add_gate(Gate('D', INPUT))
+    instance_to_replace_with.add_gate(Gate('F', NOT, ('E',)))
+    instance_to_replace_with.add_gate(Gate('I', OR, ('B', 'D')))
+    instance_to_replace_with.add_gate(Gate('H', AND, ('F', 'G')))
+    instance_to_replace_with.add_gate(Gate('J', AND, ('I', 'H')))
+    instance_to_replace_with.mark_as_output('I')
+    instance_to_replace_with.mark_as_output('J')
 
     inputs_mapping = {
-        'E': 'K',
-        'B': 'L',
-        'G': 'M',
-        'D': 'N',
+        'E': 'E',
+        'B': 'B',
+        'G': 'G',
+        'D': 'D',
     }
-    outputs_mapping = {'I': 'P', 'J': 'R'}
+    outputs_mapping = {'I': 'I', 'J': 'J'}
     new_instance = instance.replace_subcircuit(
         subcircuit=instance_to_replace_with,
         inputs_mapping=inputs_mapping,
