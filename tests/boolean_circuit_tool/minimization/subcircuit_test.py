@@ -1,13 +1,109 @@
+import collections
+
 import pytest
 
 from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import AND, Gate, INPUT, LEQ, OR, XOR
+from boolean_circuit_tool.core.circuit.gate import AND, Gate, INPUT, LEQ, NOT, OR, XOR
 from boolean_circuit_tool.minimization.exception import UnsupportedOperationError
-from boolean_circuit_tool.minimization.subcircuit import minimize_subcircuits
+from boolean_circuit_tool.minimization.subcircuit import (
+    _generate_inputs_tt,
+    _get_subcircuits,
+    minimize_subcircuits,
+)
 from boolean_circuit_tool.synthesis.circuit_search import Basis
 
 
-def test_minimize_subcircuits1():
+def test_generate_inputs_tt():
+    assert _generate_inputs_tt(1) == [2]
+    assert _generate_inputs_tt(2) == [10, 12]
+    assert _generate_inputs_tt(3) == [170, 204, 240]
+    assert _generate_inputs_tt(4) == [43690, 52428, 61680, 65280]
+
+
+def test_get_subcircuits():
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', NOT, ('A',)))
+    instance.add_gate(Gate('E', AND, ('B', 'D')))
+    instance.add_gate(Gate('F', OR, ('A', 'C')))
+    instance.add_gate(Gate('G', XOR, ('E', 'F')))
+    instance.mark_as_output('G')
+
+    cuts = [
+        ('A',),
+        ('B',),
+        ('C',),
+        ('D',),
+        ('E',),
+        ('F',),
+        ('G',),
+        ('B', 'D'),
+        ('A', 'B'),
+        ('A', 'C'),
+        ('E', 'F'),
+        ('A', 'C', 'E'),
+        ('A', 'B', 'F'),
+        ('A', 'B', 'C'),
+        ('B', 'D', 'F'),
+    ]
+    nodes_for_cuts = [
+        {'D', 'A'},
+        {'B'},
+        {'C'},
+        {'D'},
+        {'E'},
+        {'F'},
+        {'G'},
+        {'E'},
+        {'E'},
+        {'F'},
+        {'G'},
+        {'G'},
+        {'G'},
+        {'G'},
+        {'G'},
+    ]
+    cut_nodes = collections.defaultdict(set)
+    for cut, nodes in zip(cuts, nodes_for_cuts):
+        cut_nodes[cut] = nodes
+
+    subcircuits_data = []
+    for subcircuit in _get_subcircuits(instance, cuts, cut_nodes, 10, 5):
+        subcircuits_data.append(
+            (
+                sorted(subcircuit.inputs),
+                sorted(subcircuit.gates),
+                sorted(subcircuit.outputs),
+            )
+        )
+
+    assert len(subcircuits_data) == 4
+    assert subcircuits_data[0] == (
+        ['A', 'B'],
+        ['A', 'B', 'D', 'E'],
+        ['E'],
+    )
+    assert subcircuits_data[1] == (
+        ['A', 'C'],
+        ['A', 'C', 'D', 'F'],
+        ['D', 'F'],
+    )
+    assert subcircuits_data[2] == (
+        ['E', 'F'],
+        ['E', 'F', 'G'],
+        ['G'],
+    )
+    assert subcircuits_data[3] == (
+        ['A', 'B', 'C'],
+        ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+        ['G'],
+    )
+
+
+def test_minimize_subcircuits():
     # Simple case with intersecting AND's
     instance = Circuit()
 
@@ -39,35 +135,6 @@ def test_minimize_subcircuits1():
         instance, basis=Basis.XAIG, enable_validation=True
     )
     assert minimized_circuit.size == 6
-
-
-def test_minimize_subcircuits2():
-    # Simple case with 2 separate simplifiable parts
-    instance = Circuit()
-
-    instance.add_gate(Gate('A', INPUT))
-    instance.add_gate(Gate('B', INPUT))
-    instance.add_gate(Gate('C', INPUT))
-    instance.add_gate(Gate('D', INPUT))
-    instance.add_gate(Gate('E', INPUT))
-    instance.add_gate(Gate('F', INPUT))
-    instance.add_gate(Gate('AB', AND, ('A', 'B')))
-    instance.add_gate(Gate('BC', AND, ('B', 'C')))
-    instance.add_gate(Gate('DE', AND, ('D', 'E')))
-    instance.add_gate(Gate('EF', AND, ('E', 'F')))
-    instance.add_gate(Gate('X', AND, ('AB', 'BC')))
-    instance.add_gate(Gate('Y', AND, ('DE', 'EF')))
-    instance.add_gate(Gate('Z', XOR, ('X', 'Y')))
-    instance.mark_as_output('Z')
-
-    minimized_circuit = minimize_subcircuits(
-        instance, basis=Basis.AIG, enable_validation=True
-    )
-    assert minimized_circuit.size == 11
-    minimized_circuit = minimize_subcircuits(
-        instance, basis=Basis.XAIG, enable_validation=True
-    )
-    assert minimized_circuit.size == 11
 
 
 def test_minimize_subcircuits2():

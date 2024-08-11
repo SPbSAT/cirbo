@@ -323,9 +323,7 @@ def minimize_subcircuits(
         cut_limit,
         fanout_size,
     )
-    cut_nodes: tp.DefaultDict[Cut, set[str]] = collections.defaultdict(
-        set
-    )  # _read_cuts(cuts_raw, mapping)
+    cut_nodes: tp.DefaultDict[Cut, set[Label]] = collections.defaultdict(set)
     for node, cuts in node_cuts.items():
         for cut in cuts:
             cut_nodes[tuple(cut)].add(node)

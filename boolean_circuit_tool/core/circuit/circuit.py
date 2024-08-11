@@ -62,9 +62,6 @@ class TraverseMode(enum.Enum):
 
 
 class TraverseState(enum.Enum):
-    def __init__(self, value):
-        self.as_int = value
-
     UNVISITED = 0
     ENTERED = 1
     VISITED = 2
@@ -389,19 +386,6 @@ class Circuit(BooleanFunction):
         """
         return label in self._gates
 
-    def add_gate(self, gate: Gate) -> tp_ext.Self:
-        """
-        Add gate in the circuit.
-
-        :param gate: new gate.
-        :return: this circuit after modification.
-
-        """
-        check_label_doesnt_exist(gate.label, self)
-        check_gates_exist(gate.operands, self)
-
-        return self._add_gate(gate)
-
     def remove_gate(self, gate_label: Label) -> tp_ext.Self:
         """
         Remove gate from the circuit.
@@ -414,6 +398,19 @@ class Circuit(BooleanFunction):
         check_gates_exist((gate.label,), self)
         check_gate_has_not_users(gate.label, self)
         return self._remove_gate(gate_label)
+
+    def add_gate(self, gate: Gate) -> tp_ext.Self:
+        """
+        Add gate in the circuit.
+
+        :param gate: new gate.
+        :return: this circuit after modification.
+
+        """
+        check_label_doesnt_exist(gate.label, self)
+        check_gates_exist(gate.operands, self)
+
+        return self._add_gate(gate)
 
     def emplace_gate(
         self,
@@ -1131,7 +1128,7 @@ class Circuit(BooleanFunction):
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
         :param on_discover_hook: callable function which applies for gate when we try to
-            viist it from another one
+            add it in queue
         :param on_exit_hook: callable function which applies after visiting the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
@@ -1168,7 +1165,7 @@ class Circuit(BooleanFunction):
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
         :param on_discover_hook: callable function which applies for gate when we try to
-            viist it from another one
+            add it in queue
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
         :return: Iterator of gates, which traverse the circuit in dfs order.
@@ -1565,23 +1562,6 @@ class Circuit(BooleanFunction):
         )
         return f"{input_str}\n\n{gates_str}\n\n{output_str}"
 
-    def _add_gate(self, gate: Gate) -> tp_ext.Self:
-        """
-        Add gate in the circuit without any checks (!!!)
-
-        :param: gate.
-        :return: circuit with new gate.
-
-        """
-        for operand in gate.operands:
-            self._add_user(operand, gate.label)
-
-        self._gates[gate.label] = gate
-        if gate.gate_type == INPUT:
-            self._inputs.append(gate.label)
-
-        return self
-
     def _remove_gate(self, gate_label: Label) -> tp_ext.Self:
         """
         Remove gate from the circuit without any checks (!!!).
@@ -1604,6 +1584,23 @@ class Circuit(BooleanFunction):
 
         for block in self.blocks.values():
             block._delete_gate(gate_label)
+
+        return self
+
+    def _add_gate(self, gate: Gate) -> tp_ext.Self:
+        """
+        Add gate in the circuit without any checks (!!!)
+
+        :param: gate.
+        :return: circuit with new gate.
+
+        """
+        for operand in gate.operands:
+            self._add_user(operand, gate.label)
+
+        self._gates[gate.label] = gate
+        if gate.gate_type == INPUT:
+            self._inputs.append(gate.label)
 
         return self
 
@@ -1664,7 +1661,7 @@ class Circuit(BooleanFunction):
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
         :param on_discover_hook: callable function which applies for gate when we try to
-            viist it from another one
+            add it in queue
         :param on_exit_hook: callable function which applies after visiting all children
             of the gate
         :param unvisited_hook: callable function which applies for unvisited gates after

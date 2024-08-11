@@ -2,6 +2,8 @@
 
 import typing as tp
 
+import more_itertools
+
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitValidationError,
     DeleteBlockError,
@@ -23,7 +25,6 @@ if tp.TYPE_CHECKING:
         Block,
         Circuit,
         Gate,
-        TraverseState,
     )
     from boolean_circuit_tool.core.circuit.gate import Label
 
@@ -70,13 +71,14 @@ def check_block_has_not_users(block: 'Block', circuit: 'Circuit') -> None:
 
 def check_circuit_has_no_cycles(circuit: 'Circuit') -> None:
     """Check that there are no cycles in the circuit."""
+    from boolean_circuit_tool.core.circuit.circuit import TraverseState
 
     def on_discover_hook(
         gate: 'Gate', gate_states: tp.DefaultDict['Label', 'TraverseState']
     ):
-        if gate_states[gate.label].as_int == 1:  #  TraverseState.ENTERED
+        if gate_states[gate.label] == TraverseState.ENTERED:
             raise CircuitValidationError(
-                f'Circuit has orinted cycle',
+                'Circuit has orinted cycle',
             )
 
-    list(circuit.dfs(on_discover_hook=on_discover_hook))
+    more_itertools.consume(circuit.dfs(on_discover_hook=on_discover_hook))
