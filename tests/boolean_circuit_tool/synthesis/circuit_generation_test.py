@@ -15,7 +15,7 @@ def to_list_of_bool(n, bit_len):
     bit_str_len = len(bit_str)
     for i in range(bit_str_len - 1, bit_str_len - bit_len - 1, -1):
         res.append(bool(int(bit_str[i])))
-    return res
+    return res[::-1]
 
 
 @pytest.mark.parametrize("n", range(1, 10))

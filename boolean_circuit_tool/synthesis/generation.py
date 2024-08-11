@@ -21,8 +21,8 @@ __all__ = [
 
 
 def generate_plus_one(inp_len: int, out_len: int) -> Circuit:
-    x_labels = _generate_labels('x', inp_len)
-    z_labels = _generate_labels('z', out_len)
+    x_labels = _generate_labels('x', inp_len)[::-1]
+    z_labels = _generate_labels('z', out_len)[::-1]
     circuit = Circuit()
     circuit.add_inputs(x_labels)
 
@@ -102,9 +102,13 @@ def add_plus_one(
         for i in range(inp_len + 1):
             result_labels.append(_get_new_label(circuit))
 
+    input_labels = input_labels[::-1]
+    result_labels = result_labels[::-1]
+
     out_len = len(result_labels)
 
-    circuit.add_gate(Gate('carry_0', gate.IFF, (input_labels[0],)))
+    carries = _get_new_labels(circuit, out_len, other_restrictions=result_labels)
+    circuit.add_gate(Gate(carries[0], gate.IFF, (input_labels[0],)))
     circuit.add_gate(
         Gate(result_labels[0], gate.NOT, (input_labels[0],))
     ).mark_as_output(result_labels[0])
@@ -114,23 +118,26 @@ def add_plus_one(
             if i < out_len - 1:
                 circuit.add_gate(
                     Gate(
-                        'carry_' + str(i),
+                        carries[i],
                         gate.AND,
-                        (input_labels[i], 'carry_' + str(i - 1)),
+                        (input_labels[i], carries[i - 1]),
                     )
                 )
             circuit.add_gate(
-                Gate(
-                    result_labels[i], gate.XOR, (input_labels[i], 'carry_' + str(i - 1))
-                )
+                Gate(result_labels[i], gate.XOR, (input_labels[i], carries[i - 1]))
             )
         elif i == inp_len:
-            circuit.add_gate(Gate(result_labels[i], gate.IFF, ('carry_' + str(i - 1),)))
+            circuit.add_gate(Gate(result_labels[i], gate.IFF, (carries[i - 1],)))
         else:
             circuit.add_gate(Gate(result_labels[i], gate.ALWAYS_FALSE, tuple()))
         if add_outputs:
             circuit.mark_as_output(result_labels[i])
 
+    input_labels = input_labels[::-1]
+    result_labels = result_labels[::-1]
+
+    circuit.order_inputs(input_labels)
+    circuit.order_outputs(result_labels)
     return result_labels
 
 
@@ -146,14 +153,11 @@ def add_if_then_else(
     if result_label is None:
         result_label = _get_new_label(circuit)
 
-    circuit.add_gate(Gate('tmp1' + result_label, gate.AND, (if_label, then_label)))
-    circuit.add_gate(Gate('tmp2' + result_label, gate.NOT, (if_label,)))
-    circuit.add_gate(
-        Gate('tmp3' + result_label, gate.AND, ('tmp2' + result_label, else_label))
-    )
-    circuit.add_gate(
-        Gate(result_label, gate.OR, ('tmp1' + result_label, 'tmp3' + result_label))
-    )
+    tmp = _get_new_labels(circuit, 3, other_restrictions=[result_label])
+    circuit.add_gate(Gate(tmp[0], gate.AND, (if_label, then_label)))
+    circuit.add_gate(Gate(tmp[1], gate.NOT, (if_label,)))
+    circuit.add_gate(Gate(tmp[2], gate.AND, (tmp[1], else_label)))
+    circuit.add_gate(Gate(result_label, gate.OR, (tmp[0], tmp[2])))
     if add_outputs:
         circuit.mark_as_output(result_label)
 
@@ -225,8 +229,23 @@ def _generate_labels(prefix: str, n: int) -> list[str]:
     return [prefix + '_' + str(i) for i in range(n)]
 
 
-def _get_new_label(circuit: Circuit) -> gate.Label:
+def _get_new_label(
+    circuit: Circuit, *, other_restrictions: list[gate.Label] = None
+) -> gate.Label:
+    if other_restrictions is None:
+        other_restrictions = []
     ans = "new_" + uuid.uuid4().hex
-    while circuit.has_gate(ans):
+    while circuit.has_gate(ans) or ans in other_restrictions:
         ans = "new_" + uuid.uuid4().hex
+    return ans
+
+
+def _get_new_labels(
+    circuit: Circuit, n: int, *, other_restrictions: list[gate.Label] = None
+) -> list[gate.Label]:
+    if other_restrictions is None:
+        other_restrictions = []
+    ans = []
+    for i in range(n):
+        ans.append(_get_new_label(circuit, other_restrictions=other_restrictions + ans))
     return ans
