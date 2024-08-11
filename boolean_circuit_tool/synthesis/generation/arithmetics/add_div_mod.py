@@ -14,9 +14,9 @@ def add_sub_with_per_equal_size(
     n = len(input_labels_a)
     assert n == len(input_labels_b)
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     for input_label in input_labels_b:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     res = [0] * n
     bal = [0] * n
@@ -43,9 +43,9 @@ def add_div_mod(
     n = len(input_labels_a)
     assert n == len(input_labels_b)
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     for input_label in input_labels_b:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     a = input_labels_a
     b = input_labels_b

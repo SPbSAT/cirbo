@@ -13,7 +13,7 @@ from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import
 
 def add_square(circuit, input_labels_a):
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     n = len(input_labels_a)
 
     if n < 48 or n in [49, 53]:
@@ -35,7 +35,7 @@ def add_square(circuit, input_labels_a):
 def add_square_pow2_m1(circuit, input_labels):
     n = len(input_labels)
     for input_label in input_labels:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     if n == 1:
         return input_labels

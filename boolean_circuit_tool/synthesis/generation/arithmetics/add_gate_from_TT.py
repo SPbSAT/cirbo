@@ -44,7 +44,7 @@ TT_to_type = {
 
 def get_new_label(circuit: Circuit) -> str:
     ans = "new_" + uuid.uuid4().hex
-    while circuit.has_element(ans):
+    while circuit.has_gate(ans):
         ans = "new_" + uuid.uuid4().hex
     return ans
 

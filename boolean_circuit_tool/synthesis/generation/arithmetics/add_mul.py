@@ -18,9 +18,9 @@ def add_mul(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     for input_label in input_labels_b:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     # in my mind a[0] is the smallest bit in a
     c = [[0] * n for _ in range(m)]
@@ -53,9 +53,9 @@ def add_mul_alter(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     for input_label in input_labels_b:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     # in my mind a[0] is the smallest bit in a
     c = [[0] * n for _ in range(m)]
@@ -77,9 +77,9 @@ def add_mul_alter(circuit, input_labels_a, input_labels_b):
 
 def add_mul_karatsuba(circuit, input_labels_a, input_labels_b):  # work on equal sizes
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     for input_label in input_labels_b:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     out_size = len(input_labels_a) + len(input_labels_b)
     if len(input_labels_a) == 1 or len(input_labels_b) == 1:
@@ -133,9 +133,9 @@ def add_mul_dadda(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     for input_label in input_labels_b:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     c = [deque() for _ in range(n + m)]
     for i in range(m):
@@ -181,9 +181,9 @@ def add_mul_wallace(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     for input_label in input_labels_b:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     c = [[0] * m for _ in range(n + m)]
     for i in range(m):
@@ -235,9 +235,9 @@ def add_mul_pow2_m1(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
     for input_label in input_labels_a:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
     for input_label in input_labels_b:
-        assert circuit.has_element(input_label)
+        assert circuit.has_gate(input_label)
 
     c = [[0] * n for _ in range(m)]
     for i in range(m):
