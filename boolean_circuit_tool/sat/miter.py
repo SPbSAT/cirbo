@@ -1,19 +1,23 @@
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.sat.exceptions import MiterDifferentShapesError
-from boolean_circuit_tool.synthesis.generation import generate_pairwise_xor
-
+from boolean_circuit_tool.synthesis.generation.generation import generate_pairwise_xor
 
 __all__ = [
     'build_miter',
 ]
+
+FIRST_CIRCUIT_NAME = 'circuit1'
+SECOND_CIRCUIT_NAME = 'circuit2'
+PAIRWISE_XOR_NAME = 'pairwise_xor'
+OR_NAME = 'big_or'
 
 
 def build_miter(
     left: Circuit,
     right: Circuit,
     *,
-    left_name: gate.Label = 'circuit1',
-    right_name: gate.Label = 'circuit2'
+    left_name: gate.Label = FIRST_CIRCUIT_NAME,
+    right_name: gate.Label = SECOND_CIRCUIT_NAME
 ) -> Circuit:
     """
     Given two circuit, returns a miter circuit (that checks whether the two circuits are
@@ -41,11 +45,11 @@ def build_miter(
         pairwise_xor,
         miter.get_block(left_name).outputs + miter.get_block(right_name).outputs,
         pairwise_xor.inputs,
-        name='pairwise_xor',
+        name=PAIRWISE_XOR_NAME,
     )
     miter.emplace_gate(
-        'big_or', gate.OR, tuple(miter.get_block('pairwise_xor').outputs)
+        OR_NAME, gate.OR, tuple(miter.get_block(PAIRWISE_XOR_NAME).outputs)
     )
-    miter.set_outputs(['big_or'])
+    miter.set_outputs([OR_NAME])
 
     return miter

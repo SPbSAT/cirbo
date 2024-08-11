@@ -1,7 +1,7 @@
 import uuid
 
 from boolean_circuit_tool.core.circuit import Circuit, Gate, gate
-from boolean_circuit_tool.synthesis.exceptions_gen import (
+from boolean_circuit_tool.synthesis.generation.exceptions import (
     PairwiseIfThenElseDifferentShapesError,
     PairwiseXorDifferentShapesError,
 )

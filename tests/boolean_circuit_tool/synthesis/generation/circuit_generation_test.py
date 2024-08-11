@@ -1,7 +1,7 @@
 import pytest
 
 from boolean_circuit_tool.core.utils import canonical_index_to_input
-from boolean_circuit_tool.synthesis.generation import (
+from boolean_circuit_tool.synthesis.generation.generation import (
     generate_if_then_else,
     generate_pairwise_if_then_else,
     generate_pairwise_xor,

@@ -3,7 +3,10 @@ import pytest
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.sat import is_circuit_satisfiable
 from boolean_circuit_tool.sat.miter import build_miter
-from boolean_circuit_tool.synthesis.generation import generate_inputs, generate_plus_one
+from boolean_circuit_tool.synthesis.generation.generation import (
+    generate_inputs,
+    generate_plus_one,
+)
 
 
 @pytest.mark.parametrize("n", range(2, 9))
