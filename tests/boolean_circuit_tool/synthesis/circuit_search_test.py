@@ -120,10 +120,17 @@ def test_sum_with_precomputed_xor(inputs: int, outputs: int, size: int):
         for i in range(outputs)
     ]
     circuit_finder = CircuitFinderSat(TruthTableModel(tt), size, basis=Basis.XAIG)
-    circuit_finder.fix_gate(inputs, 0, 1, _tt_to_gate_type[(0, 1, 1, 0)])
+    circuit_finder.fix_gate(gate=inputs,
+                            first_predecessor=0,
+                            second_predecessor=1,
+                            gate_type=_tt_to_gate_type[(0, 1, 1, 0)]
+                            )
     for k in range(inputs - 2):
         circuit_finder.fix_gate(
-            inputs + k + 1, k + 2, inputs + k, _tt_to_gate_type[(0, 1, 1, 0)]
+            gate=inputs + k + 1,
+            first_predecessor=k + 2,
+            second_predecessor=inputs + k,
+            gate_type=_tt_to_gate_type[(0, 1, 1, 0)]
         )
     circuit = circuit_finder.find_circuit()
     check_correctness(circuit, tt)
@@ -215,19 +222,19 @@ def test_fix_gate_exceptions():
     tt = ["01101001"]
     circuit_finder = CircuitFinderSat(TruthTableModel(tt), 6, basis=Basis.AIG)
     with pytest.raises(GateIsAbsentError):
-        circuit_finder.fix_gate(9, 0, 2)
+        circuit_finder.fix_gate(gate=9, first_predecessor=0, second_predecessor=2)
     with pytest.raises(GateIsAbsentError):
-        circuit_finder.fix_gate(8, 0, 9)
+        circuit_finder.fix_gate(gate=8, first_predecessor=0, second_predecessor=9)
     with pytest.raises(GateIsAbsentError):
-        circuit_finder.fix_gate(8, 9, 6)
+        circuit_finder.fix_gate(gate=8, first_predecessor=9, second_predecessor=6)
     with pytest.raises(FixGateError):
-        circuit_finder.fix_gate(3)
+        circuit_finder.fix_gate(gate=3)
     with pytest.raises(FixGateOrderError):
-        circuit_finder.fix_gate(3, 2, 1)
+        circuit_finder.fix_gate(gate=3, first_predecessor=2, second_predecessor=1)
     with pytest.raises(FixGateOrderError):
-        circuit_finder.fix_gate(3, 4)
+        circuit_finder.fix_gate(gate=3, first_predecessor=4)
 
-    circuit_finder.fix_gate(4, 1)
+    circuit_finder.fix_gate(gate=4, first_predecessor=1)
     ckt = circuit_finder.find_circuit()
     check_correctness(ckt, tt)
     assert '1' in ckt.get_gate('s4').operands
@@ -251,7 +258,7 @@ def test_forbid_wire_exceptions():
 def test_fix_forbid():
     tt = ["01101001"]
     circuit_finder = CircuitFinderSat(TruthTableModel(tt), 6, basis=Basis.AIG)
-    circuit_finder.fix_gate(4, 1)
+    circuit_finder.fix_gate(gate=4, first_predecessor=1)
     circuit_finder.forbid_wire(1, 4)
     with pytest.raises(NoSolutionError):
         circuit_finder.find_circuit()

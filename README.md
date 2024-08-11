@@ -92,7 +92,7 @@ In addition to the standard tests, there are optional slow tests that interact w
 These tests require the corresponding database files. To execute these tests, use the following command:
 
 ```
-poetry run pytest tests/ --db-xaig-verify --db-xaig-path /path/to/xaig_db.bin --db-aig-verify --db-aig-path /path/to/aig_db.bin
+poetry run pytest tests/ -m "db_xaig or db_aig" --db-xaig-path /path/to/xaig_db.bin --db-aig-path /path/to/aig_db.bin
 ```
 Replace `/path/to/xaig_db.bin` and `/path/to/aig_db.bin` with the actual paths to your XAIG and AIG database files, respectively.
 

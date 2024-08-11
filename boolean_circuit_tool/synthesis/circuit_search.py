@@ -202,8 +202,8 @@ class CircuitFinderSat:
         self.need_normalized = need_normalized
         self._vpool = IDPool()
         self._cnf = CNF()
-        self.need_check_db = True
-        self.need_init_cnf = True
+        self._need_check_db = True
+        self._need_init_cnf = True
 
     def get_cnf(self) -> tp.List[tp.List[int]]:
         """
@@ -214,14 +214,15 @@ class CircuitFinderSat:
             representing literals.
 
         """
-        if self.need_init_cnf:
+        if self._need_init_cnf:
             self._init_default_cnf_formula()
-            self.need_init_cnf = False
+            self._need_init_cnf = False
         return self._cnf.clauses
 
     def find_circuit(
         self,
         solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL195,
+        *,
         time_limit: tp.Optional[int] = None,
         circuit_db: tp.Optional[CircuitsDatabase] = None,
     ) -> Circuit:
@@ -243,7 +244,7 @@ class CircuitFinderSat:
 
         """
 
-        if circuit_db is not None and self.need_check_db:
+        if circuit_db is not None and self._need_check_db:
             db_ret: tp.Optional[Circuit] = circuit_db.get_by_raw_truth_table_model(
                 self._output_truth_tables
             )
@@ -253,9 +254,9 @@ class CircuitFinderSat:
                 else:
                     raise NoSolutionError()
 
-        if self.need_init_cnf:
+        if self._need_init_cnf:
             self._init_default_cnf_formula()
-            self.need_init_cnf = False
+            self._need_init_cnf = False
 
         solver_name = PySATSolverNames(solver_name)
         logger.debug(
@@ -296,6 +297,7 @@ class CircuitFinderSat:
     def fix_gate(
         self,
         gate: int,
+        *,
         first_predecessor: tp.Optional[int] = None,
         second_predecessor: tp.Optional[int] = None,
         gate_type: tp.Optional[GateType] = None,
@@ -311,7 +313,7 @@ class CircuitFinderSat:
 
         """
 
-        self.need_check_db = False
+        self._need_check_db = False
 
         if gate not in self._internal_gates:
             raise GateIsAbsentError()
@@ -362,7 +364,7 @@ class CircuitFinderSat:
 
         """
 
-        self.need_check_db = False
+        self._need_check_db = False
 
         if from_gate not in self._gates:
             raise GateIsAbsentError()
