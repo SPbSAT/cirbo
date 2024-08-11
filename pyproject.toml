@@ -128,7 +128,7 @@ markers = [
 ]
 # Suppress warnings for invalid escape sequences in pysat package
 
-addopts = "-m 'not db_aig and not db_xaig'"
+addopts = "-m 'not db_aig and not db_xaig and not ABC'"
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"
 ]
