@@ -1585,6 +1585,8 @@ class Circuit(BooleanFunction):
     def _remove_user(self, gate: Label, user: Label):
         """Remove user from `gate`."""
         self._gate_to_users[gate].remove(user)
+        if self._gate_to_users[gate] == []:
+            del self._gate_to_users[gate]
 
     def _add_user(self, gate: Label, user: Label):
         """Add user for `gate`."""
