@@ -2,7 +2,7 @@
 
 INPUT(A)
 INPUT(D)
-INPUT(E)
+OUTPUT(C)
 B = NOT(A)
 C = AND(A, B)
-OUTPUT(C)
+INPUT(E)
