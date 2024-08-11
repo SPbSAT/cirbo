@@ -13,6 +13,22 @@ from .multiplication import (
 )
 from .sqrt import add_sqrt
 from .square import add_square, add_square_pow2_m1
+from .subtraction import (
+    add_sub2,
+    add_sub3,
+    add_sub_two_numbers,
+    add_subtract_with_compare,
+)
+from .summation import (
+    add_sum2,
+    add_sum3,
+    add_sum_n_bits,
+    add_sum_n_bits_easy,
+    add_sum_pow2_m1,
+    add_sum_two_numbers,
+    add_sum_two_numbers_with_shift,
+)
+
 
 __all__ = [
     # div_mod.py
@@ -32,5 +48,16 @@ __all__ = [
     'add_square',
     'add_square_pow2_m1',
     # subtraction.py
+    'add_sub2',
+    'add_sub3',
+    'add_sub_two_numbers',
+    'add_subtract_with_compare',
     # summation.py
+    'add_sum2',
+    'add_sum3',
+    'add_sum_n_bits',
+    'add_sum_n_bits_easy',
+    'add_sum_pow2_m1',
+    'add_sum_two_numbers',
+    'add_sum_two_numbers_with_shift',
 ]
