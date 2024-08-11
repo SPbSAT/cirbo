@@ -6,20 +6,27 @@
 Python >=3.9 is used to cover all currently
 [maintained versions](https://devguide.python.org/versions/).
 
+1. Install dev version of `python3.9` (e.g. `sudo apt install python3.9-dev`)
+1. Init and update repository submodules `git submodule update --init --recursive`
 1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
-2. Setup virtual environment by running `poetry install`
-3. Set your env to the oldest supported Python version `poetry env use 3.9`
-4. Enable virtual environment using `poetry shell`
+1. Build extensions locally by running `poetry build`
+1. Setup virtual environment by running `poetry install`
+1. Set your env to the oldest supported Python version `poetry env use 3.9`
+1. Enable virtual environment using `poetry shell`
+1. Install pre-commit hooks using `pre-commit install`
 
-## Updating dependencies
+Note: probably one will need to restart an IDE after extensions are built and
+installed to refresh its index and stubs.
 
-1. Use `poetry add <package>` to add new dependency. To add dev-only dependency
-use `poetry add <package> --group dev`.
-2. Commit changed `pyproject.toml` and `poetry.lock`.
+## Building extensions
 
-If conflict occurred during merge request, one should repeat both steps above
-on a fresh `main` version in order to correctly resolve valid versions for
-all dependencies.
+This package provides bridges to some external `C/C++` libraries. Extensions
+are written using `pybind11` and should be built before used locally. To build
+dependencies run `poetry build` and to install them after use `poetry install`.
+
+Note: to build dependencies one should have all building tools available
+in the system. Currently, dependencies require `C++` compiler and `cmake`
+to be available.
 
 ## Codestyle guidelines
 
@@ -41,23 +48,106 @@ export of unwanted objects (e.g. export of imported objects).
 (e.g. `import itertools`).
 7. For package `typing` shortening `tp` should be used (`import typing as tp`).
 
+## Checks
+
+`mypy`, `flake8`, `pytest`, `black`, `docformatter` and `usort` are main checks
+used in CI.
+
+Those checks are available in poetry environment and can be invoked at once
+locally using tool script:
+
+`python ./tools/check.py`
+
+If everything is good, output is expected to be like the following:
+
+```
+(boolean-circuit-tool-py3.9) boolean-circuit-tool$ python ./tools/check.py
+1. MYPY CHECK SUCCEED
+2. FLAKE8 CHECK SUCCEED
+3. PYTEST CHECK SUCCEED
+4. USORT CHECK SUCCEED
+5. DOCFORMATTER CHECK SUCCEED
+6. BLACK CHECK SUCCEED
+```
+
+shorten outputs mode can also be activated using flag `-s`:
+
+`python ./tools/check.py -s`
+
 ## Formatters
 
 `black`, `docformatter` and `usort` are available in poetry environment
 and can be used to format code during development.
 
-All of them can be run at once using:
+All of them can be run at once using tool script:
 
 `python ./tools/formatter.py`
 
 ## Tests
 
-Tests are written and executed using `pytest`. 
+Tests are written and executed using `pytest`.
 To execute tests run `poetry run pytest`.
+
+In addition to the standard tests, there are optional slow tests that interact with circuit databases. 
+These tests require the corresponding database files. To execute these tests, use the following command:
+
+```
+poetry run pytest tests/ -m "db_xaig or db_aig" --db-xaig-path /path/to/xaig_db.bin --db-aig-path /path/to/aig_db.bin
+```
+Replace `/path/to/xaig_db.bin` and `/path/to/aig_db.bin` with the actual paths to your XAIG and AIG database files, respectively.
 
 Tests are located at the `tests` subdirectory, and should be written for all
 functionalities of the package. Also, directory structure of `tests` should
 repeat structure of main `boolean-circuit-tool` package.
+
+## Pre-commit checks
+
+`pre-commit` hooks are currently used to run required CI checks before each
+commit locally, to not spend cloud CI quota.
+
+To force-commit without pre-commit checks use `--no-verify` option, for
+example: `git commit -m "my fixes" --no-verify`.
+
+To update git hooks based on current `.pre-commit-config.yaml` run
+`pre-commit install`.
+
+To run all current `pre-commit` checks against staged files use `pre-commit run`.
+To run it against all files use `pre-commit run --all-files`.
+
+## Updating dependencies
+
+To add or update python dependencies do the following:
+
+1. Use `poetry add <package>` to add new dependency. To add dev-only dependency
+use `poetry add <package> --group dev`. To update package version to the latest
+of available execute `poetry update <package>`.
+2. Commit changed `pyproject.toml` and `poetry.lock`.
+
+If conflict occurred during merge request, one should repeat both steps above
+on a fresh `main` version in order to correctly resolve valid versions for
+all dependencies.
+
+To bring new third-party dependency to the repository (e.g. some `C` library
+sources) use `git submodule add <repository> third_party/<repository name>`.
+Read more about submodules in
+[docs](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
+
+## Writing extensions
+
+`C/C++` extensions are written using `pybind11`. To create new extension one should:
+
+1. Put source files to `extensions/<extension name>/src/`.
+2. Add extension build specification to `CMakeLists.txt`.
+3. Add extension module specification to `build.py`, to `ext_modules` variable.
+4. Locally compile and install extensions
+   ```sh
+   poetry build
+   poetry run
+   ```
+5. Add python tests to `tests/<extension name>` package.
+
+Note: there is an `dummy_extension` needed solely to demonstrate a minimal
+configuration extension should have.
 
 ## CI flow
 

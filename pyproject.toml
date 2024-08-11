@@ -5,17 +5,27 @@ description = "Tools and utilities for boolean circuit manipulations."
 # TODO: list all authors.
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
+license = "LICENCE"
 # Temporary guard against occasional publishing.
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    # Temporary guard against occasional publishing.
     "Private :: Do not Upload",
 ]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-click = "^8.1.7"
-more-itertools = "^10.3.0"
+more-itertools = "^10.4.0"
 typing-extensions = "^4.12.2"
 python-sat="^1.8.dev13"
+pebble = "^5.0.7"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
@@ -26,9 +36,23 @@ mypy = "^1.9.0"
 pytest = "^8.2.2"
 usort = "^1.0.8.post1"
 docformatter = "^1.7.5"
+coverage = "^7.6.1"
+pre-commit = "^3.8.0"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7.4.7"
+sphinx-autoapi = "^3.2.1"
+
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = true
 
 [build-system]
-requires = ["poetry-core"]
+requires = [
+    "poetry-core>=1.0.0",
+    "setuptools>=45",
+    "wheel",
+]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]
@@ -94,10 +118,13 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = "pysat.*"
+module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*"]
+
 
 [tool.pytest.ini_options]
 # Suppress warnings for invalid escape sequences in pysat package
+
+addopts = "-m 'not db_aig and not db_xaig'"
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"
 ]
