@@ -127,6 +127,8 @@ markers = [
     "ABC: marks tests that use ABC extension (deselect with '-m \"not ABC\"')",
 ]
 # Suppress warnings for invalid escape sequences in pysat package
+
+addopts = "-m 'not db_aig and not db_xaig'"
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"
 ]

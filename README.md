@@ -13,7 +13,7 @@ Python >=3.9 is used to cover all currently
 1. Setup virtual environment by running `poetry install`
 1. Set your env to the oldest supported Python version `poetry env use 3.9`
 1. Enable virtual environment using `poetry shell`
-1. Install pre-commit hooks using `pre-commit intsall`
+1. Install pre-commit hooks using `pre-commit install`
 
 Note: probably one will need to restart an IDE after extensions are built and
 installed to refresh its index and stubs.
@@ -95,6 +95,14 @@ All of them can be run at once using tool script:
 
 Tests are written and executed using `pytest`.
 To execute tests run `poetry run pytest`.
+
+In addition to the standard tests, there are optional slow tests that interact with circuit databases. 
+These tests require the corresponding database files. To execute these tests, use the following command:
+
+```
+poetry run pytest tests/ -m "db_xaig or db_aig" --db-xaig-path /path/to/xaig_db.bin --db-aig-path /path/to/aig_db.bin
+```
+Replace `/path/to/xaig_db.bin` and `/path/to/aig_db.bin` with the actual paths to your XAIG and AIG database files, respectively.
 
 Tests are located at the `tests` subdirectory, and should be written for all
 functionalities of the package. Also, directory structure of `tests` should
