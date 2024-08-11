@@ -61,7 +61,9 @@ def _check_project(*, short: bool):
     flake8_ret = _call_command_with_buffer(
         "poetry run flake8 boolean_circuit_tool tests tools docs"
     )
-    pytest_ret = _call_command_with_buffer("poetry run pytest tests")
+    pytest_ret = _call_command_with_buffer(
+        "poetry run pytest tests -m 'not (manual or slow or ABC)'"
+    )
     usort_ret = _call_command_with_buffer(
         "poetry run usort check boolean_circuit_tool/ tests/ tools/"
     )

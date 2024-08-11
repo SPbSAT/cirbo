@@ -122,6 +122,10 @@ module = ["pysat.*", "pebble.*"]
 
 
 [tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "ABC: marks tests that use ABC extension (deselect with '-m \"not ABC\"')",
+]
 # Suppress warnings for invalid escape sequences in pysat package
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"

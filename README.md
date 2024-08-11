@@ -28,6 +28,14 @@ Note: to build dependencies one should have all building tools available
 in the system. Currently, dependencies require `C++` compiler and `cmake`
 to be available.
 
+Some extensions can be disabled using environment variables if one doesn't
+need them. For example `DISABLE_ABC_CEXT=1; poetry build` will build
+wheels without `ABC` bridge module. It can be helpful for CI or fast testing
+because `ABC` compilation times are heavy.
+
+Tests that use `ABC` extension can be skipped by passing option `-m 'not ABC'`
+to `pytest` run.
+
 ## Codestyle guidelines
 
 One should follow simple rules:
@@ -38,7 +46,7 @@ One should follow simple rules:
    3. wrong usage behaviour.
 2. Type hints must be specified for all arguments and return values, as well
 as for class attributes. Typehints for local variables are also welcome when
-well-placed, but not obligatory.
+well-placed, `but not` obligatory.
 3. All public Python objects (functions, classes, modules) must have docstrings.
 For private and protected objects docstrings are encouraged but not obligatory.
 4. All Python modules should include `__all__` definition, to avoid occasional

@@ -15,18 +15,23 @@ list(APPEND ABC_READLINE_FLAGS "ABC_USE_NO_READLINE=1")
 
 add_subdirectory(third_party/pybind11)
 add_subdirectory(third_party/mockturtle)
-add_subdirectory(third_party/abc)
-
-# Needed for correct library compilation.
-target_compile_options(libabc PRIVATE -fPIC)
 
 pybind11_add_module(dummy_extension extensions/dummy_extension/src/module.cpp)
 pybind11_add_module(mockturtle_wrapper extensions/mockturtle_wrapper/src/module.cpp)
-pybind11_add_module(abc_wrapper extensions/abc_wrapper/src/module.cpp)
 
 target_link_libraries(mockturtle_wrapper PRIVATE mockturtle)
-target_link_libraries(abc_wrapper PRIVATE libabc)
 
 target_include_directories(mockturtle_wrapper PRIVATE third_party)
-target_include_directories(abc_wrapper PRIVATE third_party)
 
+
+# ABC related libs can be disabled using environment variable.
+IF("$ENV{DISABLE_ABC_CEXT}" STREQUAL "0")
+    add_subdirectory(third_party/abc)
+    # Needed for correct library compilation.
+    target_compile_options(libabc PRIVATE -fPIC)
+
+    pybind11_add_module(abc_wrapper extensions/abc_wrapper/src/module.cpp)
+
+    target_link_libraries(abc_wrapper PRIVATE libabc)
+    target_include_directories(abc_wrapper PRIVATE third_party)
+ENDIF("$ENV{DISABLE_ABC_CEXT}" STREQUAL "0")
