@@ -4,22 +4,18 @@ import random
 import pytest
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
-from boolean_circuit_tool.synthesis.generation.arithmetics.div_mod import add_div_mod
-from boolean_circuit_tool.synthesis.generation.arithmetics.equality import add_equal
-from boolean_circuit_tool.synthesis.generation.arithmetics.multiplication import (
+from boolean_circuit_tool.synthesis.generation.arithmetics import (
+    add_div_mod,
+    add_equal,
     add_mul,
     add_mul_alter,
     add_mul_dadda,
     add_mul_karatsuba,
     add_mul_pow2_m1,
     add_mul_wallace,
-)
-from boolean_circuit_tool.synthesis.generation.arithmetics.sqrt import add_sqrt
-from boolean_circuit_tool.synthesis.generation.arithmetics.square import (
+    add_sqrt,
     add_square,
     add_square_pow2_m1,
-)
-from boolean_circuit_tool.synthesis.generation.arithmetics.summation import (
     add_sum_n_bits,
 )
 
