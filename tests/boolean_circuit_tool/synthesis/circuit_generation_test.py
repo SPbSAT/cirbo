@@ -9,22 +9,13 @@ from boolean_circuit_tool.synthesis.generation import (
 )
 
 
-def to_list_of_bool(n, bit_len):
-    bit_str = "{0:b}".format(n).zfill(bit_len)
-    res = []
-    bit_str_len = len(bit_str)
-    for i in range(bit_str_len - 1, bit_str_len - bit_len - 1, -1):
-        res.append(bool(int(bit_str[i])))
-    return res[::-1]
-
-
 @pytest.mark.parametrize("n", range(1, 10))
 @pytest.mark.parametrize("m", range(1, 20))
 def test_generate_plus_one(n: int, m: int):
     circuit = generate_plus_one(n, m)
     for i in range(2**n):
-        inp = to_list_of_bool(i, n)
-        out = to_list_of_bool(i + 1, m)
+        inp = canonical_index_to_input(i, n)
+        out = canonical_index_to_input(i + 1, m)
 
         test_out = circuit.evaluate(inp)
         assert test_out == out
