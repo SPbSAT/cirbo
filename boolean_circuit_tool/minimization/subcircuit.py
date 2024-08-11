@@ -295,6 +295,7 @@ def get_internal_gates(
     """
     Get gates between given inputs and outputs in the circuit.
 
+    :param circuit: circuit.
     :param inputs: list with inputs.
     :param outputs: list with outputs.
     :return: list with gates from the circuit
