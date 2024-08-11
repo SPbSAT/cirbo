@@ -6,7 +6,6 @@ import typing_extensions as tp_ext
 from boolean_circuit_tool.core.exceptions import BadDefinitionError
 from boolean_circuit_tool.core.logic import TriValue
 
-
 __all__ = [
     'RawTruthTable',
     'RawTruthTableModel',
