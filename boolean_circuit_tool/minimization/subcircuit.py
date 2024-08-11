@@ -299,7 +299,8 @@ def minimize_subcircuits(
     fanout_size: int = 10000,
 ) -> Circuit:
     """
-    Improve circuit's size by simplification its subcircuits using SAT-Solver. The algorithm is following:
+    Improve circuit's size by simplification its subcircuits using SAT-Solver.
+    The algorithm is following:
     1. Get all limited size cuts.
     2. Remove nested cuts and build subcircuits on the remaining.
     3. Evaluate truth tables for subcircuits with don't cares.
@@ -324,7 +325,7 @@ def minimize_subcircuits(
         circuit.
 
     """
-    node_cuts: dict[Label : list[Cut]] = mw.enumerate_cuts(
+    node_cuts: dict[Label, list[Cut]] = mw.enumerate_cuts(
         circuit.format_circuit(),
         cut_size,
         cut_limit,
@@ -334,7 +335,7 @@ def minimize_subcircuits(
     for node, cuts in node_cuts.items():
         for cut in cuts:
             cut_nodes[tuple(cut)].add(node)
-    cuts: list[Cut] = list(cut_nodes.keys())
+    cuts = list(cut_nodes.keys())
 
     logger.debug(f"Found {len(cuts)} cuts")
 

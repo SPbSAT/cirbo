@@ -522,7 +522,7 @@ class Circuit(BooleanFunction):
             for operand in self.get_gate(label)._operands:
                 self._add_user(operand, label)
         for i, label in enumerate(labels_to_rename):
-            new_label: Label = labels_to_remove[i]
+            new_label = labels_to_remove[i]
             self.rename_gate(label, new_label)
 
         return self
@@ -1564,7 +1564,7 @@ class Circuit(BooleanFunction):
 
     def _remove_gate(self, gate_label: Label) -> tp_ext.Self:
         """
-        Remove gate from the circuit without any checks (!!!).
+        C Remove gate from the circuit without any checks (!!!).
 
         :param gate_label: gate's label for deleting.
         :return: this circuit after modification.

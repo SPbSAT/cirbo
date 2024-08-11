@@ -70,7 +70,7 @@ def check_circuit_has_no_cycles(circuit: 'Circuit') -> None:
     from boolean_circuit_tool.core.circuit.circuit import TraverseState
 
     def on_discover_hook(
-        gate: 'Gate', gate_states: tp.DefaultDict['Label', 'TraverseState']
+        gate: 'Gate', gate_states: tp.Mapping['Label', 'TraverseState']
     ):
         if gate_states[gate.label] == TraverseState.ENTERED:
             raise CircuitValidationError(
