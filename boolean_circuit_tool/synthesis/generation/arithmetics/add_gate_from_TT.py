@@ -1,9 +1,12 @@
+import random
 import uuid
 
 from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import Gate
 from boolean_circuit_tool.core.circuit.gate import (
+    ALWAYS_FALSE,
+    ALWAYS_TRUE,
     AND,
+    Gate,
     GEQ,
     GT,
     LEQ,
@@ -17,10 +20,7 @@ from boolean_circuit_tool.core.circuit.gate import (
     RIFF,
     RNOT,
     XOR,
-    ALWAYS_TRUE,
-    ALWAYS_FALSE,
 )
-import random
 
 TT_to_type = {
     "0001": AND,
@@ -58,6 +58,7 @@ def add_gate_with_TT(circuit: Circuit, label1: str, label2: str, operation: str)
     :param label2: name of second gate.
     :param operation: type of gate like TT format. In example '0101' or '0010'.
     :return: name of new gate.
+
     """
     label = get_new_label(circuit)
     circuit.add_gate(Gate(label, TT_to_type[operation], (label1, label2)))

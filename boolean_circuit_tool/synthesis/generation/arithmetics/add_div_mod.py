@@ -1,10 +1,16 @@
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import add_sub2, add_sub3
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
 from boolean_circuit_tool.core.circuit import Circuit
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import (
+    add_gate_with_TT,
+)
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
+    add_sub2,
+    add_sub3,
+)
 
 
-def add_sub_with_per_equal_size(circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]) -> (
-        list[str], str):
+def add_sub_with_per_equal_size(
+    circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]
+) -> (list[str], str):
     n = len(input_labels_a)
     assert n == len(input_labels_b)
     for input_label in input_labels_a:
@@ -16,11 +22,15 @@ def add_sub_with_per_equal_size(circuit: Circuit, input_labels_a: list[str], inp
     bal = [0] * n
     res[0], bal[0] = add_sub2(circuit, [input_labels_a[0], input_labels_b[0]])
     for i in range(1, n):
-        res[i], bal[i] = add_sub3(circuit, [input_labels_a[i], input_labels_b[i], bal[i - 1]])
+        res[i], bal[i] = add_sub3(
+            circuit, [input_labels_a[i], input_labels_b[i], bal[i - 1]]
+        )
     return res, bal[n - 1]
 
 
-def add_div_mod(circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]) -> (list[str], list[str]):
+def add_div_mod(
+    circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]
+) -> (list[str], list[str]):
     """
     Function make div two integers with equal size.
 
@@ -28,6 +38,7 @@ def add_div_mod(circuit: Circuit, input_labels_a: list[str], input_labels_b: lis
     :param input_labels_a: bits of divisible in increase order.
     :param input_labels_b: bits of divider in increase order.
     :return: first list is result for div, second list is result for mod.
+
     """
     n = len(input_labels_a)
     assert n == len(input_labels_b)
@@ -46,17 +57,25 @@ def add_div_mod(circuit: Circuit, input_labels_a: list[str], input_labels_b: lis
     for i in range(n - 1, 0, -1):  # chose shift for sub (> 0)
         prov = pref[i - 1]
         m = n - i  # intersection
-        sub_res, per = add_sub_with_per_equal_size(circuit, now[(n - m):], b[:m])
+        sub_res, per = add_sub_with_per_equal_size(circuit, now[(n - m) :], b[:m])
         result[i] = add_gate_with_TT(circuit, prov, per, "1000")
         for j in range(m):
-            now[j + n - m] = add_gate_with_TT(circuit, add_gate_with_TT(circuit, result[i], sub_res[j], "0001"),
-                                              add_gate_with_TT(circuit, now[j + n - m], result[i], "0010"), "0111")
+            now[j + n - m] = add_gate_with_TT(
+                circuit,
+                add_gate_with_TT(circuit, result[i], sub_res[j], "0001"),
+                add_gate_with_TT(circuit, now[j + n - m], result[i], "0010"),
+                "0111",
+            )
     m = n  # intersection
     sub_res, per = add_sub_with_per_equal_size(circuit, now, b)
     result[0] = add_gate_with_TT(circuit, per, per, "1000")
     for j in range(m):
-        now[j] = add_gate_with_TT(circuit, add_gate_with_TT(circuit, result[0], sub_res[j], "0001"),
-                                  add_gate_with_TT(circuit, now[j], result[0], "0010"), "0111")
+        now[j] = add_gate_with_TT(
+            circuit,
+            add_gate_with_TT(circuit, result[0], sub_res[j], "0001"),
+            add_gate_with_TT(circuit, now[j], result[0], "0010"),
+            "0111",
+        )
 
     # if we need result A % 0 = 0 and B / 0 = 0
     pref.append(add_gate_with_TT(circuit, pref[-1], b[0], "0111"))

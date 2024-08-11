@@ -1,8 +1,12 @@
 import typing as tp
-from boolean_circuit_tool.core.circuit import Circuit, ALWAYS_FALSE, Gate, NOT, AND
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import get_new_label
+
+from boolean_circuit_tool.core.circuit import ALWAYS_FALSE, AND, Circuit, Gate, NOT
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import (
+    get_new_label,
+)
 
 __all__ = ['add_equal']
+
 
 def add_equal(circuit: Circuit, input_labels: tp.Sequence[str], num: int) -> str:
     """
@@ -12,6 +16,7 @@ def add_equal(circuit: Circuit, input_labels: tp.Sequence[str], num: int) -> str
     :param input_labels: A sequence of labels representing the bits to be compared.
     :param num: The integer value to compare against the bit sequence.
     :return: The label of the gate that represents the result of the comparison.
+
     """
 
     bits = bin(num)[2:].zfill(len(input_labels))[::-1]

@@ -1,8 +1,11 @@
-from boolean_circuit_tool.core.circuit import Circuit
 from itertools import product, zip_longest
 
+from boolean_circuit_tool.core.circuit import Circuit
+
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import add_gate_with_TT
+from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_TT import (
+    add_gate_with_TT,
+)
 
 
 def add_sum_two_numbers(circuit, input_labels_a, input_labels_b):
@@ -13,6 +16,7 @@ def add_sum_two_numbers(circuit, input_labels_a, input_labels_b):
     :param input_labels_a: List of bits representing the first binary number.
     :param input_labels_b: List of bits representing the second binary number.
     :return: List of bits representing the sum of the two numbers.
+
     """
     n = len(input_labels_a)
     m = len(input_labels_b)
@@ -31,7 +35,9 @@ def add_sum_two_numbers(circuit, input_labels_a, input_labels_b):
     return [d[i][0] for i in range(n + 1)]
 
 
-def add_sum_two_numbers_with_shift(circuit, shift, input_labels_a, input_labels_b):  # shift for second
+def add_sum_two_numbers_with_shift(
+    circuit, shift, input_labels_a, input_labels_b
+):  # shift for second
     """
     Function to add two binary numbers with a shift applied to the second number.
 
@@ -39,17 +45,23 @@ def add_sum_two_numbers_with_shift(circuit, shift, input_labels_a, input_labels_
     :param shift: The number of bit positions to shift the second number.
     :param input_labels_a: List of bits representing the first binary number.
     :param input_labels_b: List of bits representing the second binary number.
-    :return: List of bits representing the sum of the two numbers after applying the shift.
+    :return: List of bits representing the sum of the two numbers after applying the
+        shift.
+
     """
     n = len(input_labels_a)
     m = len(input_labels_b)
 
-    if shift >= n:  # if shift so big for first number (in out cases I hope we will not use this)
+    if (
+        shift >= n
+    ):  # if shift so big for first number (in out cases I hope we will not use this)
         d = [[0] for _ in range(m + shift)]
         for i in range(n):
             d[i] = [input_labels_a[i]]
         if shift != n:
-            zero = add_gate_with_TT(circuit, input_labels_a[0], input_labels_a[0], '0000')
+            zero = add_gate_with_TT(
+                circuit, input_labels_a[0], input_labels_a[0], '0000'
+            )
             for i in range(n, shift - n):
                 d[i] = [zero]
         for i in range(m):
@@ -106,11 +118,13 @@ def add_sub3(circuit, input_labels):
 def add_sub_two_numbers(circuit, input_labels_a, input_labels_b):
     """
     Function to subtract two binary numbers represented by input labels.
+
     :param circuit: The general circuit.
-        :param input_labels_a: List of bits representing the first binary number.
-        :param input_labels_b: List of bits representing the second binary number.
-        :return: List of bits representing the difference of the two numbers.
-        """
+    :param input_labels_a: List of bits representing the first binary number.
+    :param input_labels_b: List of bits representing the second binary number.
+    :return: List of bits representing the difference of the two numbers.
+
+    """
     n = len(input_labels_a)
     m = len(input_labels_b)
     res = [0] * n
@@ -118,7 +132,9 @@ def add_sub_two_numbers(circuit, input_labels_a, input_labels_b):
     res[0], bal[0] = add_sub2(circuit, [input_labels_a[0], input_labels_b[0]])
     for i in range(1, n):
         if i < m:
-            res[i], bal[i] = add_sub3(circuit, [input_labels_a[i], input_labels_b[i], bal[i - 1]])
+            res[i], bal[i] = add_sub3(
+                circuit, [input_labels_a[i], input_labels_b[i], bal[i - 1]]
+            )
         else:
             res[i], bal[i] = add_sub2(circuit, [input_labels_a[i], bal[i - 1]])
 
@@ -166,11 +182,12 @@ def add_simplified_mdfa(circuit, input_labels):
 
 def add_sum_n_bits_easy(circuit, input_lables):
     """
-    Function to add a variable number of bits with numbers of gate approximately 5 * n
+    Function to add a variable number of bits with numbers of gate approximately 5 * n.
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
     :return: Tuple containing the sum in binary representation.
+
     """
     now = input_lables
     res = []
@@ -195,11 +212,13 @@ def add_sum_n_bits_easy(circuit, input_lables):
 
 def add_sum_n_bits(circuit, input_lables):
     """
-    Function to add a variable number of bits with numbers of gate approximately 4.5 * n
+    Function to add a variable number of bits with numbers of gate approximately 4.5 *
+    n.
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
     :return: Tuple containing the sum in binary representation.
+
     """
     res = []
     now_x_xy = []
@@ -215,8 +234,16 @@ def add_sum_n_bits(circuit, input_lables):
         next_x_xy = []
         while len(now_x_xy) > 1:
             if len(now_solo) > 0:
-                z, x1, x1y1 = add_mdfa(circuit, [now_solo[-1], now_x_xy[-1][0], now_x_xy[-1][1],
-                                                 now_x_xy[-2][0], now_x_xy[-2][1]])
+                z, x1, x1y1 = add_mdfa(
+                    circuit,
+                    [
+                        now_solo[-1],
+                        now_x_xy[-1][0],
+                        now_x_xy[-1][1],
+                        now_x_xy[-2][0],
+                        now_x_xy[-2][1],
+                    ],
+                )
                 for _ in range(2):
                     now_x_xy.pop()
                 now_solo.pop()
@@ -224,8 +251,15 @@ def add_sum_n_bits(circuit, input_lables):
                 now_solo.append(z)
                 next_x_xy.append((x1, x1y1))
             else:
-                z, x1, x1y1 = add_simplified_mdfa(circuit, [now_x_xy[-1][0], now_x_xy[-1][1],
-                                                            now_x_xy[-2][0], now_x_xy[-2][1]])
+                z, x1, x1y1 = add_simplified_mdfa(
+                    circuit,
+                    [
+                        now_x_xy[-1][0],
+                        now_x_xy[-1][1],
+                        now_x_xy[-2][0],
+                        now_x_xy[-2][1],
+                    ],
+                )
                 for _ in range(2):
                     now_x_xy.pop()
 
@@ -233,14 +267,18 @@ def add_sum_n_bits(circuit, input_lables):
                 next_x_xy.append((x1, x1y1))
         if len(now_x_xy) == 1:
             if len(now_solo) > 0:
-                x, y = add_stockmeyer_block(circuit, [now_solo[-1], now_x_xy[-1][0], now_x_xy[-1][1]])
+                x, y = add_stockmeyer_block(
+                    circuit, [now_solo[-1], now_x_xy[-1][0], now_x_xy[-1][1]]
+                )
                 now_solo.pop()
                 now_x_xy.pop()
                 next_solo.append(y)
                 now_solo.append(x)
             else:
                 now_solo.append(now_x_xy[-1][1])
-                next_solo.append(add_gate_with_TT(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010"))
+                next_solo.append(
+                    add_gate_with_TT(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010")
+                )
                 now_x_xy.pop()
 
         while len(now_solo) > 2:
@@ -260,6 +298,7 @@ def add_sum_n_bits(circuit, input_lables):
         now_x_xy = next_x_xy
     return res
 
+
 # divides the sum into blocks of size 2^n-1
 # will be replaced with calls of 4.5n sums generator
 def add_sum_pow2_m1(circuit, input_labels):
@@ -271,22 +310,23 @@ def add_sum_pow2_m1(circuit, input_labels):
 
     out = []
     it = 0
-    while (len(input_labels) > 2):
+    while len(input_labels) > 2:
         for pw in range(5, 1, -1):
-            i = 2 ** pw - 1
+            i = 2**pw - 1
             while len(input_labels) >= i:
-                out.append(add_sum_n_bits(circuit, input_labels[0: i]))
+                out.append(add_sum_n_bits(circuit, input_labels[0:i]))
                 input_labels = input_labels[i:]
                 input_labels.append(out[it][0])
                 it += 1
-    if (len(input_labels) == 2):
-        out.append(add_sum2(circuit, input_labels[0: 2]))
+    if len(input_labels) == 2:
+        out.append(add_sum2(circuit, input_labels[0:2]))
         input_labels = input_labels[2:]
         input_labels.append(out[it][0])
 
     out = [list(filter(None, x)) for x in zip_longest(*out)]
     out[0] = [out[0][len(out[0]) - 1]]
     return out
+
 
 __all__ = [
     "add_sum_n_bits",
