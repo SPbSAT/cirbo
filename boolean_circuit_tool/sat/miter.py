@@ -15,6 +15,17 @@ def build_miter(
     left_name: gate.Label = 'circuit1',
     right_name: gate.Label = 'circuit2'
 ) -> Circuit:
+    """
+    Given two circuit, returns a miter circuit (that checks whether the two circuits are
+    equivalent).
+
+    :param left: first circuit
+    :param right: second circuit
+    :param left_name: name for the block that is added for the first circuit
+    :param right_name: name for the block that is added for the second circuit
+    :return: a miter circuit of given circuits
+
+    """
     if (left.input_size != right.input_size) or (left.output_size != right.output_size):
         raise MiterDifferentShapesError()
 

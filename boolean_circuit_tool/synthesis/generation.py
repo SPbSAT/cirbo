@@ -21,6 +21,14 @@ __all__ = [
 
 
 def generate_plus_one(inp_len: int, out_len: int) -> Circuit:
+    """
+    Generates a circuit that adds 1 to a number of `inp_len` bits given in the big
+    endian format and returns `out_len` least-significant bits of the result.
+
+    :param inp_len: number of input bits
+    :param out_len: number of output bits
+
+    """
     x_labels = _generate_labels('x', inp_len)[::-1]
     z_labels = _generate_labels('z', out_len)[::-1]
     circuit = Circuit()
@@ -31,6 +39,7 @@ def generate_plus_one(inp_len: int, out_len: int) -> Circuit:
 
 
 def generate_if_then_else() -> Circuit:
+    """Generates a circuit that computes `if then else` function of three bits."""
     circuit = Circuit()
     circuit.add_inputs(['if', 'then', 'else'])
 
@@ -41,6 +50,14 @@ def generate_if_then_else() -> Circuit:
 
 
 def generate_pairwise_if_then_else(n: int) -> Circuit:
+    """
+    Generates a circuit with `3n` inputs `[if_0, .., if_{n-1}, then_0, .., then_{n-1},
+    else_0, .., else_{n-1}]` and `n` outputs `[if_then_else_0, .., if_then_else_{n-1}]`
+    that computes `if then else` function for every 0 <= i < n.
+
+    :param n: 3n -- number of inputs, n -- number of outputs
+
+    """
     if_labels = _generate_labels('if', n)
     then_labels = _generate_labels('then', n)
     else_labels = _generate_labels('else', n)
@@ -63,6 +80,13 @@ def generate_pairwise_if_then_else(n: int) -> Circuit:
 
 
 def generate_pairwise_xor(n: int) -> Circuit:
+    """
+    Generates a circuit with `2n` inputs `[x_0, .., x_{n-1}, y_0, .., y_{n-1}]` and `n`
+    outputs `[xor_0, .., xor_{n-1}]` that computes `xor` function for every 0 <= i < n.
+
+    :param n: 2n -- number of inputs, n -- number of outputs
+
+    """
     x_labels = _generate_labels('x', n)
     y_labels = _generate_labels('y', n)
     xor_labels = _generate_labels('xor', n)
@@ -78,6 +102,13 @@ def generate_pairwise_xor(n: int) -> Circuit:
 
 
 def generate_inputs_with_labels(labels: list[gate.Label]) -> Circuit:
+    """
+    Generates a circuit consisting of INPUT gates with given labels. Those gates are
+    also marked as OUTPUTS.
+
+    :param labels: names for the input gates
+
+    """
     circuit = Circuit()
     circuit.add_inputs(labels)
     circuit.set_outputs(labels)
@@ -85,6 +116,13 @@ def generate_inputs_with_labels(labels: list[gate.Label]) -> Circuit:
 
 
 def generate_inputs(n: int) -> Circuit:
+    """
+    Generates a circuit consisting of n INPUT gates. Those gates are also marked as
+    OUTPUTS.
+
+    :param n: number of input gates
+
+    """
     return generate_inputs_with_labels(_generate_labels('x', n))
 
 
@@ -95,6 +133,21 @@ def add_plus_one(
     result_labels: list[gate.Label] = None,
     add_outputs=False
 ) -> list[gate.Label]:
+    """
+    For a given circuit, adds a subcircuit that adds 1 to a number corresponding to the
+    given input gates in the big endian format, and returns least-significant bits of
+    the result.
+
+    :param circuit: base circuit
+    :param input_labels: labels of gates of the circuit that will be inputs of the new
+        subcircuit
+    :param result_labels: (optional parameter) labels that will correspond to the
+        outputs of the new subcircuit
+    :param add_outputs: (optional parameter) indicates whether the outputs of the new
+        subcircuit are added to the outputs of the circuit
+    :return: labels that correspond to the outputs of the new subcircuit
+
+    """
     inp_len = len(input_labels)
 
     if result_labels is None:
@@ -150,6 +203,24 @@ def add_if_then_else(
     result_label: gate.Label = None,
     add_outputs=False
 ) -> gate.Label:
+    """
+    For a given circuit, adds a subcircuit that computes `if then else` function of
+    three given input gates.
+
+    :param circuit: base circuit
+    :param if_label: label of a gate of the circuit that will be if-input of the new
+        subcircuit
+    :param then_label: label of a gate of the circuit that will be then-input of the new
+        subcircuit
+    :param else_label: label of a gate of the circuit that will be else-input of the new
+        subcircuit
+    :param result_label: (optional parameter) label that will correspond to the outputs
+        of the new subcircuit
+    :param add_outputs: (optional parameter) indicates whether the output of the new
+        subcircuit is added to the outputs of the circuit
+    :return: label that correspond to the outputs of the new subcircuit
+
+    """
     if result_label is None:
         result_label = _get_new_label(circuit)
 
@@ -166,17 +237,36 @@ def add_if_then_else(
 
 def add_pairwise_if_then_else(
     circuit: Circuit,
-    if_inputs: list[gate.Label],
-    then_inputs: list[gate.Label],
-    else_inputs: list[gate.Label],
+    if_labels: list[gate.Label],
+    then_labels: list[gate.Label],
+    else_labels: list[gate.Label],
     *,
     result_labels: list[gate.Label] = None,
     add_outputs=False
 ) -> list[gate.Label]:
-    if len(if_inputs) != len(then_inputs) or len(then_inputs) != len(else_inputs):
+    """
+    For a given circuit, adds a subcircuit with `3n` given inputs `if`, `then` and
+    `else`, and `n` outputs, that computes `if then else` function of `(if[i], then[i],
+    else[i])` for every 0 <= i < n.
+
+    :param circuit: base circuit
+    :param if_labels: labels of gates of the circuit that will be if-inputs of the new
+        subcircuit
+    :param then_labels: labels of gates of the circuit that will be then-inputs of the
+        new subcircuit
+    :param else_labels: labels of gates of the circuit that will be else-inputs of the
+        new subcircuit
+    :param result_labels: (optional parameter) labels that will correspond to the
+        outputs of the new subcircuit
+    :param add_outputs: (optional parameter) indicates whether the outputs of the new
+        subcircuit are added to the outputs of the circuit
+    :return: labels that correspond to the outputs of the new subcircuit
+
+    """
+    if len(if_labels) != len(then_labels) or len(then_labels) != len(else_labels):
         raise PairwiseIfThenElseDifferentShapesError()
 
-    n = len(if_inputs)
+    n = len(if_labels)
     if result_labels is None:
         result_labels = []
         for i in range(n):
@@ -188,9 +278,9 @@ def add_pairwise_if_then_else(
     for i in range(n):
         add_if_then_else(
             circuit,
-            if_inputs[i],
-            then_inputs[i],
-            else_inputs[i],
+            if_labels[i],
+            then_labels[i],
+            else_labels[i],
             result_label=result_labels[i],
             add_outputs=add_outputs,
         )
@@ -206,6 +296,22 @@ def add_pairwise_xor(
     result_labels: list[gate.Label] = None,
     add_outputs=False
 ) -> list[gate.Label]:
+    """
+    For a given circuit, adds a subcircuit with `2n` given inputs `x` and `y`, and `n`
+    outputs, that computes `x[i] xor y[i]` for every 0 <= i < n.
+
+    :param circuit: base circuit
+    :param x_labels: labels of gates of the circuit that will be x-inputs of the new
+        subcircuit
+    :param y_labels: labels of gates of the circuit that will be y-inputs of the new
+        subcircuit
+    :param result_labels: (optional parameter) labels that will correspond to the
+        outputs of the new subcircuit
+    :param add_outputs: (optional parameter) indicates whether the outputs of the new
+        subcircuit are added to the outputs of the circuit
+    :return: labels that correspond to the outputs of the new subcircuit
+
+    """
     if len(x_labels) != len(y_labels):
         raise PairwiseXorDifferentShapesError()
 
