@@ -21,11 +21,7 @@ __all__ = [
 ]
 
 if tp.TYPE_CHECKING:
-    from boolean_circuit_tool.core.circuit.circuit import (
-        Block,
-        Circuit,
-        Gate,
-    )
+    from boolean_circuit_tool.core.circuit.circuit import Block, Circuit, Gate
     from boolean_circuit_tool.core.circuit.gate import Label
 
 

@@ -115,7 +115,9 @@ def _get_subcircuits(
 
     def is_nested_cut(cut1: Cut, cut2: Cut) -> bool:
         """
-        Check whether `cut1` is nested in `cut2`.
+        Check whether `cut1` is nested in `cut2`. One cut is called nested in another
+        cut if for each node from the first cut its arbitrary path to any input node
+        passes through some node from the second cut.
 
         :param cut1:
         :param cut2:
@@ -132,6 +134,7 @@ def _get_subcircuits(
                 return False
         return True
 
+    cuts.sort(key=lambda x: len(x))
     good_cuts: list[Cut] = list()
     is_removed: dict[Cut, bool] = collections.defaultdict(bool)
     for i, cut in enumerate(cuts):
@@ -296,7 +299,11 @@ def minimize_subcircuits(
     fanout_size: int = 10000,
 ) -> Circuit:
     """
-    Improve circuit's size by simplification its subcircuits using SAT-Solver.
+    Improve circuit's size by simplification its subcircuits using SAT-Solver. The algorithm is following:
+    1. Get all limited size cuts.
+    2. Remove nested cuts and build subcircuits on the remaining.
+    3. Evaluate truth tables for subcircuits with don't cares.
+    4. Try to improve found subcircuits using SAT-Solver for finding lower size circuit.
 
     :param circuit: given circuit.
     :param basis: basis in which we want to simplify.
@@ -327,7 +334,7 @@ def minimize_subcircuits(
     for node, cuts in node_cuts.items():
         for cut in cuts:
             cut_nodes[tuple(cut)].add(node)
-    cuts: list[Cut] = sorted(cut_nodes.keys(), key=lambda x: len(x))
+    cuts: list[Cut] = list(cut_nodes.keys())
 
     logger.debug(f"Found {len(cuts)} cuts")
 
