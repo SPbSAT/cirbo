@@ -1,13 +1,16 @@
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
-    add_sub_with_per_equal_size,
-)
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
     add_gate_from_tt,
+    add_sub_with_per_equal_size,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
     add_sum_two_numbers,
 )
+
+
+__all__ = [
+    'add_sqrt',
+]
 
 
 def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
@@ -53,8 +56,3 @@ def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
                 "0111",
             )
     return c[:half]
-
-
-__all__ = [
-    'add_sqrt',
-]

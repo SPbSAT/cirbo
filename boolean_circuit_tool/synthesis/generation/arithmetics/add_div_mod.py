@@ -1,10 +1,9 @@
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
+    add_gate_from_tt,
     add_sub_with_per_equal_size,
 )
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
-    add_gate_from_tt,
-)
+from boolean_circuit_tool.synthesis.generation.exceptions import DifferentShapesError
 
 __all__ = [
     'add_div_mod',
@@ -12,7 +11,9 @@ __all__ = [
 
 
 def add_div_mod(
-    circuit: Circuit, input_labels_a: list[str], input_labels_b: list[str]
+    circuit: Circuit,
+    input_labels_a: list[str],
+    input_labels_b: list[str],
 ) -> (list[str], list[str]):
     """
     Function make div two integers with equal size.
@@ -25,10 +26,6 @@ def add_div_mod(
     """
     n = len(input_labels_a)
     assert n == len(input_labels_b)
-    for input_label in input_labels_a:
-        assert circuit.has_gate(input_label)
-    for input_label in input_labels_b:
-        assert circuit.has_gate(input_label)
 
     a = input_labels_a
     b = input_labels_b

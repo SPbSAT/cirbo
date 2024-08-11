@@ -1,8 +1,22 @@
 from itertools import zip_longest
 
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_gate_from_tt import (
+from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
 )
+
+
+__all__ = [
+    "add_sub2",
+    "add_sub3",
+    "add_sum2",
+    "add_sum3",
+    "add_sum_n_bits",
+    "add_sum_n_bits_easy",
+    "add_sum_pow2_m1",
+    "add_sum_two_numbers",
+    "add_sum_two_numbers_with_shift",
+    "add_sub_two_numbers",
+]
 
 
 def add_sum_two_numbers(circuit, input_labels_a, input_labels_b):
@@ -323,13 +337,3 @@ def add_sum_pow2_m1(circuit, input_labels):
     out = [list(filter(None, x)) for x in zip_longest(*out)]
     out[0] = [out[0][len(out[0]) - 1]]
     return out
-
-
-__all__ = [
-    "add_sum_n_bits",
-    "add_sum_n_bits_easy",
-    "add_sum_pow2_m1",
-    "add_sum_two_numbers",
-    "add_sum_two_numbers_with_shift",
-    "add_sub_two_numbers",
-]
