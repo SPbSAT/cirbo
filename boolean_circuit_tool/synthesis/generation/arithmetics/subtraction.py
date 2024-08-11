@@ -1,6 +1,7 @@
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
+    PLACEHOLDER_STR,
     validate_const_size,
     validate_equal_sizes,
 )
@@ -80,8 +81,8 @@ def add_subtract_with_compare(
 
     n = len(input_labels_a)
 
-    res = [''] * n
-    bal = [''] * n
+    res = [PLACEHOLDER_STR] * n
+    bal = [PLACEHOLDER_STR] * n
 
     res[0], bal[0] = add_sub2(
         circuit,

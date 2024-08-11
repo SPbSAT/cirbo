@@ -3,6 +3,7 @@ import typing as tp
 
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
+    PLACEHOLDER_STR,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
     add_sub_two_numbers,
@@ -32,7 +33,7 @@ def add_mul(circuit, input_labels_a, input_labels_b):
     m = len(input_labels_b)
 
     # in my mind a[0] is the smallest bit in a
-    c = [[''] * n for _ in range(m)]
+    c = [[PLACEHOLDER_STR] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
@@ -44,7 +45,7 @@ def add_mul(circuit, input_labels_a, input_labels_b):
     if m == 1:
         return c[0]
 
-    d = [[''] for _ in range(n + m)]
+    d = [[PLACEHOLDER_STR] for _ in range(n + m)]
     d[0] = [c[0][0]]
     for i in range(1, n + m):
         inp = []
@@ -63,7 +64,7 @@ def add_mul_alter(circuit, input_labels_a, input_labels_b):
     m = len(input_labels_b)
 
     # in my mind a[0] is the smallest bit in a
-    c = [[''] * n for _ in range(m)]
+    c = [[PLACEHOLDER_STR] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
@@ -177,7 +178,7 @@ def add_mul_wallace(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
 
-    c = [[0] * m for _ in range(n + m)]
+    c = [[PLACEHOLDER_STR] * m for _ in range(n + m)]
     for i in range(m):
         for j in range(n):
             c[i + j][i] = add_gate_from_tt(
@@ -190,12 +191,12 @@ def add_mul_wallace(circuit, input_labels_a, input_labels_b):
         return [c[i][0] for i in range(n)]
 
     while len(c[0]) != 2:
-        cn = [[0] * (2 * (len(c[0]) // 3)) for _ in range(n + m)]
+        cn = [[PLACEHOLDER_STR] * (2 * (len(c[0]) // 3)) for _ in range(n + m)]
         for row in range(0, len(c[0]) - len(c[0]) % 3, 3):
             for col in range(n + m):
                 inp = []
                 for k in range(row, row + 3):
-                    if c[col][k] != 0:
+                    if c[col][k] != PLACEHOLDER_STR:
                         inp.append(c[col][k])
 
                 if len(inp) > 0:
@@ -214,9 +215,9 @@ def add_mul_wallace(circuit, input_labels_a, input_labels_b):
     labels_b = []
     shift = 0
     for i in range(n + m):
-        if c[i][0] != 0:
+        if c[i][0] != PLACEHOLDER_STR:
             labels_a.append(c[i][0])
-        if c[i][1] != 0:
+        if c[i][1] != PLACEHOLDER_STR:
             labels_b.append(c[i][1])
         elif len(labels_b) == 0:
             shift += 1
@@ -228,7 +229,7 @@ def add_mul_pow2_m1(circuit, input_labels_a, input_labels_b):
     n = len(input_labels_a)
     m = len(input_labels_b)
 
-    c = [[''] * n for _ in range(m)]
+    c = [[PLACEHOLDER_STR] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
@@ -240,7 +241,7 @@ def add_mul_pow2_m1(circuit, input_labels_a, input_labels_b):
     if m == 1:
         return c[0]
 
-    out = [[['']] for _ in range(n + m)]
+    out = [[[PLACEHOLDER_STR]] for _ in range(n + m)]
     out[0] = [[c[0][0]]]
     for i in range(1, n + m):
         inp = []

@@ -1,6 +1,7 @@
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
+    PLACEHOLDER_STR,
     validate_equal_sizes,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
@@ -44,7 +45,7 @@ def add_div_mod(
             )
         )
 
-    result = [''] * n
+    result = [PLACEHOLDER_STR] * n
     now = a
     for i in range(n - 1, 0, -1):  # chose shift for sub (> 0)
         prov = pref[i - 1]

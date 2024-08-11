@@ -1,5 +1,6 @@
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
+    PLACEHOLDER_STR,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.multiplication import (
     add_mul_karatsuba,
@@ -41,7 +42,7 @@ def add_square_pow2_m1(circuit, input_labels):
     if n == 1:
         return input_labels
 
-    c = [[''] * n for _ in range(n)]
+    c = [[PLACEHOLDER_STR] * n for _ in range(n)]
     for i in range(n):
         for j in range(i + 1, n):
             c[i][j] = add_gate_from_tt(
@@ -53,7 +54,7 @@ def add_square_pow2_m1(circuit, input_labels):
     for i in range(n):
         c[i][i] = input_labels[i]
 
-    d = [[['']] for _ in range(2 * n)]
+    d = [[[PLACEHOLDER_STR]] for _ in range(2 * n)]
     d[0] = [[c[0][0]]]
     zero = add_gate_from_tt(
         circuit,

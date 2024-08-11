@@ -6,11 +6,17 @@ from boolean_circuit_tool.synthesis.generation.exceptions import DifferentShapes
 
 
 __all__ = [
+    'PLACEHOLDER_STR',
     'add_gate_from_tt',
     'validate_const_size',
     'validate_equal_sizes',
     'generate_random_label',
 ]
+
+
+# String is a placeholder used in several generation methods
+# to represent yet-to-be-filled gate Label in lists.
+PLACEHOLDER_STR = '_PLACEHOLDER_STR_'
 
 
 def validate_const_size(
