@@ -6,7 +6,6 @@ import typing_extensions as tp_ext
 from boolean_circuit_tool.core.exceptions import BadDefinitionError
 from boolean_circuit_tool.core.logic import TriValue
 
-
 __all__ = [
     'RawTruthTable',
     'RawTruthTableModel',
@@ -47,7 +46,7 @@ class BooleanFunctionModel(tp.Protocol[BooleanFunctionT]):
         :return: number of outputs.
         """
 
-    def check(self, inputs: list[bool]) -> tp.Sequence[TriValue]:
+    def check(self, inputs: tp.Sequence[bool]) -> tp.Sequence[TriValue]:
         """
         Get model output values that correspond to provided `inputs`.
 
@@ -56,7 +55,7 @@ class BooleanFunctionModel(tp.Protocol[BooleanFunctionT]):
 
         """
 
-    def check_at(self, inputs: list[bool], output_index: int) -> TriValue:
+    def check_at(self, inputs: tp.Sequence[bool], output_index: int) -> TriValue:
         """
         Get model value of `output_index`th output that corresponds to provided
         `inputs`.
@@ -96,13 +95,13 @@ class BooleanFunctionModel(tp.Protocol[BooleanFunctionT]):
 class BooleanFunction(BooleanFunctionModel, tp.Protocol):
     """
     Protocol for any object that behaves like boolean function, e.g. Circuit, TruthTable
-    or PythonFunction.
+    or PyFunction.
 
     Any `BooleanFunction` is also a completely defined `BooleanFunctionModel`.
 
     """
 
-    def evaluate(self, inputs: list[bool]) -> tp.Sequence[bool]:
+    def evaluate(self, inputs: tp.Sequence[bool]) -> tp.Sequence[bool]:
         """
         Get output values that correspond to provided `inputs`.
 
@@ -111,7 +110,7 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
 
         """
 
-    def evaluate_at(self, inputs: list[bool], output_index: int) -> bool:
+    def evaluate_at(self, inputs: tp.Sequence[bool], output_index: int) -> bool:
         """
         Get value of `output_index`th output that corresponds to provided `inputs`.
 
@@ -258,7 +257,7 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
 
         """
 
-    def check(self, inputs: list[bool]) -> tp.Sequence[TriValue]:
+    def check(self, inputs: tp.Sequence[bool]) -> tp.Sequence[TriValue]:
         """
         Get model output values that correspond to provided `inputs`.
 
@@ -268,7 +267,7 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
         """
         return self.evaluate(inputs=inputs)
 
-    def check_at(self, inputs: list[bool], output_index: int) -> TriValue:
+    def check_at(self, inputs: tp.Sequence[bool], output_index: int) -> TriValue:
         """
         Get model value of `output_index`th output that corresponds to provided
         `inputs`.
