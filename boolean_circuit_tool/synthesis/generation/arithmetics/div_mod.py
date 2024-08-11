@@ -1,13 +1,16 @@
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
-    add_sub_with_per_equal_size,
+    validate_equal_sizes,
 )
-from boolean_circuit_tool.synthesis.generation.exceptions import DifferentShapesError
 
 __all__ = [
     'add_div_mod',
 ]
+
+from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
+    add_subtract_with_compare,
+)
 
 
 def add_div_mod(
@@ -24,8 +27,8 @@ def add_div_mod(
     :return: first list is result for div, second list is result for mod.
 
     """
+    validate_equal_sizes(input_labels_a, input_labels_b)
     n = len(input_labels_a)
-    assert n == len(input_labels_b)
 
     a = input_labels_a
     b = input_labels_b
@@ -37,7 +40,7 @@ def add_div_mod(
     for i in range(n - 1, 0, -1):  # chose shift for sub (> 0)
         prov = pref[i - 1]
         m = n - i  # intersection
-        sub_res, per = add_sub_with_per_equal_size(circuit, now[(n - m) :], b[:m])
+        sub_res, per = add_subtract_with_compare(circuit, now[(n - m) :], b[:m])
         result[i] = add_gate_from_tt(circuit, prov, per, "1000")
         for j in range(m):
             now[j + n - m] = add_gate_from_tt(
@@ -47,7 +50,7 @@ def add_div_mod(
                 "0111",
             )
     m = n  # intersection
-    sub_res, per = add_sub_with_per_equal_size(circuit, now, b)
+    sub_res, per = add_subtract_with_compare(circuit, now, b)
     result[0] = add_gate_from_tt(circuit, per, per, "1000")
     for j in range(m):
         now[j] = add_gate_from_tt(

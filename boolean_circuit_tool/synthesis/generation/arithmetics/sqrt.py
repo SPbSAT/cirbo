@@ -1,9 +1,11 @@
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
-    add_sub_with_per_equal_size,
 )
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
+    add_subtract_with_compare,
+)
+from boolean_circuit_tool.synthesis.generation.arithmetics.summation import (
     add_sum_two_numbers,
 )
 
@@ -37,7 +39,7 @@ def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
     for st in range(half - 1, -1, -1):
         sm = add_sum_two_numbers(circuit, c[(2 * st) :], [UNO])
         sm = sm[:-1]
-        sub_res, per = add_sub_with_per_equal_size(circuit, x[(2 * st) :], sm)
+        sub_res, per = add_subtract_with_compare(circuit, x[(2 * st) :], sm)
         for i in range(st * 2, n):
             x[i] = add_gate_from_tt(
                 circuit,

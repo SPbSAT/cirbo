@@ -1,14 +1,19 @@
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
 )
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_mul import (
-    add_mul,
+from boolean_circuit_tool.synthesis.generation.arithmetics.multiplication import (
     add_mul_karatsuba,
 )
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.summation import (
     add_sum_pow2_m1,
     add_sum_two_numbers_with_shift,
 )
+
+
+__all__ = [
+    'add_square',
+    'add_square_pow2_m1',
+]
 
 
 def add_square(circuit, input_labels_a):

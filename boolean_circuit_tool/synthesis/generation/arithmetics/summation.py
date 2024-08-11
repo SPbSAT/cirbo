@@ -2,12 +2,14 @@ from itertools import zip_longest
 
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
+    validate_const_size,
+)
+from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
+    add_sub_two_numbers,
 )
 
 
 __all__ = [
-    "add_sub2",
-    "add_sub3",
     "add_sum2",
     "add_sum3",
     "add_sum_n_bits",
@@ -15,7 +17,6 @@ __all__ = [
     "add_sum_pow2_m1",
     "add_sum_two_numbers",
     "add_sum_two_numbers_with_shift",
-    "add_sub_two_numbers",
 ]
 
 
@@ -88,7 +89,7 @@ def add_sum_two_numbers_with_shift(
 
 
 def add_sum2(circuit, input_labels):
-    assert len(input_labels) == 2
+    validate_const_size(input_labels, 2)
     [x1, x2] = input_labels
     g1 = add_gate_from_tt(circuit, x1, x2, '0110')
     g2 = add_gate_from_tt(circuit, x1, x2, '0001')
@@ -96,7 +97,7 @@ def add_sum2(circuit, input_labels):
 
 
 def add_sum3(circuit, input_labels):
-    assert len(input_labels) == 3
+    validate_const_size(input_labels, 3)
     x1, x2, x3 = input_labels
     g1 = add_gate_from_tt(circuit, x1, x2, '0110')
     g2 = add_gate_from_tt(circuit, g1, x3, '0110')
@@ -106,56 +107,10 @@ def add_sum3(circuit, input_labels):
     return g2, g5
 
 
-def add_sub2(circuit, input_labels):
-    assert len(input_labels) == 2
-    [x1, x2] = input_labels
-    g1 = add_gate_from_tt(circuit, x1, x2, '0110')
-    g2 = add_gate_from_tt(circuit, x1, x2, '0100')
-
-    return g1, g2  # res and balance
-
-
-def add_sub3(circuit, input_labels):
-    assert len(input_labels) == 3
-    x0, x1, x2 = input_labels  # A, B and balance (we do A - B)
-    x3 = add_gate_from_tt(circuit, x0, x1, '0110')
-    x4 = add_gate_from_tt(circuit, x1, x2, '0110')
-    x5 = add_gate_from_tt(circuit, x3, x4, '0111')
-    x6 = add_gate_from_tt(circuit, x2, x3, '0110')
-    x7 = add_gate_from_tt(circuit, x0, x5, '0110')
-    return x6, x7
-
-
-def add_sub_two_numbers(circuit, input_labels_a, input_labels_b):
-    """
-    Function to subtract two binary numbers represented by input labels.
-
-    :param circuit: The general circuit.
-    :param input_labels_a: List of bits representing the first binary number.
-    :param input_labels_b: List of bits representing the second binary number.
-    :return: List of bits representing the difference of the two numbers.
-
-    """
-    n = len(input_labels_a)
-    m = len(input_labels_b)
-    res = [0] * n
-    bal = [0] * n
-    res[0], bal[0] = add_sub2(circuit, [input_labels_a[0], input_labels_b[0]])
-    for i in range(1, n):
-        if i < m:
-            res[i], bal[i] = add_sub3(
-                circuit, [input_labels_a[i], input_labels_b[i], bal[i - 1]]
-            )
-        else:
-            res[i], bal[i] = add_sub2(circuit, [input_labels_a[i], bal[i - 1]])
-
-    return res
-
-
 # given x1, x2, and (x2 oplus x3), computes the binary representation
 # of (x1 + x2 + x3)
 def add_stockmeyer_block(circuit, input_labels):
-    assert len(input_labels) == 3
+    validate_const_size(input_labels, 3)
     x1, x2, x23 = input_labels
     w0 = add_gate_from_tt(circuit, x1, x23, '0110')
     g2 = add_gate_from_tt(circuit, x2, x23, '0010')
@@ -165,7 +120,7 @@ def add_stockmeyer_block(circuit, input_labels):
 
 
 def add_mdfa(circuit, input_labels):
-    assert len(input_labels) == 5
+    validate_const_size(input_labels, 5)
     z, x1, xy1, x2, xy2 = input_labels
     g1 = add_gate_from_tt(circuit, x1, z, '0110')
     g2 = add_gate_from_tt(circuit, xy1, g1, '0111')
@@ -180,7 +135,7 @@ def add_mdfa(circuit, input_labels):
 
 # an MDFA block with z=0
 def add_simplified_mdfa(circuit, input_labels):
-    assert len(input_labels) == 4
+    validate_const_size(input_labels, 4)
     x1, xy1, x2, xy2 = input_labels
     g2 = add_gate_from_tt(circuit, xy1, x1, '0111')
     g4 = add_gate_from_tt(circuit, g2, xy1, '0110')

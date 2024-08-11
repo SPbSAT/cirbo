@@ -3,8 +3,10 @@ from collections import deque
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
 )
-from boolean_circuit_tool.synthesis.generation.arithmetics.add_n_bits_sum import (
+from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
     add_sub_two_numbers,
+)
+from boolean_circuit_tool.synthesis.generation.arithmetics.summation import (
     add_sum2,
     add_sum3,
     add_sum_n_bits,
