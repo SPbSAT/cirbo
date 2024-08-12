@@ -42,7 +42,7 @@ def canonical_index_to_input(index: int, input_size: int) -> tp.Sequence[bool]:
     """
     s = bin(index)[2:]
     s = '0' * (input_size - len(s)) + s
-    return [bool(int(c)) for c in s]
+    return [bool(int(c)) for c in s][-input_size::]
 
 
 def get_bit_value(value: int, bit_idx: int, bit_size: int) -> bool:
