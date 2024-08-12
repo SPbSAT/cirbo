@@ -10,7 +10,18 @@ import collections
 import itertools
 import random
 
-from boolean_circuit_tool.core.circuit import Circuit, GateState, gate
+from boolean_circuit_tool.core.circuit import Circuit, GateState
+from boolean_circuit_tool.core.circuit.gate import (
+    ALWAYS_FALSE,
+    ALWAYS_TRUE,
+    AND,
+    Gate,
+    NAND,
+    NOT,
+    NXOR,
+    OR,
+    XOR,
+)
 
 __all__ = [
     'remove_leaves_and_double_not',
@@ -42,10 +53,10 @@ def remove_leaves_and_double_not(circuit: Circuit) -> Circuit:
         original_gate = circuit.get_gate(gate_label)
         operands = []
 
-        if original_gate.gate_type == gate.NOT:
+        if original_gate.gate_type == NOT:
             operand_label = original_gate.operands[0]
             operand_gate = circuit.get_gate(operand_label)
-            if operand_gate.gate_type == gate.NOT:
+            if operand_gate.gate_type == NOT:
                 result_label = _dfs(operand_gate.operands[0])
                 replace_map[gate_label] = result_label
                 return result_label
@@ -56,7 +67,7 @@ def remove_leaves_and_double_not(circuit: Circuit) -> Circuit:
 
         if gate_label not in replace_map:
             new_gate_label = gate_label
-            new_gate = gate.Gate(new_gate_label, original_gate.gate_type, tuple(operands))
+            new_gate = Gate(new_gate_label, original_gate.gate_type, tuple(operands))
             new_circuit.add_gate(new_gate)
             replace_map[gate_label] = new_gate_label
 
@@ -130,7 +141,7 @@ def _replace_equivalent_gates(
         )
 
         if new_gate_label not in new_circuit.gates:
-            new_gate = gate.Gate(new_gate_label, gate.gate_type, new_operands)
+            new_gate = Gate(new_gate_label, gate.gate_type, new_operands)
             new_circuit.add_gate(new_gate)
 
         if gate_label in circuit.outputs:
@@ -224,7 +235,7 @@ def merge_same_successors(circuit: Circuit, num_samples: int = 1000) -> Circuit:
             new_gate_label = replacement_map.get(gate_label, gate_label)
             new_operands = tuple(replacement_map.get(op, op) for op in gate.operands)
             if new_gate_label not in new_circuit.gates:
-                new_gate = gate.Gate(new_gate_label, gate.gate_type, new_operands)
+                new_gate = Gate(new_gate_label, gate.gate_type, new_operands)
                 new_circuit.add_gate(new_gate)
             if gate_label in circuit.outputs:
                 new_circuit.mark_as_output(new_gate_label)
@@ -257,29 +268,29 @@ def remove_identities(circuit: Circuit) -> Circuit:
 
         new_circuit = Circuit()
         replace_map = {}  # Maps original gate labels to new gate labels
-        supported_identity_operations = {gate.AND, gate.NAND, gate.XOR, gate.NXOR, gate.OR}
+        supported_identity_operations = {AND, NAND, XOR, NXOR, OR}
         identities = {
-            gate.AND: {
+            AND: {
                 frozenset([0, 0]): 'NOT_IDENTITY',  # AND(NOT(X), NOT(X)) = NOT(X)
                 frozenset([0, 1]): 'ALWAYS_FALSE',  # AND(X, NOT(X)) = 0
                 frozenset([1, 1]): 'IDENTITY',  # AND(X, X) = X
             },
-            gate.NAND: {
+            NAND: {
                 frozenset([0, 0]): 'IDENTITY',  # NAND(NOT(X), NOT(X)) = X
                 frozenset([0, 1]): 'ALWAYS_TRUE',  # NAND(X, NOT(X)) = 1
                 frozenset([1, 1]): 'NOT_IDENTITY',  # NAND(X, X) = NOT(X)
             },
-            gate.XOR: {
+            XOR: {
                 frozenset([0, 0]): 'ALWAYS_FALSE',  # XOR(NOT(X), NOT(X)) = 0
                 frozenset([0, 1]): 'ALWAYS_TRUE',  # XOR(X, NOT(X)) = 1
                 frozenset([1, 1]): 'ALWAYS_FALSE',  # XOR(X, X) = 0
             },
-            gate.NXOR: {
+            NXOR: {
                 frozenset([0, 0]): 'ALWAYS_TRUE',  # NXOR(NOT(X), NOT(X)) = 1
                 frozenset([0, 1]): 'ALWAYS_FALSE',  # NXOR(X, NOT(X)) = 0
                 frozenset([1, 1]): 'ALWAYS_TRUE',  # NXOR(X, X) = 1
             },
-            gate.OR: {
+            OR: {
                 frozenset([0, 0]): 'NOT_IDENTITY',  # OR(NOT(X), NOT(X)) = NOT(X)
                 frozenset([0, 1]): 'ALWAYS_TRUE',  # OR(X, NOT(X)) = 1
                 frozenset([1, 1]): 'IDENTITY',  # OR(X, X) = X
@@ -289,7 +300,7 @@ def remove_identities(circuit: Circuit) -> Circuit:
         def find_ancestor(gate_label):
             not_count = 1  # Add initial 1 to label it as not inverted in 1
             current_label = gate_label
-            while circuit.get_gate(current_label).gate_type == gate.NOT:
+            while circuit.get_gate(current_label).gate_type == NOT:
                 not_count += 1
                 current_label = circuit.get_gate(current_label).operands[0]
             return current_label, not_count % 2
@@ -305,19 +316,19 @@ def remove_identities(circuit: Circuit) -> Circuit:
                     ]
 
                     if set(ancestor_states) in [
-                        {gate.ALWAYS_TRUE},
-                        {gate.ALWAYS_FALSE},
-                        {gate.ALWAYS_TRUE, gate.ALWAYS_FALSE},
+                        {ALWAYS_TRUE},
+                        {ALWAYS_FALSE},
+                        {ALWAYS_TRUE, ALWAYS_FALSE},
                     ]:
                         values = []
                         for i, (label, not_count) in enumerate(ancestor_data):
-                            value = ancestor_states[i] == gate.ALWAYS_TRUE
+                            value = ancestor_states[i] == ALWAYS_TRUE
                             if not_count % 2 == 0:
                                 value = not value
                             values.append(value)
                         result_value = gate.operator(*values)
-                        new_gate_type = gate.ALWAYS_TRUE if result_value else gate.ALWAYS_FALSE
-                        new_gate = gate.Gate(gate_label, new_gate_type, ())
+                        new_gate_type = ALWAYS_TRUE if result_value else ALWAYS_FALSE
+                        new_gate = Gate(gate_label, new_gate_type, ())
                         new_circuit.add_gate(new_gate)
                         replace_map[gate_label] = gate_label
 
@@ -331,21 +342,21 @@ def remove_identities(circuit: Circuit) -> Circuit:
                         if identity_result == 'IDENTITY':
                             replace_map[gate_label] = ancestor_data[0][0]
                         elif identity_result == 'NOT_IDENTITY':
-                            new_gate = gate.Gate(gate_label, gate.NOT, (ancestor_data[0][0],))
+                            new_gate = Gate(gate_label, NOT, (ancestor_data[0][0],))
                             new_circuit.add_gate(new_gate)
                             replace_map[gate_label] = gate_label
                         elif identity_result == 'ALWAYS_TRUE':
-                            new_gate = gate.Gate(gate_label, gate.ALWAYS_TRUE, ())
+                            new_gate = Gate(gate_label, ALWAYS_TRUE, ())
                             new_circuit.add_gate(new_gate)
                             replace_map[gate_label] = gate_label
                         elif identity_result == 'ALWAYS_FALSE':
-                            new_gate = gate.Gate(gate_label, gate.ALWAYS_FALSE, ())
+                            new_gate = Gate(gate_label, ALWAYS_FALSE, ())
                             new_circuit.add_gate(new_gate)
                             replace_map[gate_label] = gate_label
 
             if gate_label not in new_circuit.gates:
                 new_operands = tuple(replace_map.get(op, op) for op in gate.operands)
-                new_gate = gate.Gate(gate_label, gate.gate_type, new_operands)
+                new_gate = Gate(gate_label, gate.gate_type, new_operands)
                 new_circuit.add_gate(new_gate)
                 replace_map[gate_label] = gate_label
 
