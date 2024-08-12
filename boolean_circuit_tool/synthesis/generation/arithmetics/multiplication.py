@@ -35,6 +35,16 @@ def add_mul(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
 ) -> list[gate.Label]:
+    """
+    Multiplies two numbers represented by the given input labels using a straightforward
+    bitwise multiplication method.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
@@ -72,6 +82,15 @@ def add_mul_alter(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
 ) -> list[gate.Label]:
+    """
+    An alternative multiplication method using bitwise shifting and addition.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
@@ -99,7 +118,16 @@ def add_mul_karatsuba(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
-) -> list[gate.Label]:  # work on equal sizes
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Karatsuba multiplication algorithm.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     out_size = len(input_labels_a) + len(input_labels_b)
@@ -155,6 +183,15 @@ def add_mul_dadda(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
 ) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Dadda multiplication algorithm.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
@@ -205,6 +242,15 @@ def add_mul_wallace(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
 ) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Dadda multiplication algorithm.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
@@ -262,6 +308,14 @@ def add_mul_pow2_m1(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
 ) -> list[gate.Label]:
+    """
+    Multiplies two numbers with lengths 2^k - 1 using a specific squaring method.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+    """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
