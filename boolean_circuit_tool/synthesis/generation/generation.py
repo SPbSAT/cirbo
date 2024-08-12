@@ -23,14 +23,21 @@ __all__ = [
     'add_pairwise_xor',
 ]
 
+LITTLE_ENDIAN = 'little_endian'
+BIG_ENDIAN = 'big_endian'
 
-def generate_plus_one(inp_len: int, out_len: int) -> Circuit:
+
+def generate_plus_one(
+    inp_len: int, out_len: int, *, endianness=LITTLE_ENDIAN
+) -> Circuit:
     """
-    Generates a circuit that adds 1 to a number of `inp_len` bits given in the big
-    endian format and returns `out_len` least-significant bits of the result.
+    Generates a circuit that adds 1 to a number of `inp_len` bits and returns `out_len`
+    least-significant bits of the result.
 
     :param inp_len: number of input bits
     :param out_len: number of output bits
+    :param endianness: defines how to interpret numbers, big-endian or little-endian
+        format
 
     """
     x_labels = _generate_labels('x', inp_len)[::-1]
@@ -38,7 +45,13 @@ def generate_plus_one(inp_len: int, out_len: int) -> Circuit:
     circuit = Circuit()
     circuit.add_inputs(x_labels)
 
-    add_plus_one(circuit, x_labels, result_labels=z_labels, add_outputs=True)
+    add_plus_one(
+        circuit,
+        x_labels,
+        result_labels=z_labels,
+        add_outputs=True,
+        endianness=endianness,
+    )
     return circuit
 
 
@@ -136,11 +149,11 @@ def add_plus_one(
     *,
     result_labels: tp.Optional[list[gate.Label]] = None,
     add_outputs=False,
+    endianness=LITTLE_ENDIAN,
 ) -> list[gate.Label]:
     """
     For a given circuit, adds a subcircuit that adds 1 to a number corresponding to the
-    given input gates in the big endian format, and returns least-significant bits of
-    the result.
+    given input gates, and returns least-significant bits of the result.
 
     :param circuit: base circuit
     :param input_labels: labels of gates of the circuit that will be inputs of the new
@@ -149,6 +162,8 @@ def add_plus_one(
         outputs of the new subcircuit
     :param add_outputs: (optional parameter) indicates whether the outputs of the new
         subcircuit are added to the outputs of the circuit
+    :param endianness: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: labels that correspond to the outputs of the new subcircuit
 
     """
@@ -159,8 +174,9 @@ def add_plus_one(
         for i in range(inp_len + 1):
             result_labels.append(_get_new_label(circuit))
 
-    input_labels = input_labels[::-1]
-    result_labels = result_labels[::-1]
+    if endianness == BIG_ENDIAN:
+        input_labels = input_labels[::-1]
+        result_labels = result_labels[::-1]
 
     out_len = len(result_labels)
 
@@ -190,8 +206,9 @@ def add_plus_one(
         if add_outputs:
             circuit.mark_as_output(result_labels[i])
 
-    input_labels = input_labels[::-1]
-    result_labels = result_labels[::-1]
+    if endianness == BIG_ENDIAN:
+        input_labels = input_labels[::-1]
+        result_labels = result_labels[::-1]
 
     circuit.order_inputs(input_labels)
     circuit.order_outputs(result_labels)
