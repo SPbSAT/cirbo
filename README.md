@@ -28,6 +28,14 @@ Note: to build dependencies one should have all building tools available
 in the system. Currently, dependencies require `C++` compiler and `cmake`
 to be available.
 
+Some extensions can be disabled using environment variables if one doesn't
+need them. For example `(export DISABLE_ABC_CEXT=1 && poetry build)` (parenthesis
+should be included) will build wheels without `ABC` bridge module. It can be
+helpful for CI or fast testing because `ABC` compilation times are heavy.
+
+Tests that use `ABC` extension can be skipped by passing option `-m 'not ABC'`
+to `pytest` run.
+
 ## Codestyle guidelines
 
 One should follow simple rules:

@@ -124,11 +124,13 @@ module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*"]
 [tool.pytest.ini_options]
 # Suppress warnings for invalid escape sequences in pysat package
 
-addopts = "-m 'not db_aig and not db_xaig and not slow'"
+addopts = "-m 'not db_aig and not db_xaig and not slow and not ABC' --ignore=third_party"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "db_aig: marks tests that use aig database",
     "db_xaig: marks tests that use xaig database",
+    "ABC: marks tests that use ABC extension (deselect with '-m \"not ABC\"')",
+
 ]
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"
