@@ -2,25 +2,23 @@ import pytest
 
 from boolean_circuit_tool.core.utils import canonical_index_to_input
 from boolean_circuit_tool.synthesis.generation.generation import (
-    BIG_ENDIAN,
     generate_if_then_else,
     generate_pairwise_if_then_else,
     generate_pairwise_xor,
     generate_plus_one,
-    LITTLE_ENDIAN,
 )
 
 
 @pytest.mark.parametrize("n", range(1, 10))
 @pytest.mark.parametrize("m", range(1, 20))
-@pytest.mark.parametrize("endianness", [BIG_ENDIAN, LITTLE_ENDIAN])
-def test_generate_plus_one(n: int, m: int, endianness: str):
-    circuit = generate_plus_one(n, m, endianness=endianness)
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_generate_plus_one(n: int, m: int, big_endian: bool):
+    circuit = generate_plus_one(n, m, big_endian=big_endian)
     for i in range(2**n):
         inp = canonical_index_to_input(i, n)
         out = canonical_index_to_input(i + 1, m)
 
-        if endianness == LITTLE_ENDIAN:
+        if not big_endian:
             inp = inp[::-1]
             out = out[::-1]
 
