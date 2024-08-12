@@ -1,6 +1,8 @@
 import collections
 import typing as tp
 
+from boolean_circuit_tool.core.circuit import Circuit, gate
+
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     PLACEHOLDER_STR,
@@ -28,7 +30,23 @@ __all__ = [
 ]
 
 
-def add_mul(circuit, input_labels_a, input_labels_b):
+def add_mul(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers represented by the given input labels using a straightforward
+    bitwise multiplication method.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
 
@@ -59,7 +77,22 @@ def add_mul(circuit, input_labels_a, input_labels_b):
     return [d[i][0] for i in range(n + m)]
 
 
-def add_mul_alter(circuit, input_labels_a, input_labels_b):
+def add_mul_alter(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+) -> list[gate.Label]:
+    """
+    An alternative multiplication method using bitwise shifting and addition.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
 
@@ -81,7 +114,22 @@ def add_mul_alter(circuit, input_labels_a, input_labels_b):
     return res
 
 
-def add_mul_karatsuba(circuit, input_labels_a, input_labels_b):  # work on equal sizes
+def add_mul_karatsuba(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Karatsuba multiplication algorithm.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
     out_size = len(input_labels_a) + len(input_labels_b)
     if len(input_labels_a) == 1 or len(input_labels_b) == 1:
         out_size -= 1
@@ -130,7 +178,22 @@ def add_mul_karatsuba(circuit, input_labels_a, input_labels_b):  # work on equal
     return final_res[:out_size]
 
 
-def add_mul_dadda(circuit, input_labels_a, input_labels_b):
+def add_mul_dadda(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Dadda multiplication algorithm.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
 
@@ -174,7 +237,22 @@ def add_mul_dadda(circuit, input_labels_a, input_labels_b):
     return out
 
 
-def add_mul_wallace(circuit, input_labels_a, input_labels_b):
+def add_mul_wallace(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Dadda multiplication algorithm.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
 
@@ -225,7 +303,21 @@ def add_mul_wallace(circuit, input_labels_a, input_labels_b):
     return add_sum_two_numbers_with_shift(circuit, shift, labels_a, labels_b)[: n + m]
 
 
-def add_mul_pow2_m1(circuit, input_labels_a, input_labels_b):
+def add_mul_pow2_m1(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers with lengths 2^k - 1 using a specific squaring method.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :return: A list of gate labels representing the product of the two input numbers.
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
 

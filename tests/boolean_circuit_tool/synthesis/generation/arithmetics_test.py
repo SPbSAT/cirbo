@@ -17,6 +17,7 @@ from boolean_circuit_tool.synthesis.generation.arithmetics import (
     add_square,
     add_square_pow2_m1,
     add_sum_n_bits,
+    add_sum_n_bits_in_aig,
 )
 
 TEST_SIZE = 100
@@ -220,24 +221,22 @@ def test_div_mod(x):
         )
 
 
+@pytest.mark.parametrize("func", [add_sum_n_bits_in_aig, add_sum_n_bits])
 @pytest.mark.parametrize(
     "x",
-    [
-        2,
-        5,
-        7,
-        17,
+    list(range(1, 18))
+    + [
         60,
         128,
         pytest.param(1000, marks=pytest.mark.slow),
     ],
 )
-def test_sum_n_bits(x):
+def test_sum_n_bits(func, x):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
     for i in range(x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
-    res = add_sum_n_bits(ckt, input_labels)
+    res = func(ckt, input_labels)
     for i in res:
         ckt.mark_as_output(i)
     for test in range(TEST_SIZE):

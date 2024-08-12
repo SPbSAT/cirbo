@@ -1,3 +1,6 @@
+import typing as tp
+
+from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     PLACEHOLDER_STR,
@@ -17,15 +20,26 @@ __all__ = [
 ]
 
 
-def add_square(circuit, input_labels_a):
-    n = len(input_labels_a)
+def add_square(
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+) -> list[gate.Label]:
+    """
+    Compute the square of a number represented by the given input labels in the circuit.
+
+    :param circuit: The general circuit.
+    :param input_labels: Iterable of gate labels representing the input number.
+    :return: A list of gate labels representing the square of the input number.
+
+    """
+    input_labels = list(input_labels)
+    n = len(input_labels)
 
     if n < 48 or n in [49, 53]:
-        return add_square_pow2_m1(circuit, input_labels_a)
+        return add_square_pow2_m1(circuit, input_labels)
 
     mid = n // 2
-    a = input_labels_a[:mid]
-    b = input_labels_a[mid:]
+    a = input_labels[:mid]
+    b = input_labels[mid:]
     aa = add_square(circuit, a)
     bb = add_square(circuit, b)
     ab = add_mul_karatsuba(circuit, a, b)
@@ -36,7 +50,17 @@ def add_square(circuit, input_labels_a):
     return final_res[: 2 * n]
 
 
-def add_square_pow2_m1(circuit, input_labels):
+def add_square_pow2_m1(
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+) -> list[gate.Label]:
+    """
+    Compute the square of a number with length 2^k - 1 using a specific squaring method.
+
+    :param circuit: The general circuit.
+    :param input_labels: Iterable of gate labels representing the input number.
+    :return: A list of gate labels representing the square of the input number.
+    """
+    input_labels = list(input_labels)
     n = len(input_labels)
 
     if n == 1:

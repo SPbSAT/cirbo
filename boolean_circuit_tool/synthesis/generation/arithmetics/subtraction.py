@@ -1,3 +1,5 @@
+import typing as tp
+
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
@@ -15,16 +17,22 @@ __all__ = [
 ]
 
 
-def add_sub2(circuit, input_labels):
+def add_sub2(
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+) -> list[gate.Label]:
+    input_labels = list(input_labels)
     validate_const_size(input_labels, 2)
     [x1, x2] = input_labels
     g1 = add_gate_from_tt(circuit, x1, x2, '0110')
     g2 = add_gate_from_tt(circuit, x1, x2, '0100')
 
-    return g1, g2  # res and balance
+    return list([g1, g2])  # res and balance
 
 
-def add_sub3(circuit, input_labels):
+def add_sub3(
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+) -> list[gate.Label]:
+    input_labels = list(input_labels)
     validate_const_size(input_labels, 3)
     x0, x1, x2 = input_labels  # A, B and balance (we do A - B)
     x3 = add_gate_from_tt(circuit, x0, x1, '0110')
@@ -32,10 +40,14 @@ def add_sub3(circuit, input_labels):
     x5 = add_gate_from_tt(circuit, x3, x4, '0111')
     x6 = add_gate_from_tt(circuit, x2, x3, '0110')
     x7 = add_gate_from_tt(circuit, x0, x5, '0110')
-    return x6, x7
+    return list([x6, x7])
 
 
-def add_sub_two_numbers(circuit, input_labels_a, input_labels_b):
+def add_sub_two_numbers(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+) -> list[gate.Label]:
     """
     Function to subtract two binary numbers represented by input labels.
 
@@ -45,10 +57,12 @@ def add_sub_two_numbers(circuit, input_labels_a, input_labels_b):
     :return: List of bits representing the difference of the two numbers.
 
     """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
-    res = [0] * n
-    bal = [0] * n
+    res = [PLACEHOLDER_STR] * n
+    bal = [PLACEHOLDER_STR] * n
     res[0], bal[0] = add_sub2(circuit, [input_labels_a[0], input_labels_b[0]])
     for i in range(1, n):
         if i < m:
