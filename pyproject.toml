@@ -118,17 +118,20 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pysat.*", "pebble.*"]
+module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*"]
 
 
 [tool.pytest.ini_options]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "ABC: marks tests that use ABC extension (deselect with '-m \"not ABC\"')",
-]
 # Suppress warnings for invalid escape sequences in pysat package
 
-addopts = "-m 'not db_aig and not db_xaig and not ABC'"
+addopts = "-m 'not db_aig and not db_xaig and not slow and not ABC' --ignore=third_party"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "db_aig: marks tests that use aig database",
+    "db_xaig: marks tests that use xaig database",
+    "ABC: marks tests that use ABC extension (deselect with '-m \"not ABC\"')",
+
+]
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"
 ]

@@ -434,6 +434,99 @@ class Circuit(BooleanFunction):
 
         return self._emplace_gate(label, gate_type, operands, **kwargs)
 
+    def get_internal_gates(
+        self, inputs: list[Label], outputs: list[Label]
+    ) -> list[Label]:
+        """
+        Get gates between given inputs and outputs in the circuit.
+
+        :param inputs: list with inputs.
+        :param outputs: list with outputs.
+        :return: list with gates from the circuit
+
+        """
+        internal_gates: list[Label] = []
+        label_is_visited: dict[Label, bool] = collections.defaultdict(bool)
+        for output_label in outputs:
+            queue: tp.Deque[Label] = collections.deque()
+            if not label_is_visited[output_label]:
+                label_is_visited[output_label]
+                queue.append(output_label)
+            while queue:
+                label = queue.popleft()
+                if label not in inputs and label not in outputs:
+                    internal_gates.append(label)
+                if label not in inputs:
+                    for operand in self.get_gate(label).operands:
+                        if not label_is_visited[operand]:
+                            label_is_visited[operand] = True
+                            queue.append(operand)
+        return internal_gates
+
+    def replace_subcircuit(
+        self,
+        subcircuit: "Circuit",
+        inputs_mapping: dict[Label, Label],
+        outputs_mapping: dict[Label, Label],
+    ) -> tp_ext.Self:
+        """
+        Replace subcircuit with a new one.
+
+        :param subcircuit: new subcircuit.
+        :param inputs_mapping: label to label mapping between subcitcuit inputs and
+            circuit nodes.
+        :param outputs_mapping: label to label mapping between subcitcuit outputs and
+            circuit nodes.
+        :return: modified circuit.
+
+        """
+        labels_to_remove: list[Label] = self.get_internal_gates(
+            list(inputs_mapping.keys()), list(outputs_mapping.keys())
+        )
+        for label in outputs_mapping:
+            if label in inputs_mapping:
+                continue
+            for operand in self.get_gate(label).operands:
+                if operand in inputs_mapping or operand in outputs_mapping:
+                    self._remove_user(operand, label)
+        for label in labels_to_remove:
+            self._remove_gate(label)
+
+        tmp_mapping: dict[Label, Label] = (
+            {}
+        )  # used to avoid duplicating labels for nodes
+        subcircuit_gates: list[Label] = list(subcircuit.gates.keys())
+        for i, label in enumerate(subcircuit_gates):
+            new_label: Label = (
+                f"tmp_{i}"  # assume subcircuit will not have nodes with such labels
+            )
+            tmp_mapping[label] = new_label
+            subcircuit.rename_gate(label, new_label)
+
+        for label1, label2 in inputs_mapping.items():
+            subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
+        for label1, label2 in outputs_mapping.items():
+            if label1 not in inputs_mapping:
+                subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
+        labels_to_rename: list[Label] = list()
+        for node in subcircuit.top_sort(inverse=True):
+            label = node.label
+            if label not in inputs_mapping and label not in outputs_mapping:
+                self.add_gate(subcircuit.get_gate(label))
+                labels_to_rename.append(label)
+        for label in outputs_mapping:
+            if label in inputs_mapping:
+                continue
+            self.get_gate(label)._operands = subcircuit.get_gate(label)._operands
+            self.get_gate(label)._gate_type = subcircuit.get_gate(label)._gate_type
+            for operand in self.get_gate(label)._operands:
+                self._add_user(operand, label)
+        for i, label in enumerate(labels_to_rename):
+            new_label = labels_to_remove[i]
+            self.rename_gate(label, new_label)
+
+        return self
+
     def make_block_from_slice(
         self,
         name: Label,
@@ -1020,6 +1113,7 @@ class Circuit(BooleanFunction):
         *,
         inverse: bool = False,
         on_enter_hook: TraverseHookT = lambda _, __: None,
+        on_discover_hook: TraverseHookT = lambda _, __: None,
         on_exit_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
     ) -> tp.Iterable[Gate]:
@@ -1033,6 +1127,8 @@ class Circuit(BooleanFunction):
             Iterator will start from inputs and traverse the circuit to the outputs,
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
+        :param on_discover_hook: callable function which applies for gate when we try to
+            add it in queue
         :param on_exit_hook: callable function which applies after visiting the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
@@ -1044,6 +1140,7 @@ class Circuit(BooleanFunction):
             start_gates,
             inverse=inverse,
             on_enter_hook=on_enter_hook,
+            on_discover_hook=on_discover_hook,
             on_exit_hook=on_exit_hook,
             unvisited_hook=unvisited_hook,
         )
@@ -1054,6 +1151,7 @@ class Circuit(BooleanFunction):
         *,
         inverse: bool = False,
         on_enter_hook: TraverseHookT = lambda _, __: None,
+        on_discover_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
     ) -> tp.Iterable[Gate]:
         """
@@ -1066,6 +1164,8 @@ class Circuit(BooleanFunction):
             Iterator will start from inputs and traverse the circuit to the outputs,
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
+        :param on_discover_hook: callable function which applies for gate when we try to
+            add it in queue
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
         :return: Iterator of gates, which traverse the circuit in dfs order.
@@ -1076,15 +1176,16 @@ class Circuit(BooleanFunction):
             start_gates,
             inverse=inverse,
             on_enter_hook=on_enter_hook,
+            on_discover_hook=on_discover_hook,
             unvisited_hook=unvisited_hook,
         )
 
     def evaluate_circuit(
         self,
-        assignment: dict[str, GateState],
+        assignment: dict[Label, GateState],
         *,
         outputs: tp.Optional[tp.Sequence[Label]] = None,
-    ) -> dict[str, GateState]:
+    ) -> dict[Label, GateState]:
         """
         Evaluate the circuit with the given input values and return full assignment.
 
@@ -1128,8 +1229,8 @@ class Circuit(BooleanFunction):
 
     def evaluate_circuit_outputs(
         self,
-        assignment: dict[str, GateState],
-    ) -> dict[str, GateState]:
+        assignment: dict[Label, GateState],
+    ) -> dict[Label, GateState]:
         """
         Evaluate the circuit with the given input values and return outputs assignment.
 
@@ -1544,6 +1645,7 @@ class Circuit(BooleanFunction):
         *,
         inverse: bool = False,
         on_enter_hook: TraverseHookT = lambda _, __: None,
+        on_discover_hook: TraverseHookT = lambda _, __: None,
         on_exit_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
     ) -> tp.Iterable[Gate]:
@@ -1558,6 +1660,8 @@ class Circuit(BooleanFunction):
             Iterator will start from inputs and traverse the circuit to the outputs,
             otherwise from outputs to inputs.
         :param on_enter_hook: callable function which applies before visiting the gate
+        :param on_discover_hook: callable function which applies for gate when we try to
+            add it in queue
         :param on_exit_hook: callable function which applies after visiting all children
             of the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
@@ -1615,6 +1719,7 @@ class Circuit(BooleanFunction):
                 gate_states[current_elem.label] = TraverseState.ENTERED
 
                 for child in _next_getter(current_elem):
+                    on_discover_hook(self.get_gate(child), gate_states)
                     if gate_states[child] == TraverseState.UNVISITED:
                         queue.append(child)
 
