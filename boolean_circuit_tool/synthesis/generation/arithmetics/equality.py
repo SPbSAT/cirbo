@@ -10,7 +10,9 @@ __all__ = [
 ]
 
 
-def add_equal(circuit: Circuit, input_labels: tp.Sequence[str], num: int) -> str:
+def add_equal(
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label], num: int
+) -> gate.Label:
     """
     Compares the bit sequence represented by `input_labels` with the integer `num`.
 
@@ -20,7 +22,7 @@ def add_equal(circuit: Circuit, input_labels: tp.Sequence[str], num: int) -> str
     :return: The label of the gate that represents the result of the comparison.
 
     """
-
+    input_labels = list(input_labels)
     bits = bin(num)[2:].zfill(len(input_labels))[::-1]
     if len(bits) > len(input_labels):
         new_label = generate_random_label(circuit)

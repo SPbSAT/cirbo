@@ -1,4 +1,6 @@
-from boolean_circuit_tool.core.circuit import Circuit
+import typing as tp
+
+from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
 )
@@ -15,7 +17,9 @@ __all__ = [
 ]
 
 
-def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
+def add_sqrt(
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+) -> list[gate.Label]:
     """
     Function find sqrt of integer.
 
@@ -24,6 +28,7 @@ def add_sqrt(circuit: Circuit, input_labels: list[str]) -> list[str]:
     :return: the sqrt of integer.
 
     """
+    input_labels = list(input_labels)
     n = len(input_labels)
     half = n // 2
     x = input_labels

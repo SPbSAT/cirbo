@@ -1,3 +1,5 @@
+import typing as tp
+
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
@@ -16,8 +18,8 @@ __all__ = [
 
 def add_div_mod(
     circuit: Circuit,
-    input_labels_a: list[str],
-    input_labels_b: list[str],
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
 ) -> tuple[list[gate.Label], list[gate.Label]]:
     """
     Function make div two integers with equal size.
@@ -28,6 +30,8 @@ def add_div_mod(
     :return: first list is result for div, second list is result for mod.
 
     """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
     validate_equal_sizes(input_labels_a, input_labels_b)
     n = len(input_labels_a)
 

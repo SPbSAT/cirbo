@@ -1,3 +1,6 @@
+import typing as tp
+
+from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     PLACEHOLDER_STR,
@@ -17,7 +20,10 @@ __all__ = [
 ]
 
 
-def add_square(circuit, input_labels_a):
+def add_square(
+    circuit: Circuit, input_labels_a: tp.Iterable[gate.Label]
+) -> list[gate.Label]:
+    input_labels_a = list(input_labels_a)
     n = len(input_labels_a)
 
     if n < 48 or n in [49, 53]:
@@ -36,7 +42,10 @@ def add_square(circuit, input_labels_a):
     return final_res[: 2 * n]
 
 
-def add_square_pow2_m1(circuit, input_labels):
+def add_square_pow2_m1(
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+) -> list[gate.Label]:
+    input_labels = list(input_labels)
     n = len(input_labels)
 
     if n == 1:
