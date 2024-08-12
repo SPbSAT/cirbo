@@ -85,7 +85,7 @@ expected_circuit_2.mark_as_output('AND2')
     ],
 )
 def test_remove_leaves_and_double_not(
-        original_circuit: Circuit, expected_circuit: Circuit
+    original_circuit: Circuit, expected_circuit: Circuit
 ):
     simplified_circuit = remove_leaves_and_double_not(original_circuit)
     assert are_circuits_isomorphic(
@@ -225,7 +225,14 @@ original_circuit_7.add_gate(Gate('input1', gate.INPUT))
 original_circuit_7.add_gate(Gate('input2', gate.INPUT))
 original_circuit_7.emplace_gate('XOR1', gate.XOR, ('input1', 'input1'))
 original_circuit_7.emplace_gate('NOT', gate.NOT, ('input2',))
-original_circuit_7.emplace_gate('AND1', gate.AND, ('input2', 'NOT',))
+original_circuit_7.emplace_gate(
+    'AND1',
+    gate.AND,
+    (
+        'input2',
+        'NOT',
+    ),
+)
 original_circuit_7.emplace_gate('OR1', gate.OR, ('XOR1', 'AND1'))
 original_circuit_7.emplace_gate('AND2', gate.AND, ('input1', 'input2'))
 original_circuit_7.mark_as_output('OR1')

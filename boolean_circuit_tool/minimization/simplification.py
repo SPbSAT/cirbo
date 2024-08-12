@@ -373,8 +373,8 @@ def remove_identities(circuit: Circuit) -> Circuit:
 
 def clean(original_circuit: Circuit) -> Circuit:
     """
-    Applies algorithms from this module consecutively in order
-    to simplify given circuit.
+    Applies algorithms from this module consecutively in order to simplify given
+    circuit.
 
     :param original_circuit: - the original circuit to be simplified
     :return: - new simplified version of the circuit
@@ -382,5 +382,7 @@ def clean(original_circuit: Circuit) -> Circuit:
     """
     cleaned_from_identities = remove_identities(original_circuit)
     cleaned_from_equivalent_gates = delete_equivalent_gates(cleaned_from_identities)
-    cleaned_from_leaves_double_not = remove_leaves_and_double_not(cleaned_from_equivalent_gates)
+    cleaned_from_leaves_double_not = remove_leaves_and_double_not(
+        cleaned_from_equivalent_gates
+    )
     return cleaned_from_leaves_double_not
