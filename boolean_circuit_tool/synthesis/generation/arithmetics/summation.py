@@ -11,6 +11,7 @@ __all__ = [
     "add_sum2",
     "add_sum3",
     "add_sum_n_bits",
+    "add_sum_n_bits_in_aig",
     "add_sum_n_bits_easy",
     "add_sum_pow2_m1",
     "add_sum_two_numbers",
@@ -168,6 +169,59 @@ def add_sum_n_bits_easy(circuit, input_lables):
             next.append(y)
         while len(now) > 1:
             x, y = add_sum2(circuit, now[-1:-3:-1])
+            for _ in range(2):
+                now.pop()
+            now.append(x)
+            next.append(y)
+        res.append(now[0])
+        now = next
+    return res
+
+
+def add_sum2_aig(circuit, input_labels):
+    validate_const_size(input_labels, 2)
+    x1, x2 = input_labels
+    g1 = add_gate_from_tt(circuit, x1, x2, '0111')
+    g2 = add_gate_from_tt(circuit, x1, x2, '0001')
+    g3 = add_gate_from_tt(circuit, g1, g2, '0010')
+    return g3, g2
+
+
+def add_sum3_aig(circuit, input_labels):
+    validate_const_size(input_labels, 3)
+    x1, x2, x3 = input_labels
+    g1 = add_gate_from_tt(circuit, x1, x2, '0111')
+    g2 = add_gate_from_tt(circuit, x1, x2, '0001')
+    g3 = add_gate_from_tt(circuit, g1, g2, '0010')
+    g4 = add_gate_from_tt(circuit, g3, x3, '0111')
+    g5 = add_gate_from_tt(circuit, g3, x3, '0001')
+    g6 = add_gate_from_tt(circuit, g4, g5, '0010')
+    g7 = add_gate_from_tt(circuit, g2, g5, '0111')
+    return g6, g7
+
+
+def add_sum_n_bits_in_aig(circuit, input_lables):
+    """
+    Function to add a variable number of bits IN AIG basis with numbers of gate
+    approximately 7 * n.
+
+    :param circuit: The general circuit.
+    :param input_labels: List of bits to be added.
+    :return: Tuple containing the sum in binary representation.
+
+    """
+    now = input_lables
+    res = []
+    while len(now) > 0:
+        next = []
+        while len(now) > 2:
+            x, y = add_sum3_aig(circuit, now[-1:-4:-1])
+            for _ in range(3):
+                now.pop()
+            now.append(x)
+            next.append(y)
+        while len(now) > 1:
+            x, y = add_sum2_aig(circuit, now[-1:-3:-1])
             for _ in range(2):
                 now.pop()
             now.append(x)
