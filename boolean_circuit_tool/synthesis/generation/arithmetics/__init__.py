@@ -11,7 +11,7 @@ from .multiplication import (
     add_mul_pow2_m1,
     add_mul_wallace,
 )
-from .sqrt import add_sqrt
+from .sqrt import add_sqrt, generate_sqrt
 from .square import add_square, add_square_pow2_m1
 from .subtraction import (
     add_sub2,
@@ -45,6 +45,7 @@ __all__ = [
     'add_mul_wallace',
     'add_mul_pow2_m1',
     # sqrt.py
+    'generate_sqrt',
     'add_sqrt',
     # square.py
     'add_square',

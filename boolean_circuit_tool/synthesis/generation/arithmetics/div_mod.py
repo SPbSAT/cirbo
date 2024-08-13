@@ -19,11 +19,7 @@ __all__ = [
 ]
 
 
-def generate_div_mod(
-    inp_len: int,
-    *,
-    big_endian: bool = False,
-) -> Circuit:
+def generate_div_mod(inp_len: int, *, big_endian: bool = False) -> Circuit:
     """
     Generates a circuit that have div and mod two numbers (one number is first n bits,
     other is second n bits) in result.
@@ -31,6 +27,7 @@ def generate_div_mod(
     :param inp_len: number of input bits (must be even)
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
+    :return: circuit that count div and mod.
 
     """
 
