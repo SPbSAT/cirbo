@@ -1,7 +1,7 @@
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import Gate, NOR, AND
-from boolean_circuit_tool.synthesis.generation.arithmetics.multiplication import add_mul
-from boolean_circuit_tool.synthesis.generation.arithmetics.equality import add_equal
+from boolean_circuit_tool.synthesis.generation.arithmetics import add_mul
+from boolean_circuit_tool.synthesis.generation.arithmetics import add_equal
 from math import ceil, log2
 
 
@@ -19,5 +19,3 @@ def factorization(number: int) -> Circuit:
     ckt.add_gate(Gate('gate2', AND, ('gate1', g3)))
     ckt.mark_as_output('gate2')
     return ckt
-
-factorization(3).into_graphviz_digraph().view()

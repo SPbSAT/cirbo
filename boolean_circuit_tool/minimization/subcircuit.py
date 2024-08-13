@@ -20,7 +20,11 @@ from boolean_circuit_tool.minimization.exception import (
     FailedValidationError,
     UnsupportedOperationError,
 )
-from boolean_circuit_tool.synthesis.circuit_search import Basis, CircuitFinderSat
+from boolean_circuit_tool.synthesis.circuit_search import (
+    Basis,
+    CircuitFinderSat,
+    resolve_basis,
+)
 from boolean_circuit_tool.synthesis.exception import NoSolutionError, SolverTimeOutError
 
 Cut = tuple[Label, ...]
@@ -333,7 +337,7 @@ def _eval_dont_cares(
 
 def minimize_subcircuits(
     circuit: Circuit,
-    basis: Basis,
+    basis: tp.Union[str, Basis],
     *,
     enable_validation: bool = False,
     max_subcircuit_size: int = 9,
@@ -369,6 +373,8 @@ def minimize_subcircuits(
         circuit.
 
     """
+    _basis = resolve_basis(basis)
+
     node_cuts: dict[Label, list[Cut]] = mw.enumerate_cuts(
         circuit.format_circuit(),
         cut_size,
@@ -440,7 +446,9 @@ def minimize_subcircuits(
         ]
         try:
             new_subcircuit: Circuit = CircuitFinderSat(
-                TruthTableModel(outputs_tt), size - 1, basis=basis
+                TruthTableModel(outputs_tt),
+                size - 1,
+                basis=_basis,
             ).find_circuit(time_limit=solver_time_limit_sec)
         except NoSolutionError:
             logger.debug("Smaller subcircuit not found")
