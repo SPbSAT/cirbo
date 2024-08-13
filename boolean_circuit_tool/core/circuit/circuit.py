@@ -1554,7 +1554,7 @@ class Circuit(BooleanFunction):
     ) -> None:
         """
         Draw the circuit.
-        
+
         :param draw_blocks: if draw_blocks == True circuit's block are highlighted with
             a square, otherwise not.
         :param draw_labels: if draw_labels == True next to the operator type the name of
@@ -1580,7 +1580,7 @@ class Circuit(BooleanFunction):
     ) -> None:
         """
         Save the circuit to the file like a drawing.
-        
+
         :param path: path where you want to save the drawing.
         :param draw_blocks: if draw_blocks == True circuit's block are highlighted with
             a square, otherwise not.
@@ -1804,7 +1804,7 @@ class Circuit(BooleanFunction):
         for label in self._gates:
             if gate_states[label] == TraverseState.UNVISITED:
                 unvisited_hook(self.get_gate(label), gate_states)
-    
+
     def _convert_to_Digraph(
         self,
         *,
@@ -1813,7 +1813,7 @@ class Circuit(BooleanFunction):
         name: str = 'Circuit',
     ) -> graphviz.Digraph:
         """
-        Convert circuit to graphviz.Digraph
+        Convert circuit to graphviz.Digraph.
 
         :param draw_blocks: if draw_blocks == True circuit's block are highlighted with
             a square, otherwise not.
