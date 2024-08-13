@@ -1352,7 +1352,7 @@ def test_is_constant_at():
     assert instance.is_constant_at(1) == False
 
 
-def test_is_monotonic():
+def test_is_monotone():
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1360,8 +1360,8 @@ def test_is_monotonic():
     instance.add_gate(Gate('C', AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    assert instance.is_monotonic(inverse=False) == True
-    assert instance.is_monotonic(inverse=True) == False
+    assert instance.is_monotone(inverse=False) == True
+    assert instance.is_monotone(inverse=True) == False
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1369,8 +1369,8 @@ def test_is_monotonic():
     instance.add_gate(Gate('C', AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    assert instance.is_monotonic(inverse=False) == True
-    assert instance.is_monotonic(inverse=True) == True
+    assert instance.is_monotone(inverse=False) == True
+    assert instance.is_monotone(inverse=True) == True
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1379,11 +1379,11 @@ def test_is_monotonic():
     instance.add_gate(Gate('D', OR, ('C', 'B')))
     instance.mark_as_output('D')
 
-    assert instance.is_monotonic(inverse=False) == False
-    assert instance.is_monotonic(inverse=True) == False
+    assert instance.is_monotone(inverse=False) == False
+    assert instance.is_monotone(inverse=True) == False
 
 
-def test_is_monotonic_at():
+def test_is_monotone_at():
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1394,12 +1394,12 @@ def test_is_monotonic_at():
     instance.mark_as_output('C')
     instance.mark_as_output('E')
 
-    assert instance.is_monotonic(inverse=False) == True
-    assert instance.is_monotonic(inverse=True) == False
-    assert instance.is_monotonic_at(0, inverse=False) == True
-    assert instance.is_monotonic_at(0, inverse=True) == True
-    assert instance.is_monotonic_at(1, inverse=False) == True
-    assert instance.is_monotonic_at(1, inverse=True) == False
+    assert instance.is_monotone(inverse=False) == True
+    assert instance.is_monotone(inverse=True) == False
+    assert instance.is_monotone_at(0, inverse=False) == True
+    assert instance.is_monotone_at(0, inverse=True) == True
+    assert instance.is_monotone_at(1, inverse=False) == True
+    assert instance.is_monotone_at(1, inverse=True) == False
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1413,14 +1413,14 @@ def test_is_monotonic_at():
     instance.mark_as_output('E')
     instance.mark_as_output('G')
 
-    assert instance.is_monotonic(inverse=False) == False
-    assert instance.is_monotonic(inverse=True) == False
-    assert instance.is_monotonic_at(0, inverse=False) == True
-    assert instance.is_monotonic_at(0, inverse=True) == True
-    assert instance.is_monotonic_at(1, inverse=False) == True
-    assert instance.is_monotonic_at(1, inverse=True) == False
-    assert instance.is_monotonic_at(2, inverse=False) == False
-    assert instance.is_monotonic_at(2, inverse=True) == False
+    assert instance.is_monotone(inverse=False) == False
+    assert instance.is_monotone(inverse=True) == False
+    assert instance.is_monotone_at(0, inverse=False) == True
+    assert instance.is_monotone_at(0, inverse=True) == True
+    assert instance.is_monotone_at(1, inverse=False) == True
+    assert instance.is_monotone_at(1, inverse=True) == False
+    assert instance.is_monotone_at(2, inverse=False) == False
+    assert instance.is_monotone_at(2, inverse=True) == False
 
 
 def test_is_symmetric():

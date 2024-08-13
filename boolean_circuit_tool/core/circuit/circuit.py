@@ -245,8 +245,10 @@ class Circuit(BooleanFunction):
 
     @staticmethod
     def bare_circuit_with_labels(
-        labels: tp.Sequence[Label], *, set_as_outputs: bool = False
-    ) -> tp_ext.Self:
+        labels: tp.Sequence[Label],
+        *,
+        set_as_outputs: bool = False,
+    ) -> "Circuit":
         """
         Generates a circuit consisting of INPUT gates with labels from `labels`.
 
@@ -263,8 +265,11 @@ class Circuit(BooleanFunction):
 
     @staticmethod
     def bare_circuit(
-        input_size: int, *, prefix: str = '', set_as_outputs: bool = False
-    ) -> tp_ext.Self:
+        input_size: int,
+        *,
+        prefix: str = '',
+        set_as_outputs: bool = False,
+    ) -> "Circuit":
         """
         Generates a circuit consisting of input_size INPUT gates.
 
