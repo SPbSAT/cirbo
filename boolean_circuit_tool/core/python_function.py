@@ -40,7 +40,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
     """Boolean function model given as a python callable with don't care outputs."""
 
     @staticmethod
-    def from_ts_model(
+    def from_positional(
         func: FunctionModelTypeTs,
         *,
         output_size: tp.Optional[int] = None,
@@ -56,6 +56,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
 
         """
 
+        @functools.wraps(func)
         def f(args: tp.Sequence[bool]) -> tp.Sequence[TriValue]:
             return func(*args)
 
@@ -163,11 +164,12 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
             answer = list(_old_callable(args))
 
             # replace undefined part of answer according to definition
+            args_tuple = tuple(args)
             for idx in range(_output_size):
                 if answer[idx] != DontCare:
                     continue
 
-                answer[idx] = definition[(tuple(args), idx)]
+                answer[idx] = definition[(args_tuple, idx)]
 
             # blindly believe in user input.
             return tp.cast(tp.Sequence[bool], answer)
@@ -182,31 +184,42 @@ class PyFunction(BooleanFunction):
 
     @staticmethod
     def from_int_unary_func(
-        input_size: int, output_size: int, f: tp.Callable[[int], int]
+        func: tp.Callable[[int], int], input_size: int, output_size: int, big_endian: bool = False
     ):
-        def func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
+        def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             assert len(args) == input_size
+            if not big_endian:
+                args = args[::-1]
             index = input_to_canonical_index(args)
-            result = f(index)
+            result = func(index)
+            if not big_endian:
+                result = result[::-1]
             return canonical_index_to_input(result, output_size)
 
-        return PyFunction(func=func, input_size=input_size)
+        return PyFunction(func=_func, input_size=input_size)
 
     @staticmethod
     def from_int_binary_func(
-        input_size: int, output_size: int, f: tp.Callable[[int, int], int]
+        func: tp.Callable[[int, int], int], input_size: int, output_size: int, big_endian: bool = False
     ):
-        def func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
+        def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             assert len(args) == 2 * input_size
-            index1 = input_to_canonical_index(args[: len(args) // 2])
-            index2 = input_to_canonical_index(args[len(args) // 2 :])
-            result = f(index1, index2)
+            args1 = args[: len(args) // 2]
+            args2 = args[len(args) // 2:]
+            if not big_endian:
+                args1 = args1[::-1]
+                args2 = args2[::-1]
+            index1 = input_to_canonical_index(args1)
+            index2 = input_to_canonical_index(args2)
+            result = func(index1, index2)
+            if not big_endian:
+                result = result[::-1]
             return canonical_index_to_input(result, output_size)
 
-        return PyFunction(func=func, input_size=2 * input_size)
+        return PyFunction(func=_func, input_size=2 * input_size)
 
     @staticmethod
-    def from_ts_function(
+    def from_positional(
         func: FunctionTypeTs,
         *,
         output_size: tp.Optional[int] = None,
@@ -222,8 +235,9 @@ class PyFunction(BooleanFunction):
 
         """
         s = inspect.signature(func)
-        input_size = len(s.parameters)
+        input_size = sum(v.kind == v.KEYWORD_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD for v in s.parameters.values())
 
+        @functools.wraps(func)
         def f(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             return func(*args)
 
