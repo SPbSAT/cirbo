@@ -11,10 +11,10 @@ import textwrap
 import typing as tp
 
 import graphviz
-
 import typing_extensions as tp_ext
 
 from boolean_circuit_tool.core.boolean_function import BooleanFunction, RawTruthTable
+from boolean_circuit_tool.core.circuit.converters import convert_gate
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateAlreadyExistsError,
     CircuitGateIsAbsentError,
@@ -51,7 +51,6 @@ from boolean_circuit_tool.core.circuit.gate import (
     RNOT,
     XOR,
 )
-
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
 from boolean_circuit_tool.core.circuit.utils import (
     input_iterator_with_fixed_sum,
@@ -1586,6 +1585,18 @@ class Circuit(BooleanFunction):
                 )
             )
         ]
+
+    def into_bench(self) -> tp_ext.Self:
+        """
+        Convert circuit into bench format.
+
+        :return: this circuit after modification.
+
+        """
+        old_gates = copy.copy(self.gates)
+        for gate in old_gates.values():
+            convert_gate(gate, self)
+        return self
 
     def into_graphviz_digraph(
         self,
