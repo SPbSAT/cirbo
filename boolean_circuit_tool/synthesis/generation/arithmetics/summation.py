@@ -6,6 +6,7 @@ from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     PLACEHOLDER_STR,
+    reverse_if_big_endian,
     validate_const_size,
 )
 from boolean_circuit_tool.synthesis.generation.exceptions import BadBasisError
@@ -27,6 +28,8 @@ def add_sum_two_numbers(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     Function to add two binary numbers represented by input labels.
@@ -34,6 +37,8 @@ def add_sum_two_numbers(
     :param circuit: The general circuit.
     :param input_labels_a: List of bits representing the first binary number.
     :param input_labels_b: List of bits representing the second binary number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: List of bits representing the sum of the two numbers.
 
     """
@@ -41,6 +46,9 @@ def add_sum_two_numbers(
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
 
     if n < m:
         n, m = m, n
@@ -53,7 +61,7 @@ def add_sum_two_numbers(
             inp.append(input_labels_b[i])
         d[i] = list(add_sum_n_bits(circuit, inp))
     d[n] = [d[n - 1][1]]
-    return [d[i][0] for i in range(n + 1)]
+    return reverse_if_big_endian([d[i][0] for i in range(n + 1)], big_endian)
 
 
 def add_sum_two_numbers_with_shift(
@@ -61,6 +69,8 @@ def add_sum_two_numbers_with_shift(
     shift,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
 ) -> list[gate.Label]:  # shift for second
     """
     Function to add two binary numbers with a shift applied to the second number.
@@ -69,6 +79,8 @@ def add_sum_two_numbers_with_shift(
     :param shift: The number of bit positions to shift the second number.
     :param input_labels_a: List of bits representing the first binary number.
     :param input_labels_b: List of bits representing the second binary number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: List of bits representing the sum of the two numbers after applying the
         shift.
 
@@ -77,6 +89,10 @@ def add_sum_two_numbers_with_shift(
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
 
     if (
         shift >= n
@@ -95,14 +111,16 @@ def add_sum_two_numbers_with_shift(
                 d[i] = [zero]
         for i in range(m):
             d[i + shift] = [input_labels_b[i]]
-        return [i[0] for i in d]
+        return reverse_if_big_endian([i[0] for i in d], big_endian)
     d = [[PLACEHOLDER_STR] for _ in range(max(n, m + shift) + 1)]
     for i in range(shift):
         d[i] = [input_labels_a[i]]
     res_sum = add_sum_two_numbers(circuit, input_labels_a[shift:n], input_labels_b)
     for i in range(shift, max(n, m + shift) + 1):
         d[i] = [res_sum[i - shift]]
-    return [d[i][0] for i in range(max(n, m + shift) + 1)]
+    return reverse_if_big_endian(
+        [d[i][0] for i in range(max(n, m + shift) + 1)], big_endian
+    )
 
 
 def add_sum2(
@@ -179,17 +197,21 @@ def add_simplified_mdfa(
 
 
 def add_sum_n_bits_easy(
-    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label], *, big_endian: bool = False
 ) -> list[gate.Label]:
     """
     Function to add a variable number of bits with numbers of gate approximately 5 * n.
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: Tuple containing the sum in binary representation.
 
     """
     now = list(input_labels)
+    if big_endian:
+        now.reverse()
     res = []
     while len(now) > 0:
         next = []
@@ -207,7 +229,7 @@ def add_sum_n_bits_easy(
             next.append(y)
         res.append(now[0])
         now = next
-    return res
+    return reverse_if_big_endian(res, big_endian)
 
 
 def add_sum2_aig(
@@ -243,6 +265,7 @@ def add_sum_n_bits(
     input_labels: tp.Iterable[gate.Label],
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.ALL,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     Function that adds summation gadget to a `circuit`.
@@ -250,23 +273,36 @@ def add_sum_n_bits(
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
     :param basis: in which basis should generated function lie. Supported [ALL, AIG].
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: list containing labels of sum bits.
 
     """
+
+    input_labels = list(input_labels)
+    if big_endian:
+        input_labels.reverse()
+
     if isinstance(basis, str):
         _basis = GenerationBasis(basis.upper())
     else:
         _basis = basis
 
     if _basis == GenerationBasis.ALL:
-        return _add_sum_n_bits(
-            circuit=circuit,
-            input_labels=input_labels,
+        return reverse_if_big_endian(
+            _add_sum_n_bits(
+                circuit=circuit,
+                input_labels=input_labels,
+            ),
+            big_endian,
         )
     if _basis == GenerationBasis.AIG:
-        return _add_sum_n_bits_aig(
-            circuit=circuit,
-            input_labels=input_labels,
+        return reverse_if_big_endian(
+            _add_sum_n_bits_aig(
+                circuit=circuit,
+                input_labels=input_labels,
+            ),
+            big_endian,
         )
     raise BadBasisError(f"Unsupported basis: {basis}.")
 
@@ -398,13 +434,13 @@ def _add_sum_n_bits(
 # divides the sum into blocks of size 2^n-1
 # will be replaced with calls of 4.5n sums generator
 def add_sum_pow2_m1(
-    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label], *, big_endian: bool = False
 ) -> list[list[gate.Label]]:
     input_labels = list(input_labels)
     n = len(input_labels)
     assert n > 0
     if n == 1:
-        return [[input_labels[0]]]
+        return [reverse_if_big_endian([input_labels[0]], big_endian)]
 
     out = []
     it = 0
@@ -423,4 +459,4 @@ def add_sum_pow2_m1(
 
     out = [list(filter(None, x)) for x in zip_longest(*out)]
     out[0] = [out[0][len(out[0]) - 1]]
-    return out
+    return [reverse_if_big_endian(i, big_endian) for i in out]
