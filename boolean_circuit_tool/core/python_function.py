@@ -289,7 +289,7 @@ class PyFunction(Function):
         self._input_size = input_size
 
         if output_size is None:
-            result = func([False] * self._input_size)
+            result = func([False] * self.input_size)
             self._output_size = len(result)
         else:
             self._output_size = output_size
