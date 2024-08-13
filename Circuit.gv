@@ -1,0 +1,43 @@
+digraph Circuit {
+	"C0@B" [label="" shape=circle]
+	"C0@A" [label="" shape=circle]
+	"C0@C" [label="∨" shape=circle]
+	"C0@A" -> "C0@C"
+	"C0@B" -> "C0@C"
+	"C1@B" [label="¬" shape=circle]
+	"C0@C" -> "C1@B"
+	"C1@D" [label="∨" shape=circle]
+	"C0@C" -> "C1@D"
+	"C1@B" -> "C1@D"
+	"C1@C" [label="∧" shape=circle]
+	"C0@C" -> "C1@C"
+	"C1@B" -> "C1@C"
+	"C2@B" [label="" shape=circle]
+	"C2@C" [label="∧" shape=circle]
+	"C1@D" -> "C2@C"
+	"C2@B" -> "C2@C"
+	"C0@A" [label="C0@A" color=white]
+	"C0@B" [label="C0@B" color=white]
+	"C2@B" [label="C2@B" color=white]
+	"C1@C" [shape=doublecircle]
+	"C2@C" [shape=doublecircle]
+	subgraph cluster_C0 {
+		color=blue
+		"C0@C"
+		fontcolor=blue label=C0
+	}
+	subgraph cluster_C1 {
+		color=blue
+		"C1@D"
+		"C1@C"
+		"C1@B"
+		fontcolor=blue label=C1
+		subgraph cluster_C3 {
+			color=blue
+			"C1@B"
+			fontcolor=blue label=C3
+		}
+	}
+	label=Circuit
+	fontsize=20
+}

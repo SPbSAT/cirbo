@@ -1567,13 +1567,14 @@ class Circuit(BooleanFunction):
             the gate is written, if draw_labels == False circuit node names is type of
             operator.
         :param name: name of graph.
+        :param fontsize: fontsize for label of graph.
         :return: graph
 
         """
         _gate_type_to_name: dict[GateType, str] = {
             INPUT: "",
-            ALWAYS_TRUE: "ALWAYS_TRUE",
-            ALWAYS_FALSE: "ALWAYS_FALSE",
+            ALWAYS_TRUE: "TRUE",
+            ALWAYS_FALSE: "FALSE",
             AND: u"\u2227",
             GEQ: u"\u2265",
             GT: u"\u003E",
@@ -1671,7 +1672,7 @@ class Circuit(BooleanFunction):
                 _sg.attr(color='blue')
                 for _gate in self.get_block(_block_label).gates:
                     _sg.node(_gate)
-                _sg.attr(label=_block_label)
+                _sg.attr(label=_block_label, fontcolor='blue')
                 for _subblock in nested_blocks[_block_label]:
                     with _sg.subgraph(name='cluster_' + _subblock) as _sbg:
                         _draw_subgraph(_sbg, _subblock)
@@ -1694,6 +1695,7 @@ class Circuit(BooleanFunction):
         draw_blocks: bool = True,
         draw_labels: bool = False,
         name: str = 'Circuit',
+        fontsize: str = '20',
     ) -> None:
         """
         Save the circuit to the file like a drawing.
@@ -1705,12 +1707,14 @@ class Circuit(BooleanFunction):
             the gate is written, if draw_labels == False circuit node names is type of
             operator.
         :param name: name of graph.
+        :param fontsize: fontsize for label of graph.
 
         """
         graph: graphviz.Digraph = self.into_graphviz_digraph(
             draw_blocks=draw_blocks,
             draw_labels=draw_labels,
             name=name,
+            fontsize=fontsize,
         )
         graph.render(path)
 
