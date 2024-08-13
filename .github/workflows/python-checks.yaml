@@ -35,7 +35,7 @@ jobs:
       matrix:
         python-version: ["3.9"]
         poetry-version: ["1.8.3"]
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
 #   checks should not take more than 5 minutes. If it is the
 #   case probably something heavy trespassed to unit tests.
@@ -59,6 +59,7 @@ jobs:
           virtualenvs-in-project: true
       - run: poetry build --no-interaction
         env:
+          DISABLE_ABC_CEXT: 1
           CMAKE_BUILD_PARALLEL_LEVEL: 8
       - run: poetry install --no-interaction
       - name: mypy
@@ -69,7 +70,7 @@ jobs:
         run: poetry run flake8 boolean_circuit_tool tests tools docs
       - name: pytest
         if: always()
-        run: poetry run pytest tests
+        run: poetry run pytest tests -v -m 'not (manual or slow or ABC)'
       - name: usort
         if: always()
         run: poetry run usort check boolean_circuit_tool tests tools

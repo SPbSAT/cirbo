@@ -6,12 +6,17 @@
 Python >=3.9 is used to cover all currently
 [maintained versions](https://devguide.python.org/versions/).
 
-1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
+1. Install following packages using your package manager:
+   - dev version of `python3.9` and `python3.9-distutils` (e.g. `sudo apt install python3.9-dev`)
+   - `cmake` and suitable C++ compiler
+   - `graphviz` library.
 1. Init and update repository submodules `git submodule update --init --recursive`
-1. Build extensions locally by running `poetry build` 
+1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
+1. Build extensions locally by running `poetry build`
 1. Setup virtual environment by running `poetry install`
 1. Set your env to the oldest supported Python version `poetry env use 3.9`
 1. Enable virtual environment using `poetry shell`
+1. Install pre-commit hooks using `pre-commit install`
 
 Note: probably one will need to restart an IDE after extensions are built and
 installed to refresh its index and stubs.
@@ -25,6 +30,14 @@ dependencies run `poetry build` and to install them after use `poetry install`.
 Note: to build dependencies one should have all building tools available
 in the system. Currently, dependencies require `C++` compiler and `cmake`
 to be available.
+
+Some extensions can be disabled using environment variables if one doesn't
+need them. For example `(export DISABLE_ABC_CEXT=1 && poetry build)` (parenthesis
+should be included) will build wheels without `ABC` bridge module. It can be
+helpful for CI or fast testing because `ABC` compilation times are heavy.
+
+Tests that use `ABC` extension can be skipped by passing option `-m 'not ABC'`
+to `pytest` run.
 
 ## Codestyle guidelines
 
@@ -46,23 +59,71 @@ export of unwanted objects (e.g. export of imported objects).
 (e.g. `import itertools`).
 7. For package `typing` shortening `tp` should be used (`import typing as tp`).
 
+## Checks
+
+`mypy`, `flake8`, `pytest`, `black`, `docformatter` and `usort` are main checks
+used in CI.
+
+Those checks are available in poetry environment and can be invoked at once
+locally using tool script:
+
+`python ./tools/check.py`
+
+If everything is good, output is expected to be like the following:
+
+```
+(boolean-circuit-tool-py3.9) boolean-circuit-tool$ python ./tools/check.py
+1. MYPY CHECK SUCCEED
+2. FLAKE8 CHECK SUCCEED
+3. PYTEST CHECK SUCCEED
+4. USORT CHECK SUCCEED
+5. DOCFORMATTER CHECK SUCCEED
+6. BLACK CHECK SUCCEED
+```
+
+shorten outputs mode can also be activated using flag `-s`:
+
+`python ./tools/check.py -s`
+
 ## Formatters
 
 `black`, `docformatter` and `usort` are available in poetry environment
 and can be used to format code during development.
 
-All of them can be run at once using:
+All of them can be run at once using tool script:
 
 `python ./tools/formatter.py`
 
 ## Tests
 
-Tests are written and executed using `pytest`. 
+Tests are written and executed using `pytest`.
 To execute tests run `poetry run pytest`.
+
+In addition to the standard tests, there are optional slow tests that interact with circuit databases. 
+These tests require the corresponding database files. To execute these tests, use the following command:
+
+```
+poetry run pytest tests/ -m "db_xaig or db_aig" --db-xaig-path /path/to/xaig_db.bin --db-aig-path /path/to/aig_db.bin
+```
+Replace `/path/to/xaig_db.bin` and `/path/to/aig_db.bin` with the actual paths to your XAIG and AIG database files, respectively.
 
 Tests are located at the `tests` subdirectory, and should be written for all
 functionalities of the package. Also, directory structure of `tests` should
 repeat structure of main `boolean-circuit-tool` package.
+
+## Pre-commit checks
+
+`pre-commit` hooks are currently used to run required CI checks before each
+commit locally, to not spend cloud CI quota.
+
+To force-commit without pre-commit checks use `--no-verify` option, for
+example: `git commit -m "my fixes" --no-verify`.
+
+To update git hooks based on current `.pre-commit-config.yaml` run
+`pre-commit install`.
+
+To run all current `pre-commit` checks against staged files use `pre-commit run`.
+To run it against all files use `pre-commit run --all-files`.
 
 ## Updating dependencies
 
