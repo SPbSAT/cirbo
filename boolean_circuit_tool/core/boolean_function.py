@@ -6,7 +6,6 @@ import typing_extensions as tp_ext
 from boolean_circuit_tool.core.exceptions import BadDefinitionError
 from boolean_circuit_tool.core.logic import TriValue
 
-
 __all__ = [
     'RawTruthTable',
     'RawTruthTableModel',
@@ -138,27 +137,27 @@ class BooleanFunction(BooleanFunctionModel, tp.Protocol):
 
         """
 
-    def is_monotonic(self, *, inverse: bool) -> bool:
+    def is_monotone(self, *, inverse: bool = False) -> bool:
         """
-        Check if all outputs are monotonic (output value doesn't decrease when
+        Check if all outputs are monotone (output value doesn't decrease when
         inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
 
         :param inverse: if True, will check that output values doesn't
         increase when inputs are enumerated in classic order.
-        :return: True iff this function is monotonic.
+        :return: True iff this function is monotone.
 
         """
 
-    def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
+    def is_monotone_at(self, output_index: int, *, inverse: bool = False) -> bool:
         """
-        Check if output `output_index` is monotonic (output value doesn't
+        Check if output `output_index` is monotone (output value doesn't
         decrease when inputs are enumerated in a classic order: 0000, 0001,
         0010, 0011 ...).
 
         :param output_index: index of desired output.
         :param inverse: if True, will check that output value doesn't
         increase when inputs are enumerated in classic order.
-        :return: True iff output `output_index` is monotonic.
+        :return: True iff output `output_index` is monotone.
 
         """
 
