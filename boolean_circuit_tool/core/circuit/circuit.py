@@ -33,11 +33,15 @@ from boolean_circuit_tool.core.circuit.gate import (
     AND,
     Gate,
     GateType,
+    GEQ,
+    GT,
     IFF,
     INPUT,
     Label,
+    LEQ,
     LIFF,
     LNOT,
+    LT,
     NAND,
     NOR,
     NOT,
@@ -47,6 +51,7 @@ from boolean_circuit_tool.core.circuit.gate import (
     RNOT,
     XOR,
 )
+
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
 from boolean_circuit_tool.core.circuit.utils import (
     input_iterator_with_fixed_sum,
@@ -1548,9 +1553,10 @@ class Circuit(BooleanFunction):
     def into_graphviz_digraph(
         self,
         *,
-        draw_blocks: bool = False,
+        draw_blocks: bool = True,
         draw_labels: bool = False,
         name: str = 'Circuit',
+        fontsize: str = '20',
     ) -> graphviz.Digraph:
         """
         Convert circuit to graphviz.Digraph.
@@ -1565,15 +1571,25 @@ class Circuit(BooleanFunction):
 
         """
         _gate_type_to_name: dict[GateType, str] = {
-            NOT: u"\u00AC",
-            AND: u"\u2227",
-            NAND: u"\u00AC\u2227",
-            OR: u"\u2228",
-            NOR: u"\u00AC\u2228",
-            XOR: u"\u2295",
-            NXOR: u"\u00AC\u2295",
-            IFF: "IFF",
             INPUT: "",
+            ALWAYS_TRUE: "ALWAYS_TRUE",
+            ALWAYS_FALSE: "ALWAYS_FALSE",
+            AND: u"\u2227",
+            GEQ: u"\u2265",
+            GT: u"\u003E",
+            IFF: "IFF",
+            LEQ: u"\u2264",
+            LIFF: "LIFF",
+            LNOT: "LNOT",
+            LT: u"\u003C",
+            NAND: u"\u00AC\u2227",
+            NOR: u"\u00AC\u2228",
+            NOT: u"\u00AC",
+            NXOR: u"\u00AC\u2295",
+            OR: u"\u2228",
+            RIFF: "RIFF",
+            RNOT: "RNOT",
+            XOR: u"\u2295",
         }
 
         # Define node name formatting.
@@ -1596,8 +1612,20 @@ class Circuit(BooleanFunction):
                 label=_format_node_name(gate),
                 shape='circle',
             )
-            for operand in gate.operands:
-                graph.edge(operand, gate_label)
+            i = 1
+            if gate.gate_type in [GT, GEQ, LT, LEQ, LNOT, RNOT, LIFF, RIFF]:
+                for operand in gate.operands:
+                    graph.edge(
+                        operand,
+                        gate_label,
+                        headlabel=f'{i}',
+                        labeldistance='2',
+                        fontcolor='red',
+                    )
+                    i += 1
+            else:
+                for operand in gate.operands:
+                    graph.edge(operand, gate_label)
 
         # Redraw inputs with different shape.
         for _input in self._inputs:
@@ -1655,7 +1683,7 @@ class Circuit(BooleanFunction):
                         _draw_subgraph(sg, block_label)
 
         graph.attr(label=name)
-        graph.attr(fontsize='20')
+        graph.attr(fontsize=fontsize)
 
         return graph
 
@@ -1663,7 +1691,7 @@ class Circuit(BooleanFunction):
         self,
         path: str,
         *,
-        draw_blocks: bool = False,
+        draw_blocks: bool = True,
         draw_labels: bool = False,
         name: str = 'Circuit',
     ) -> None:
