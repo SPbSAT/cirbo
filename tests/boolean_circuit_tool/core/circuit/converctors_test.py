@@ -102,3 +102,20 @@ def test_mix_ckt_gates():
     C1.into_bench()
 
     assert C0.get_truth_table() == C1.get_truth_table()
+
+
+def test_block():
+    C0 = (
+        Circuit()
+        .add_gate(gate.Gate('A', gate.INPUT))
+        .add_gate(gate.Gate('B', gate.INPUT))
+        .add_gate(gate.Gate('C', gate.LT, ('A', 'B')))
+        .add_gate(gate.Gate('D', gate.AND, ('B', 'C')))
+    )
+    C0.mark_as_output('C')
+
+    C0.make_block_from_slice('new_block', C0.inputs, ['C'])
+    assert C0._blocks['new_block'].gates == ['C']
+
+    C0.into_bench()
+    assert len(C0._blocks['new_block'].gates) == 2

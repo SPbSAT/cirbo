@@ -28,6 +28,7 @@ def _convert_lt(_gate: gate.Gate, circuit: 'Circuit') -> None:
     circuit._gates[_gate.label] = gate.Gate(
         _gate.label, gate.AND, (new_gate_label, _gate.operands[1])
     )
+    _add_new_gate_to_blocks(_gate.label, new_gate_label, circuit)
 
 
 def _convert_leq(_gate: gate.Gate, circuit: 'Circuit') -> None:
@@ -37,6 +38,7 @@ def _convert_leq(_gate: gate.Gate, circuit: 'Circuit') -> None:
     circuit._gates[_gate.label] = gate.Gate(
         _gate.label, gate.OR, (new_gate_label, _gate.operands[1])
     )
+    _add_new_gate_to_blocks(_gate.label, new_gate_label, circuit)
 
 
 def _convert_gt(_gate: gate.Gate, circuit: 'Circuit') -> None:
@@ -46,6 +48,7 @@ def _convert_gt(_gate: gate.Gate, circuit: 'Circuit') -> None:
     circuit._gates[_gate.label] = gate.Gate(
         _gate.label, gate.AND, (_gate.operands[0], new_gate_label)
     )
+    _add_new_gate_to_blocks(_gate.label, new_gate_label, circuit)
 
 
 def _convert_geq(_gate: gate.Gate, circuit: 'Circuit') -> None:
@@ -55,6 +58,7 @@ def _convert_geq(_gate: gate.Gate, circuit: 'Circuit') -> None:
     circuit._gates[_gate.label] = gate.Gate(
         _gate.label, gate.OR, (_gate.operands[0], new_gate_label)
     )
+    _add_new_gate_to_blocks(_gate.label, new_gate_label, circuit)
 
 
 def _convert_liff(_gate: gate.Gate, circuit: 'Circuit') -> None:
@@ -89,6 +93,7 @@ def _convert_always_true(_gate: gate.Gate, circuit: 'Circuit') -> None:
     circuit._gates[_gate.label] = gate.Gate(
         _gate.label, gate.OR, (circuit.input_at_index(0), new_gate_label)
     )
+    _add_new_gate_to_blocks(_gate.label, new_gate_label, circuit)
 
 
 def _convert_always_false(_gate: gate.Gate, circuit: 'Circuit') -> None:
@@ -103,6 +108,7 @@ def _convert_always_false(_gate: gate.Gate, circuit: 'Circuit') -> None:
     circuit._gates[_gate.label] = gate.Gate(
         _gate.label, gate.AND, (circuit.input_at_index(0), new_gate_label)
     )
+    _add_new_gate_to_blocks(_gate.label, new_gate_label, circuit)
 
 
 _convertors: dict[gate.GateType, tp.Callable[[gate.Gate, 'Circuit'], None]] = {
@@ -117,3 +123,12 @@ _convertors: dict[gate.GateType, tp.Callable[[gate.Gate, 'Circuit'], None]] = {
     gate.ALWAYS_TRUE: _convert_always_true,
     gate.ALWAYS_FALSE: _convert_always_false,
 }
+
+
+def _add_new_gate_to_blocks(
+    old_gate_label: gate.Label, new_gate_label: gate.Label, circuit: 'Circuit'
+):
+    """Add new gate to circuit's blocks, if their gates has old_gate_label."""
+    for block in circuit.blocks.values():
+        if old_gate_label in block.gates:
+            block._gates += [new_gate_label]
