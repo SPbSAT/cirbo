@@ -1573,8 +1573,8 @@ class Circuit(BooleanFunction):
         """
         _gate_type_to_name: dict[GateType, str] = {
             INPUT: "",
-            ALWAYS_TRUE: "TRUE",
-            ALWAYS_FALSE: "FALSE",
+            ALWAYS_TRUE: "1",
+            ALWAYS_FALSE: "0",
             AND: u"\u2227",
             GEQ: u"\u2265",
             GT: u"\u003E",
@@ -1597,11 +1597,15 @@ class Circuit(BooleanFunction):
         if draw_labels:
 
             def _format_node_name(gate: Gate) -> str:
+                if gate.gate_type in [LNOT, RNOT]:
+                    return f'{gate.label} {_gate_type_to_name[NOT]}'
                 return f'{gate.label} {_gate_type_to_name[gate.gate_type]}'
 
         else:
 
             def _format_node_name(gate: Gate) -> str:
+                if gate.gate_type in [LNOT, RNOT]:
+                    return f'{_gate_type_to_name[NOT]}'
                 return f'{_gate_type_to_name[gate.gate_type]}'
 
         graph: graphviz.Digraph = graphviz.Digraph(name)
@@ -1614,7 +1618,7 @@ class Circuit(BooleanFunction):
                 shape='circle',
             )
             i = 1
-            if gate.gate_type in [GT, GEQ, LT, LEQ, LNOT, RNOT, LIFF, RIFF]:
+            if gate.gate_type in [GT, GEQ, LT, LEQ, LIFF, RIFF]:
                 for operand in gate.operands:
                     graph.edge(
                         operand,
@@ -1624,6 +1628,10 @@ class Circuit(BooleanFunction):
                         fontcolor='red',
                     )
                     i += 1
+            elif gate.gate_type == LNOT:
+                graph.edge(gate.operands[0], gate_label)
+            elif gate.gate_type == RNOT:
+                graph.edge(gate.operands[1], gate_label)
             else:
                 for operand in gate.operands:
                     graph.edge(operand, gate_label)
