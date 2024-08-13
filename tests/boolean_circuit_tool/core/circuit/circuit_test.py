@@ -133,6 +133,36 @@ def test_create_circuit():
     assert instance.gates == {}
 
 
+def test_bare_circuit():
+    C0 = Circuit()
+    C0.add_inputs(['x0', 'x1', 'x2'])
+
+    C1: Circuit = Circuit.bare_circuit(3, prefix='x')
+    assert C0 == C1
+
+    C1: Circuit = Circuit.bare_circuit(3, prefix='x', set_as_outputs=True)
+    assert C0 != C1
+
+    C0.set_outputs(C0.inputs)
+    assert C0 == C1
+
+
+def test_bare_circuit_with_labels():
+    new_inputs = ['x0', 'x1', 'x2']
+
+    C0 = Circuit()
+    C0.add_inputs(new_inputs)
+
+    C1: Circuit = Circuit.bare_circuit_with_labels(new_inputs)
+    assert C0 == C1
+
+    C1: Circuit = Circuit.bare_circuit_with_labels(new_inputs, set_as_outputs=True)
+    assert C0 != C1
+
+    C0.set_outputs(C0.inputs)
+    assert C0 == C1
+
+
 def test_eq():
     instance_one = Circuit()
     instance_one.add_gate(Gate('A', INPUT))
