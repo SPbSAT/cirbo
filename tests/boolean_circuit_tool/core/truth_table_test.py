@@ -202,23 +202,23 @@ def test_is_out_constant(input_size: int):
     assert truth_table.is_constant()
 
 
-def test_is_monotonic_simple():
+def test_is_monotone_simple():
     tt = TruthTable(['1110', '0001'])
-    assert not tt.is_monotonic_at(0, inverse=False)
-    assert tt.is_monotonic_at(1, inverse=False)
-    assert not tt.is_monotonic(inverse=False)
-    assert tt.is_monotonic_at(0, inverse=True)
-    assert not tt.is_monotonic_at(1, inverse=True)
-    assert not tt.is_monotonic(inverse=True)
+    assert not tt.is_monotone_at(0, inverse=False)
+    assert tt.is_monotone_at(1, inverse=False)
+    assert not tt.is_monotone(inverse=False)
+    assert tt.is_monotone_at(0, inverse=True)
+    assert not tt.is_monotone_at(1, inverse=True)
+    assert not tt.is_monotone(inverse=True)
 
 
 @pytest.mark.parametrize("input_size", [3, 4, 5, 6, 7])
-def test_is_out_monotonic(input_size: int):
+def test_is_out_monotone(input_size: int):
     false_count = random.randint(0, 2**input_size)
-    monotonic_out = [False] * false_count + [True] * (2**input_size - false_count)
-    truth_table = TruthTable([monotonic_out])
-    assert truth_table.is_monotonic_at(0, inverse=False)
-    assert truth_table.is_monotonic(inverse=False)
+    monotone_out = [False] * false_count + [True] * (2**input_size - false_count)
+    truth_table = TruthTable([monotone_out])
+    assert truth_table.is_monotone_at(0, inverse=False)
+    assert truth_table.is_monotone(inverse=False)
 
 
 def generate_sum(
