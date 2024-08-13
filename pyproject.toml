@@ -26,6 +26,7 @@ more-itertools = "^10.4.0"
 typing-extensions = "^4.12.2"
 python-sat="^1.8.dev13"
 pebble = "^5.0.7"
+graphviz = "^0.20.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
@@ -118,7 +119,7 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*"]
+module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*", "graphviz.*"]
 
 
 [tool.pytest.ini_options]

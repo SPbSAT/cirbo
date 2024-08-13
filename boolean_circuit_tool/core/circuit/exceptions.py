@@ -16,6 +16,7 @@ __all__ = [
     'TraverseMethodError',
     'CreateBlockError',
     'DeleteBlockError',
+    'OverlappingBlocksError',
 ]
 
 
@@ -95,5 +96,11 @@ class CreateBlockError(CircuitError):
 
 class DeleteBlockError(CircuitError):
     """Represents error in deleting block in the circuit."""
+
+    pass
+
+
+class OverlappingBlocksError(CircuitError):
+    """Represents error that circuit has overlapping blocks."""
 
     pass
