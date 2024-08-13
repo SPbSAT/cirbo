@@ -218,7 +218,7 @@ class TestPyFunction:
             (7, 49),
         ],
     )
-    def test_from_int_binary_func(self, a, b):
+    def test_from_int_unary_func(self, a, b):
         input_size = 3
         output_size = 6
         py_function = PyFunction.from_int_unary_func(
