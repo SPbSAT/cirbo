@@ -6,6 +6,7 @@ from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     PLACEHOLDER_STR,
+    reverse_if_big_endian,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
     add_sub_two_numbers,
@@ -34,6 +35,8 @@ def add_mul(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     Multiplies two numbers represented by the given input labels using a straightforward
@@ -42,6 +45,8 @@ def add_mul(
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
     :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: A list of gate labels representing the product of the two input numbers.
 
     """
@@ -49,6 +54,10 @@ def add_mul(
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
 
     # in my mind a[0] is the smallest bit in a
     c = [[PLACEHOLDER_STR] * n for _ in range(m)]
@@ -59,9 +68,9 @@ def add_mul(
             )
 
     if n == 1:
-        return [c[i][0] for i in range(m)]
+        return reverse_if_big_endian([c[i][0] for i in range(m)], big_endian)
     if m == 1:
-        return c[0]
+        return reverse_if_big_endian(c[0], big_endian)
 
     d = [[PLACEHOLDER_STR] for _ in range(n + m)]
     d[0] = [c[0][0]]
@@ -74,13 +83,15 @@ def add_mul(
             if j + len(d[j]) > i:
                 inp.append(d[j][i - j])
         d[i] = add_sum_n_bits(circuit, inp)
-    return [d[i][0] for i in range(n + m)]
+    return reverse_if_big_endian([d[i][0] for i in range(n + m)], big_endian)
 
 
 def add_mul_alter(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     An alternative multiplication method using bitwise shifting and addition.
@@ -88,6 +99,8 @@ def add_mul_alter(
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
     :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: A list of gate labels representing the product of the two input numbers.
 
     """
@@ -95,6 +108,10 @@ def add_mul_alter(
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
 
     # in my mind a[0] is the smallest bit in a
     c = [[PLACEHOLDER_STR] * n for _ in range(m)]
@@ -105,19 +122,21 @@ def add_mul_alter(
             )
 
     if m == 1:
-        return c[0]
+        return reverse_if_big_endian(c[0], big_endian)
 
     res = add_sum_two_numbers_with_shift(circuit, 1, c[0], c[1])
     for i in range(2, m):
         res = add_sum_two_numbers_with_shift(circuit, i, res, c[i])
 
-    return res
+    return reverse_if_big_endian(res, big_endian)
 
 
 def add_mul_karatsuba(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     Multiplies two numbers using the Karatsuba multiplication algorithm.
@@ -125,11 +144,16 @@ def add_mul_karatsuba(
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
     :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: A list of gate labels representing the product of the two input numbers.
 
     """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
     out_size = len(input_labels_a) + len(input_labels_b)
     if len(input_labels_a) == 1 or len(input_labels_b) == 1:
         out_size -= 1
@@ -144,7 +168,10 @@ def add_mul_karatsuba(
         )
 
     if n < 20 and n != 18:
-        return add_mul_pow2_m1(circuit, input_labels_a, input_labels_b)[:out_size]
+        return reverse_if_big_endian(
+            add_mul_pow2_m1(circuit, input_labels_a, input_labels_b)[:out_size],
+            big_endian,
+        )
 
     mid = n // 2
     a = input_labels_a[mid:]
@@ -175,13 +202,15 @@ def add_mul_karatsuba(
     res = add_sum_two_numbers_with_shift(circuit, mid, bd, res_mid)
     final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, ac)
 
-    return final_res[:out_size]
+    return reverse_if_big_endian(final_res[:out_size], big_endian)
 
 
 def add_mul_dadda(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     Multiplies two numbers using the Dadda multiplication algorithm.
@@ -189,6 +218,8 @@ def add_mul_dadda(
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
     :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: A list of gate labels representing the product of the two input numbers.
 
     """
@@ -196,6 +227,10 @@ def add_mul_dadda(
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
 
     c: list[tp.Deque[str]] = [collections.deque() for _ in range(n + m)]
     for i in range(m):
@@ -205,7 +240,7 @@ def add_mul_dadda(
             )
 
     if n == 1 or m == 1:
-        return [c[i][0] for i in range(m + n - 1)]
+        return reverse_if_big_endian([c[i][0] for i in range(m + n - 1)], big_endian)
 
     di = 2
     while 3 * di // 2 < min(n, m):
@@ -234,13 +269,15 @@ def add_mul_dadda(
     out = []
     for i in range(n + m):
         out.append(c[i].popleft())
-    return out
+    return reverse_if_big_endian(out, big_endian)
 
 
 def add_mul_wallace(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     Multiplies two numbers using the Dadda multiplication algorithm.
@@ -248,6 +285,8 @@ def add_mul_wallace(
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
     :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: A list of gate labels representing the product of the two input numbers.
 
     """
@@ -255,6 +294,10 @@ def add_mul_wallace(
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
 
     c = [[PLACEHOLDER_STR] * m for _ in range(n + m)]
     for i in range(m):
@@ -264,9 +307,10 @@ def add_mul_wallace(
             )
 
     if n == 1:
-        return [c[i][i] for i in range(m)]
+        return reverse_if_big_endian([c[i][i] for i in range(m)], big_endian)
+
     if m == 1:
-        return [c[i][0] for i in range(n)]
+        return reverse_if_big_endian([c[i][0] for i in range(n)], big_endian)
 
     while len(c[0]) != 2:
         cn = [[PLACEHOLDER_STR] * (2 * (len(c[0]) // 3)) for _ in range(n + m)]
@@ -300,13 +344,18 @@ def add_mul_wallace(
         elif len(labels_b) == 0:
             shift += 1
 
-    return add_sum_two_numbers_with_shift(circuit, shift, labels_a, labels_b)[: n + m]
+    return reverse_if_big_endian(
+        add_sum_two_numbers_with_shift(circuit, shift, labels_a, labels_b)[: n + m],
+        big_endian,
+    )
 
 
 def add_mul_pow2_m1(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     Multiplies two numbers with lengths 2^k - 1 using a specific squaring method.
@@ -314,12 +363,18 @@ def add_mul_pow2_m1(
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
     :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: A list of gate labels representing the product of the two input numbers.
     """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
     m = len(input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
 
     c = [[PLACEHOLDER_STR] * n for _ in range(m)]
     for i in range(m):
@@ -329,9 +384,9 @@ def add_mul_pow2_m1(
             )
 
     if n == 1:
-        return [c[i][0] for i in range(m)]
+        return reverse_if_big_endian([c[i][0] for i in range(m)], big_endian)
     if m == 1:
-        return c[0]
+        return reverse_if_big_endian(c[0], big_endian)
 
     out = [[[PLACEHOLDER_STR]] for _ in range(n + m)]
     out[0] = [[c[0][0]]]
@@ -347,4 +402,4 @@ def add_mul_pow2_m1(
             out[i] = [[inp[0]]]
         else:
             out[i] = add_sum_pow2_m1(circuit, inp)
-    return [out[i][0][0] for i in range(n + m)]
+    return reverse_if_big_endian([out[i][0][0] for i in range(n + m)], big_endian)

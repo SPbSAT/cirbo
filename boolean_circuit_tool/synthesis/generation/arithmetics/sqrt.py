@@ -4,6 +4,7 @@ from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     generate_list_of_input_labels,
+    reverse_if_big_endian,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
     add_subtract_with_compare,
@@ -51,6 +52,8 @@ def add_sqrt(
 
     :param circuit: The general circuit.
     :param input_labels: the bits of the integer we want to find the sqrt for.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: the sqrt of integer.
 
     """
@@ -59,7 +62,7 @@ def add_sqrt(
     half = n // 2
     x = input_labels
     if big_endian:
-        x = x[::-1]
+        x.reverse()
     ZERO = add_gate_from_tt(circuit, x[0], x[0], "0110")
     UNO = add_gate_from_tt(circuit, x[0], x[0], "1001")
 
@@ -90,6 +93,4 @@ def add_sqrt(
                 add_gate_from_tt(circuit, c[i], per, "0001"),
                 "0111",
             )
-    if big_endian:
-        return c[:half][::-1]
-    return c[:half]
+    return reverse_if_big_endian(c[:half], big_endian)

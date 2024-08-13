@@ -16,6 +16,7 @@ __all__ = [
     'validate_even',
     'generate_random_label',
     'generate_list_of_input_labels',
+    'reverse_if_big_endian',
 ]
 
 
@@ -75,6 +76,15 @@ def generate_list_of_input_labels(size: int) -> list[gate.Label]:
 
     """
     return [f'input{i}' for i in range(size)]
+
+
+def reverse_if_big_endian(
+    seq: tp.Iterable[gate.Label], big_endian: bool
+) -> list[gate.Label]:
+    res = list(seq)
+    if big_endian:
+        res.reverse()
+    return res
 
 
 binary_tt_to_type = {

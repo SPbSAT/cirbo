@@ -4,6 +4,7 @@ from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     PLACEHOLDER_STR,
+    reverse_if_big_endian,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.multiplication import (
     add_mul_karatsuba,
@@ -21,21 +22,27 @@ __all__ = [
 
 
 def add_square(
-    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label], *, big_endian: bool = False
 ) -> list[gate.Label]:
     """
     Compute the square of a number represented by the given input labels in the circuit.
 
     :param circuit: The general circuit.
     :param input_labels: Iterable of gate labels representing the input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: A list of gate labels representing the square of the input number.
 
     """
     input_labels = list(input_labels)
     n = len(input_labels)
+    if big_endian:
+        input_labels.reverse()
 
     if n < 48 or n in [49, 53]:
-        return add_square_pow2_m1(circuit, input_labels)
+        return reverse_if_big_endian(
+            add_square_pow2_m1(circuit, input_labels), big_endian
+        )
 
     mid = n // 2
     a = input_labels[:mid]
@@ -46,25 +53,29 @@ def add_square(
 
     res = add_sum_two_numbers_with_shift(circuit, mid + 1, aa, ab)
     final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, bb)
-
-    return final_res[: 2 * n]
+    final_res = final_res[: 2 * n]
+    return reverse_if_big_endian(final_res, big_endian)
 
 
 def add_square_pow2_m1(
-    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label], *, big_endian: bool = False
 ) -> list[gate.Label]:
     """
     Compute the square of a number with length 2^k - 1 using a specific squaring method.
 
     :param circuit: The general circuit.
     :param input_labels: Iterable of gate labels representing the input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: A list of gate labels representing the square of the input number.
     """
     input_labels = list(input_labels)
     n = len(input_labels)
+    if big_endian:
+        input_labels.reverse()
 
     if n == 1:
-        return input_labels
+        return reverse_if_big_endian(input_labels, big_endian)
 
     c = [[PLACEHOLDER_STR] * n for _ in range(n)]
     for i in range(n):
@@ -101,4 +112,7 @@ def add_square_pow2_m1(
             d[i] = [[inp[0]]]
         else:
             d[i] = add_sum_pow2_m1(circuit, inp)
-    return [d[i][0][0] for i in range(2 * n)]
+    res = [d[i][0][0] for i in range(2 * n)]
+    if big_endian:
+        res.reverse()
+    return res

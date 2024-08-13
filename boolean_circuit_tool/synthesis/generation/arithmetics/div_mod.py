@@ -49,7 +49,7 @@ def add_div_mod(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    big_endian: bool = False,
+    big_endian: bool = False
 ) -> tuple[list[gate.Label], list[gate.Label]]:
     """
     Function make div two integers with equal size.
@@ -65,8 +65,8 @@ def add_div_mod(
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     if big_endian:
-        input_labels_a = input_labels_a[::-1]
-        input_labels_b = input_labels_b[::-1]
+        input_labels_a.reverse()
+        input_labels_b.reverse()
     validate_equal_sizes(input_labels_a, input_labels_b)
     n = len(input_labels_a)
 
@@ -118,7 +118,7 @@ def add_div_mod(
         now[i] = add_gate_from_tt(circuit, now[i], pref[-1], "0001")
 
     if big_endian:
-        result = result[::-1]
-        now = now[::-1]
+        result.reverse()
+        now.reverse()
 
     return result, now
