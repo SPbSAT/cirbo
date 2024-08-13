@@ -7,5 +7,6 @@ def sum_3(x1, x2, x3):
     return [(s >> i) & 1 for i in range(2)]
 
 
-circuit_finder = CircuitFinderSat(PyFunction(sum_3), number_of_gates=5, basis=Basis.XAIG)
+circuit_finder = CircuitFinderSat(PyFunction.from_positional(sum_3), number_of_gates=5, basis=Basis.XAIG)
 circuit = circuit_finder.find_circuit()
+circuit.into_graphviz_digraph().view()

@@ -9,10 +9,9 @@ def block(x: bool, y: bool, z: bool):
     s = x + 2 * y + 4 * z
     return [DontCare] if s > 6 else [True] if s >= 3 else [False]
 
-
-ckt = Circuit()
-ckt.add_inputs(['x1', 'x2', 'x3', 'x4', 'x5', 'x6'])
-out = add_sum_n_bits(ckt, ['x1', 'x2', 'x3', 'x4', 'x5', 'x6'])
-circuit_finder = CircuitFinderSat(PyFunction(block), number_of_gates=2, basis=Basis.XAIG)
+ckt = Circuit().bare_circuit(6, prefix='x')
+out = add_sum_n_bits(ckt, ckt.inputs)
+circuit_finder = CircuitFinderSat(PyFunction.from_positional(block), number_of_gates=2, basis=Basis.XAIG)
 new_block = circuit_finder.find_circuit()
-ckt.connect_circuit(new_block, out, new_block.inputs)
+ckt.connect_circuit(new_block, out, new_block.inputs, name='new_block', add_prefix=False)
+ckt.into_graphviz_digraph().view()

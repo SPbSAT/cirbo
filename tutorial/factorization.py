@@ -19,3 +19,5 @@ def factorization(number: int) -> Circuit:
     ckt.add_gate(Gate('gate2', AND, ('gate1', g3)))
     ckt.mark_as_output('gate2')
     return ckt
+
+factorization(3).into_graphviz_digraph().view()
