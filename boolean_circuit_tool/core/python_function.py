@@ -145,27 +145,6 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
 class PyFunction(BooleanFunction):
     """Boolean function given as a python callable."""
 
-    @staticmethod
-    def from_int_unary_func(input_size: int, output_size: int, f: tp.Callable[[int], int]):
-        def func(*args: bool) -> list[bool]:
-            assert len(args) == input_size
-            index = input_to_canonical_index(args)
-            result = f(index)
-            return list(canonical_index_to_input(result, output_size))
-
-        return PyFunction(func=func)
-
-    @staticmethod
-    def from_int_binary_func(input_size: int, output_size: int, f: tp.Callable[[int, int], int]):
-        def func(*args: bool) -> list[bool]:
-            assert len(args) == 2 * input_size
-            index1 = input_to_canonical_index(args[:len(args) // 2])
-            index2 = input_to_canonical_index(args[len(args) // 2:])
-            result = f(index1, index2)
-            return list(canonical_index_to_input(result, output_size))
-
-        return PyFunction(func=func)
-
     def __init__(
         self,
         func: FunctionType,
@@ -256,7 +235,7 @@ class PyFunction(BooleanFunction):
                 return False
         return True
 
-    def is_monotone(self, *, inverse: bool = True) -> bool:
+    def is_monotone(self, *, inverse: bool = False) -> bool:
         """
         Check if all outputs are monotone (output value doesn't decrease when
         inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
@@ -276,7 +255,7 @@ class PyFunction(BooleanFunction):
                 return False
         return True
 
-    def is_monotone_at(self, output_index: int, *, inverse: bool = True) -> bool:
+    def is_monotone_at(self, output_index: int, *, inverse: bool = False) -> bool:
         """
         Check if output `output_index` is monotone (output value doesn't
         decrease when inputs are enumerated in a classic order: 0000, 0001,
