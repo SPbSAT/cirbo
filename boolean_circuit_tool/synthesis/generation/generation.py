@@ -15,8 +15,6 @@ __all__ = [
     'generate_if_then_else',
     'generate_pairwise_if_then_else',
     'generate_pairwise_xor',
-    'generate_inputs_with_labels',
-    'generate_inputs',
     'add_plus_one',
     'add_if_then_else',
     'add_pairwise_if_then_else',
@@ -121,31 +119,6 @@ def generate_pairwise_xor(n: int) -> Circuit:
         circuit, x_labels, y_labels, result_labels=xor_labels, add_outputs=True
     )
     return circuit
-
-
-def generate_inputs_with_labels(labels: list[gate.Label]) -> Circuit:
-    """
-    Generates a circuit consisting of INPUT gates with given labels. Those gates are
-    also marked as OUTPUTS.
-
-    :param labels: names for the input gates
-
-    """
-    circuit = Circuit()
-    circuit.add_inputs(labels)
-    circuit.set_outputs(labels)
-    return circuit
-
-
-def generate_inputs(n: int) -> Circuit:
-    """
-    Generates a circuit consisting of n INPUT gates. Those gates are also marked as
-    OUTPUTS.
-
-    :param n: number of input gates
-
-    """
-    return generate_inputs_with_labels(_generate_labels('x', n))
 
 
 def add_plus_one(

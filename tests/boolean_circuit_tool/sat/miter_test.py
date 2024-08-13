@@ -3,15 +3,12 @@ import pytest
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.sat import is_circuit_satisfiable
 from boolean_circuit_tool.sat.miter import build_miter
-from boolean_circuit_tool.synthesis.generation.generation import (
-    generate_inputs,
-    generate_plus_one,
-)
+from boolean_circuit_tool.synthesis.generation.generation import generate_plus_one
 
 
 @pytest.mark.parametrize("n", range(2, 9))
 def test_miter(n: int):
-    plus_zero = generate_inputs(n)
+    plus_zero = Circuit.bare_circuit(n, prefix='x', set_as_outputs=True)
     plus_one = generate_plus_one(inp_len=n, out_len=n)
     plus_two = (
         Circuit()

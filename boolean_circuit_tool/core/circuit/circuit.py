@@ -243,6 +243,42 @@ class Circuit(BooleanFunction):
         with io.StringIO(string) as s:
             return _parser.convert_to_circuit(s)
 
+    @staticmethod
+    def bare_circuit_with_labels(
+        labels: tp.Sequence[Label], *, set_as_outputs: bool = False
+    ) -> tp_ext.Self:
+        """
+        Generates a circuit consisting of INPUT gates with labels from `labels`.
+
+        :param labels: new input's labels.
+        :param set_as_outputs: marked new inputs as OUTPUTS.
+        :return: new Circuit
+
+        """
+        circuit = Circuit()
+        circuit.add_inputs(labels)
+        if set_as_outputs:
+            circuit.set_outputs(labels)
+        return circuit
+
+    @staticmethod
+    def bare_circuit(
+        input_size: int, *, prefix: str = '', set_as_outputs: bool = False
+    ) -> tp_ext.Self:
+        """
+        Generates a circuit consisting of input_size INPUT gates.
+
+        :param input_size: number of input gates
+        :param prefix: add prefix to input's labels
+        :param set_as_outputs: marked new inputs as OUTPUTS.
+        :return: new Circuit
+
+        """
+        return Circuit.bare_circuit_with_labels(
+            labels=[f'{prefix}{i}' for i in range(input_size)],
+            set_as_outputs=set_as_outputs,
+        )
+
     def __init__(self):
         self._inputs: list[Label] = list()
         self._outputs: list[Label] = list()
