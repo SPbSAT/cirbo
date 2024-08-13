@@ -4,8 +4,8 @@ import math
 import typing as tp
 
 from boolean_circuit_tool.core.boolean_function import (
-    BooleanFunction,
-    BooleanFunctionModel,
+    Function,
+    FunctionModel,
     RawTruthTable,
     RawTruthTableModel,
 )
@@ -69,7 +69,7 @@ def _parse_trival(x: tp.Union[str, TriValue, tp.Literal[0, 1]]) -> TriValue:
     raise BadBooleanValue()
 
 
-class TruthTableModel(BooleanFunctionModel['TruthTable']):
+class TruthTableModel(FunctionModel['TruthTable']):
     """Boolean function model given as a truth table with don't care outputs."""
 
     def __init__(self, table: TruthTableModelArg):
@@ -161,7 +161,7 @@ class TruthTableModel(BooleanFunctionModel['TruthTable']):
         )
 
 
-class TruthTable(BooleanFunction):
+class TruthTable(Function):
     """Boolean function given as a truth table."""
 
     def __init__(self, table: TruthTableArg):
@@ -243,7 +243,7 @@ class TruthTable(BooleanFunction):
                 return False
         return True
 
-    def is_monotone(self, *, inverse: bool = False) -> bool:
+    def is_monotone(self, inverse: bool = False) -> bool:
         """
         Check if all outputs are monotone (output value doesn't decrease when
         inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
@@ -258,7 +258,7 @@ class TruthTable(BooleanFunction):
             self.is_monotone_at(i, inverse=inverse) for i in range(self.output_size)
         )
 
-    def is_monotone_at(self, output_index: int, *, inverse: bool = False) -> bool:
+    def is_monotone_at(self, output_index: int, inverse: bool = False) -> bool:
         """
         Check if output `output_index` is monotone (output value doesn't
         decrease when inputs are enumerated in a classic order: 0000, 0001,

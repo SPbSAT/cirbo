@@ -124,7 +124,8 @@ class CircuitsDatabase:
         return decode_circuit(encoded_circuit)
 
     def get_by_raw_truth_table(
-        self, truth_table: RawTruthTable
+        self,
+        truth_table: RawTruthTable,
     ) -> tp.Optional[Circuit]:
         """
         Retrieve a circuit by its raw truth table.

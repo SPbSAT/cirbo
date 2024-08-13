@@ -6,8 +6,8 @@ import typing as tp
 import typing_extensions as tpe
 
 from boolean_circuit_tool.core.boolean_function import (
-    BooleanFunction,
-    BooleanFunctionModel,
+    Function,
+    FunctionModel,
     RawTruthTable,
     RawTruthTableModel,
 )
@@ -28,6 +28,8 @@ __all__ = [
     'FunctionModelType',
     'FunctionModelTypeTs',
 ]
+
+
 FunctionModelType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[TriValue]]
 FunctionType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[bool]]
 
@@ -36,7 +38,7 @@ FunctionModelTypeTs = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[TriValue]]
 FunctionTypeTs = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[bool]]
 
 
-class PyFunctionModel(BooleanFunctionModel['PyFunction']):
+class PyFunctionModel(FunctionModel['PyFunction']):
     """Boolean function model given as a python callable with don't care outputs."""
 
     @staticmethod
@@ -188,7 +190,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
         )
 
 
-class PyFunction(BooleanFunction):
+class PyFunction(Function):
     """Boolean function given as a python callable."""
 
     @staticmethod
@@ -358,7 +360,7 @@ class PyFunction(BooleanFunction):
                 return False
         return True
 
-    def is_monotone(self, *, inverse: bool = False) -> bool:
+    def is_monotone(self, inverse: bool = False) -> bool:
         """
         Check if all outputs are monotone (output value doesn't decrease when
         inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
@@ -378,7 +380,7 @@ class PyFunction(BooleanFunction):
                 return False
         return True
 
-    def is_monotone_at(self, output_index: int, *, inverse: bool = False) -> bool:
+    def is_monotone_at(self, output_index: int, inverse: bool = False) -> bool:
         """
         Check if output `output_index` is monotone (output value doesn't
         decrease when inputs are enumerated in a classic order: 0000, 0001,
