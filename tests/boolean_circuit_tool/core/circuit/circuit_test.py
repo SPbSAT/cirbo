@@ -4,6 +4,7 @@ import itertools
 
 import pytest
 
+from boolean_circuit_tool.core import Function
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateAlreadyExistsError,
@@ -31,6 +32,10 @@ from boolean_circuit_tool.core.circuit.gate import (
     XOR,
 )
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
+
+
+def test_implements_protocol():
+    assert isinstance(Circuit, Function)
 
 
 def test_create_circuit():

@@ -1,7 +1,12 @@
 import typing as tp
 
 import pytest
-from boolean_circuit_tool.core.boolean_function import RawTruthTable
+
+from boolean_circuit_tool.core.boolean_function import (
+    Function,
+    FunctionModel,
+    RawTruthTable,
+)
 from boolean_circuit_tool.core.exceptions import BadCallableError
 from boolean_circuit_tool.core.logic import DontCare, TriValue
 
@@ -88,6 +93,9 @@ def f_binary_model_1(arg0: bool, arg1: bool) -> tp.Sequence[TriValue]:
 
 
 class TestPyFunctionModel:
+    def test_model_implements_protocol(self):
+        assert isinstance(PyFunctionModel, FunctionModel)
+
     @pytest.mark.parametrize(
         "model, input_size, output_size",
         [
@@ -198,6 +206,8 @@ class TestPyFunctionModel:
 
 
 class TestPyFunction:
+    def test_implements_protocol(self):
+        assert isinstance(PyFunction, Function)
 
     @pytest.mark.parametrize(
         "function, input_size, output_size",

@@ -2,7 +2,11 @@ import random
 import typing as tp
 
 import pytest
-from boolean_circuit_tool.core.boolean_function import RawTruthTable
+from boolean_circuit_tool.core.boolean_function import (
+    Function,
+    FunctionModel,
+    RawTruthTable,
+)
 
 from boolean_circuit_tool.core.exceptions import (
     BadBooleanValue,
@@ -24,6 +28,14 @@ def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTa
         [random.choice([True, False]) for _ in range(2**input_size)]
         for _ in range(output_size)
     ]
+
+
+def test_model_implements_protocol():
+    assert isinstance(TruthTableModel, FunctionModel)
+
+
+def test_implements_protocol():
+    assert isinstance(TruthTable, Function)
 
 
 @pytest.mark.parametrize(

@@ -3,7 +3,7 @@ Boolean Circuit Tool is a library designed to provide methods for easy boolean c
 manipulations. Currently, it contains the following main subpackages:
 
 1. ``boolean_circuit_tool.core`` -- core classes and abstractions, including
-   ``BooleanFunction`` protocol, its main implementations: ``TruthTable``,
+   ``Function`` protocol, its main implementations: ``TruthTable``,
    ``PyFunction`` and ``Circuit``, and a bunch of methods useful when working
    with boolean circuits.
 2. ``boolean_circuit_tool.synthesis`` -- implementations of several method of boolean

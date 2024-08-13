@@ -15,13 +15,13 @@ __all__ = [
 
 
 class BooleanModelError(BooleanCircuitToolError):
-    """Base for BooleanFunctionModel protocol general class of exceptions."""
+    """Base for FunctionModel protocol general class of exceptions."""
 
     pass
 
 
 class BooleanFunctionError(BooleanCircuitToolError):
-    """Base for BooleanFunction protocol general class of exceptions."""
+    """Base for Function protocol general class of exceptions."""
 
     pass
 

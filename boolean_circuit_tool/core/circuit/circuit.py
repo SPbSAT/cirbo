@@ -13,7 +13,7 @@ import typing as tp
 import graphviz
 import typing_extensions as tp_ext
 
-from boolean_circuit_tool.core.boolean_function import BooleanFunction, RawTruthTable
+from boolean_circuit_tool.core.boolean_function import Function, RawTruthTable
 from boolean_circuit_tool.core.circuit.converters import convert_gate
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateAlreadyExistsError,
@@ -198,7 +198,7 @@ class Block:
         return new_circuit
 
 
-class Circuit(BooleanFunction):
+class Circuit(Function):
     """
     Structure to carry boolean circuit.
 
@@ -1400,7 +1400,7 @@ class Circuit(BooleanFunction):
                 return False
         return True
 
-    def is_monotone(self, *, inverse: bool = False) -> bool:
+    def is_monotone(self, inverse: bool = False) -> bool:
         """
         Check if all outputs are monotone (output value doesn't decrease when
         inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
@@ -1423,7 +1423,7 @@ class Circuit(BooleanFunction):
                     current_value[i] = v
         return True
 
-    def is_monotone_at(self, output_index: int, *, inverse: bool = False) -> bool:
+    def is_monotone_at(self, output_index: int, inverse: bool = False) -> bool:
         """
         Check if output `output_index` is monotone (output value doesn't
         decrease when inputs are enumerated in a classic order: 0000, 0001,

@@ -37,9 +37,6 @@ from boolean_circuit_tool.core.circuit.gate import (
 __all__ = [
     'remove_redundant_gates',
     'collapse_unary_operators',
-    'collapse_equivalent_gates',
-    'collapse_equivalent_gates_sparse',
-    'remove_identities',
     'cleanup',
 ]
 
