@@ -113,6 +113,4 @@ def add_square_pow2_m1(
         else:
             d[i] = add_sum_pow2_m1(circuit, inp)
     res = [d[i][0][0] for i in range(2 * n)]
-    if big_endian:
-        res.reverse()
-    return res
+    return reverse_if_big_endian(res, big_endian)

@@ -70,7 +70,7 @@ def sqrt_naive(inputs_a):
 def div_mod_naive(inputs_a, inputs_b):
     a = to_num(inputs_a)
     b = to_num(inputs_b)
-    return to_bin(a % b, len(inputs_b)) + to_bin(a // b, len(inputs_b))
+    return to_bin(a // b, len(inputs_b)) + to_bin(a % b, len(inputs_b))
 
 
 def sum_naive(inputs_a):
@@ -102,24 +102,28 @@ def sum_naive(inputs_a):
         pytest.param([24, 15], marks=pytest.mark.slow),
     ],
 )
-def test_mul(func, size):
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_mul(func, size, big_endian):
     x, y = size
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x + y)]
     for i in range(x + y):
         ckt.add_gate(Gate(input_labels[i], INPUT))
 
-    res = func(ckt, input_labels[:x], input_labels[x:])
-    for i in res:
-        ckt.mark_as_output(i)
+    res = func(ckt, input_labels[:x], input_labels[x:], big_endian=big_endian)
+    ckt.set_outputs(res)
 
-    for test in range(1000):
+    for test in range(TEST_SIZE):
         input_labels_a = [random.choice([0, 1]) for _ in range(x)]
         input_labels_b = [random.choice([0, 1]) for _ in range(y)]
-        assert (
-            mul_naive(input_labels_a, input_labels_b)
-            == ckt.evaluate(input_labels_a + input_labels_b)[::-1]
-        )
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert mul_naive(input_labels_a, input_labels_b) == res
 
 
 @pytest.mark.parametrize("func", [add_square, add_square_pow2_m1])
@@ -134,19 +138,24 @@ def test_mul(func, size):
         pytest.param(60, marks=pytest.mark.slow),
     ],
 )
-def test_square(func, x):
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_square(func, x, big_endian):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
     for i in range(x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
 
-    res = func(ckt, input_labels[:x])
-    for i in res:
-        ckt.mark_as_output(i)
+    res = func(ckt, input_labels, big_endian=big_endian)
+    ckt.set_outputs(res)
 
-    for test in range(1000):
-        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
-        assert square_naive(input_labels_a) == ckt.evaluate(input_labels_a)[::-1]
+    for test in range(TEST_SIZE):
+        input_labels = [random.choice([0, 1]) for _ in range(x)]
+        res = ckt.evaluate(input_labels)
+        if big_endian:
+            input_labels.reverse()
+        else:
+            res.reverse()
+        assert square_naive(input_labels) == res
 
 
 @pytest.mark.parametrize("num", list(range(128)))
@@ -176,17 +185,22 @@ def test_add_equal(num):
         pytest.param(64, marks=pytest.mark.slow),
     ],
 )
-def test_sqrt(x):
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_sqrt(x, big_endian):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
     for i in range(x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
-    res = add_sqrt(ckt, input_labels)
-    for i in res:
-        ckt.mark_as_output(i)
+    res = add_sqrt(ckt, input_labels, big_endian=big_endian)
+    ckt.set_outputs(res)
     for test in range(TEST_SIZE):
-        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
-        assert sqrt_naive(input_labels_a) == ckt.evaluate(input_labels_a)[::-1]
+        input_labels = [random.choice([0, 1]) for _ in range(x)]
+        res = ckt.evaluate(input_labels)
+        if big_endian:
+            input_labels.reverse()
+        else:
+            res.reverse()
+        assert sqrt_naive(input_labels) == res
 
 
 @pytest.mark.parametrize(
@@ -200,25 +214,28 @@ def test_sqrt(x):
         pytest.param(128, marks=pytest.mark.slow),
     ],
 )
-def test_div_mod(x):
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_div_mod(x, big_endian):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(2 * x)]
     for i in range(2 * x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
-    res_div, res_mod = add_div_mod(ckt, input_labels[:x], input_labels[x:])
-    for i in res_div:
-        ckt.mark_as_output(i)
-    for i in res_mod:
-        ckt.mark_as_output(i)
+    res_div, res_mod = add_div_mod(
+        ckt, input_labels[:x], input_labels[x:], big_endian=big_endian
+    )
+    ckt.set_outputs(res_div + res_mod)
     for test in range(TEST_SIZE):
         input_labels_a = [random.choice([0, 1]) for _ in range(x)]
         input_labels_b = [random.choice([0, 1]) for _ in range(x)]
         if sum(input_labels_b) == 0:
             continue
-        assert (
-            div_mod_naive(input_labels_a, input_labels_b)
-            == ckt.evaluate(input_labels_a + input_labels_b)[::-1]
-        )
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res = res[:x][::-1] + res[x:][::-1]
+        assert div_mod_naive(input_labels_a, input_labels_b) == res
 
 
 @pytest.mark.parametrize("basis", [GenerationBasis.ALL, GenerationBasis.AIG])
@@ -231,14 +248,17 @@ def test_div_mod(x):
         pytest.param(1000, marks=pytest.mark.slow),
     ],
 )
-def test_sum_n_bits(basis, x):
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_sum_n_bits(basis, x, big_endian):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
     for i in range(x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
-    res = add_sum_n_bits(ckt, input_labels, basis=basis)
-    for i in res:
-        ckt.mark_as_output(i)
+    res = add_sum_n_bits(ckt, input_labels, basis=basis, big_endian=big_endian)
+    ckt.set_outputs(res)
     for test in range(TEST_SIZE):
-        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
-        assert sum_naive(input_labels_a) == ckt.evaluate(input_labels_a)[::-1]
+        input_labels = [random.choice([0, 1]) for _ in range(x)]
+        res = ckt.evaluate(input_labels)
+        if not big_endian:
+            res.reverse()
+        assert sum_naive(input_labels) == res
