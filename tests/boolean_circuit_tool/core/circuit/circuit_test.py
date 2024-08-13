@@ -133,6 +133,60 @@ def test_create_circuit():
     assert instance.gates == {}
 
 
+def test_eq():
+    instance_one = Circuit()
+    instance_one.add_gate(Gate('A', INPUT))
+    instance_one.add_gate(Gate('B', INPUT))
+    instance_one.add_gate(Gate('C', AND, ('A', 'B')))
+    instance_one.add_gate(Gate('D', OR, ('C', 'B')))
+    instance_one.mark_as_output('C')
+    instance_one.mark_as_output('D')
+    instance_one.mark_as_output('C')
+
+    instance_two = Circuit()
+    instance_two.add_gate(Gate('A', INPUT))
+    instance_two.add_gate(Gate('B', INPUT))
+    instance_two.add_gate(Gate('C', OR, ('A', 'B')))  # different operator
+    instance_two.add_gate(Gate('D', AND, ('C', 'B')))
+    instance_two.mark_as_output('C')
+    instance_two.mark_as_output('D')
+    instance_two.mark_as_output('C')
+
+    instance_three = Circuit()
+    instance_three.add_gate(Gate('A', INPUT))
+    instance_three.add_gate(Gate('B', INPUT))
+    instance_three.add_gate(Gate('C', AND, ('A', 'B')))
+    instance_three.add_gate(Gate('D', OR, ('C', 'B')))
+    instance_three.mark_as_output('C')
+    instance_three.mark_as_output('D')  # different outputs
+
+    instance_four = Circuit()
+    instance_four.add_gate(Gate('A', INPUT))
+    instance_four.add_gate(Gate('B', INPUT))
+    instance_four.add_gate(Gate('C', AND, ('A', 'B')))
+    instance_four.add_gate(Gate('D', OR, ('C', 'B')))
+    instance_four.mark_as_output('C')
+    instance_four.mark_as_output('D')
+    instance_four.mark_as_output('C')
+    # differs only in blocks
+    instance_four.make_block('BLOCK_1', ['A', 'B', 'C'], outputs=['C'])
+    instance_four.make_block('BLOCK_2', ['A', 'B', 'D'], outputs=['D'])
+
+    assert instance_one == instance_one
+    assert instance_one != instance_two
+    assert instance_one != instance_three
+    assert instance_one == instance_four
+
+    assert instance_two == instance_two
+    assert instance_two != instance_three
+    assert instance_two != instance_four
+
+    assert instance_three == instance_three
+    assert instance_three != instance_four
+
+    assert instance_four == instance_four
+
+
 def test_find_inputs_outputs():
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
