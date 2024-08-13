@@ -8,13 +8,14 @@ from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     PLACEHOLDER_STR,
     validate_const_size,
 )
+from boolean_circuit_tool.synthesis.generation.exceptions import BadBasisError
+from boolean_circuit_tool.synthesis.generation.helpers import GenerationBasis
 
 
 __all__ = [
     "add_sum2",
     "add_sum3",
     "add_sum_n_bits",
-    "add_sum_n_bits_in_aig",
     "add_sum_n_bits_easy",
     "add_sum_pow2_m1",
     "add_sum_two_numbers",
@@ -237,7 +238,40 @@ def add_sum3_aig(
     return list([g6, g7])
 
 
-def add_sum_n_bits_in_aig(
+def add_sum_n_bits(
+    circuit: Circuit,
+    input_labels: tp.Iterable[gate.Label],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.ALL,
+) -> list[gate.Label]:
+    """
+    Function that adds summation gadget to a `circuit`.
+
+    :param circuit: The general circuit.
+    :param input_labels: List of bits to be added.
+    :param basis: in which basis should generated function lie. Supported [ALL, AIG].
+    :return: list containing labels of sum bits.
+
+    """
+    if isinstance(basis, str):
+        _basis = GenerationBasis(basis.upper())
+    else:
+        _basis = basis
+
+    if _basis == GenerationBasis.ALL:
+        return _add_sum_n_bits(
+            circuit=circuit,
+            input_labels=input_labels,
+        )
+    if _basis == GenerationBasis.AIG:
+        return _add_sum_n_bits_aig(
+            circuit=circuit,
+            input_labels=input_labels,
+        )
+    raise BadBasisError(f"Unsupported basis: {basis}.")
+
+
+def _add_sum_n_bits_aig(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
     """
@@ -270,7 +304,7 @@ def add_sum_n_bits_in_aig(
     return res
 
 
-def add_sum_n_bits(
+def _add_sum_n_bits(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
     """

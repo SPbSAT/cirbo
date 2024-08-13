@@ -5,6 +5,7 @@ from boolean_circuit_tool.exceptions import BooleanCircuitToolError
 __all__ = [
     'BadShapesError',
     'DifferentShapesError',
+    'BadBasisError',
     'PairwiseXorDifferentShapesError',
     'PairwiseIfThenElseDifferentShapesError',
 ]
@@ -19,6 +20,12 @@ class BadShapesError(BooleanCircuitToolError):
 class DifferentShapesError(BadShapesError):
     """Error that occurs when constructing some circuit with badly given shapes of
     inputs or outputs."""
+
+    pass
+
+
+class BadBasisError(BooleanCircuitToolError):
+    """Error that occurs when generation method is given a bad basis."""
 
     pass
 

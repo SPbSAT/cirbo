@@ -10,6 +10,7 @@ __all__ = [
     'BadBooleanValue',
     'BadBooleanValue',
     'TruthTableBadShapeError',
+    'BadCallableError',
 ]
 
 
@@ -45,5 +46,11 @@ class BadBooleanValue(BooleanModelError):
 
 class TruthTableBadShapeError(BooleanModelError):
     """Represents error raised when given truth table has bad shape."""
+
+    pass
+
+
+class BadCallableError(BooleanCircuitToolError):
+    """Represents error raised provided unsupported callable to PyFunction."""
 
     pass
