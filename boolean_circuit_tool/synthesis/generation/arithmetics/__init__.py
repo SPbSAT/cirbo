@@ -1,7 +1,7 @@
 """Subpackage defines plenty of methods useful for generation of small arithmetic
 circuits by several methods."""
 
-from .div_mod import add_div_mod
+from .div_mod import add_div_mod, generate_div_mod
 from .equality import add_equal
 from .multiplication import (
     add_mul,
@@ -33,6 +33,7 @@ from .summation import (
 
 __all__ = [
     # div_mod.py
+    'generate_div_mod',
     'add_div_mod',
     # equality.py
     'add_equal',
