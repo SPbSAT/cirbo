@@ -13,9 +13,11 @@ from boolean_circuit_tool.synthesis.generation.generation import (
     generate_pairwise_xor,
     generate_plus_one,
 )
+from boolean_circuit_tool.synthesis.generation.helpers import GenerationBasis
 
 
 __all__ = [
+    'GenerationBasis',
     # Arithmetic subpackage
     'arithmetics',
     # Common generation.

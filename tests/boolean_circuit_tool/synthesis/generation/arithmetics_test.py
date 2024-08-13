@@ -4,6 +4,7 @@ import random
 import pytest
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import Gate, INPUT
+from boolean_circuit_tool.synthesis.generation import GenerationBasis
 from boolean_circuit_tool.synthesis.generation.arithmetics import (
     add_div_mod,
     add_equal,
@@ -17,7 +18,6 @@ from boolean_circuit_tool.synthesis.generation.arithmetics import (
     add_square,
     add_square_pow2_m1,
     add_sum_n_bits,
-    add_sum_n_bits_in_aig,
 )
 
 TEST_SIZE = 100
@@ -221,7 +221,7 @@ def test_div_mod(x):
         )
 
 
-@pytest.mark.parametrize("func", [add_sum_n_bits_in_aig, add_sum_n_bits])
+@pytest.mark.parametrize("basis", [GenerationBasis.ALL, GenerationBasis.AIG])
 @pytest.mark.parametrize(
     "x",
     list(range(1, 18))
@@ -231,12 +231,12 @@ def test_div_mod(x):
         pytest.param(1000, marks=pytest.mark.slow),
     ],
 )
-def test_sum_n_bits(func, x):
+def test_sum_n_bits(basis, x):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
     for i in range(x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
-    res = func(ckt, input_labels)
+    res = add_sum_n_bits(ckt, input_labels, basis=basis)
     for i in res:
         ckt.mark_as_output(i)
     for test in range(TEST_SIZE):
