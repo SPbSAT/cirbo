@@ -35,21 +35,15 @@ def generate_div_mod(
     """
 
     validate_even(inp_len)
-    n = inp_len // 2
     input_labels = generate_list_of_input_labels(inp_len)
-    a_labels = input_labels[:n]
-    b_labels = input_labels[n:]
-
-    if big_endian:
-        a_labels = a_labels[::-1]
-        b_labels = b_labels[::-1]
-
-    circuit = Circuit.bare_circuit_with_labels(a_labels + b_labels)
-    div, mod = add_div_mod(circuit, a_labels, b_labels)
-    if big_endian:
-        div = div[::-1]
-        mod = mod[::-1]
-    circuit.set_inputs(div + mod)
+    circuit = Circuit.bare_circuit_with_labels(input_labels)
+    div, mod = add_div_mod(
+        circuit,
+        input_labels[: (inp_len // 2)],
+        input_labels[(inp_len // 2) :],
+        big_endian=big_endian,
+    )
+    circuit.set_outputs(div + mod)
     return circuit
 
 

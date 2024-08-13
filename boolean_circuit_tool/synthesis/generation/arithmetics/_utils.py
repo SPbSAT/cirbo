@@ -13,7 +13,9 @@ __all__ = [
     'add_gate_from_tt',
     'validate_const_size',
     'validate_equal_sizes',
+    'validate_even',
     'generate_random_label',
+    'generate_list_of_input_labels',
 ]
 
 
