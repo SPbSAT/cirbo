@@ -247,7 +247,7 @@ class TestPyFunction:
         assert bf.is_constant() == is_constant
 
     @pytest.mark.parametrize(
-        "function, output_index, inverse, is_monotonic",
+        "function, output_index, inverse, is_monotone",
         [
             (f_const, 0, False, True),
             (f_max, 0, False, True),
@@ -256,15 +256,15 @@ class TestPyFunction:
             (f_max_and_min, 1, True, False),
         ],
     )
-    def test_is_monotonic(
+    def test_is_monotone(
         self,
         function: FunctionType,
         output_index: int,
         inverse: bool,
-        is_monotonic: bool,
+        is_monotone: bool,
     ):
         bf = PyFunction(function)
-        assert bf.is_monotonic_at(output_index, inverse=inverse) == is_monotonic
+        assert bf.is_monotone_at(output_index, inverse=inverse) == is_monotone
 
     @pytest.mark.parametrize(
         "function, is_symmetric",
