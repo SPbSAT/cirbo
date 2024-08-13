@@ -184,7 +184,10 @@ class PyFunction(BooleanFunction):
 
     @staticmethod
     def from_int_unary_func(
-        func: tp.Callable[[int], int], input_size: int, output_size: int, big_endian: bool = False
+        func: tp.Callable[[int], int],
+        input_size: int,
+        output_size: int,
+        big_endian: bool = False,
     ):
         def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             assert len(args) == input_size
@@ -200,12 +203,15 @@ class PyFunction(BooleanFunction):
 
     @staticmethod
     def from_int_binary_func(
-        func: tp.Callable[[int, int], int], input_size: int, output_size: int, big_endian: bool = False
+        func: tp.Callable[[int, int], int],
+        input_size: int,
+        output_size: int,
+        big_endian: bool = False,
     ):
         def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             assert len(args) == 2 * input_size
             args1 = args[: len(args) // 2]
-            args2 = args[len(args) // 2:]
+            args2 = args[len(args) // 2 :]
             if not big_endian:
                 args1 = args1[::-1]
                 args2 = args2[::-1]
@@ -235,7 +241,10 @@ class PyFunction(BooleanFunction):
 
         """
         s = inspect.signature(func)
-        input_size = sum(v.kind == v.KEYWORD_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD for v in s.parameters.values())
+        input_size = sum(
+            v.kind == v.KEYWORD_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD
+            for v in s.parameters.values()
+        )
 
         @functools.wraps(func)
         def f(args: tp.Sequence[bool]) -> tp.Sequence[bool]:

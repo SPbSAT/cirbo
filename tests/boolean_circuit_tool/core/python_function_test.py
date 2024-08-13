@@ -4,7 +4,10 @@ import pytest
 from boolean_circuit_tool.core.logic import DontCare, TriValue
 
 from boolean_circuit_tool.core.python_function import PyFunction, PyFunctionModel
-from boolean_circuit_tool.core.utils import canonical_index_to_input, input_to_canonical_index
+from boolean_circuit_tool.core.utils import (
+    canonical_index_to_input,
+    input_to_canonical_index,
+)
 
 
 def f_max(x1: bool, x2: bool, x3: bool) -> tp.Sequence[bool]:
@@ -218,7 +221,9 @@ class TestPyFunction:
     def test_from_int_binary_func(self, a, b):
         input_size = 3
         output_size = 6
-        py_function = PyFunction.from_int_unary_func(lambda x: x ** 2, input_size, output_size, big_endian=True)
+        py_function = PyFunction.from_int_unary_func(
+            lambda x: x**2, input_size, output_size, big_endian=True
+        )
         args_a = canonical_index_to_input(a, input_size)
         values = py_function.evaluate(args_a)
         b_val = input_to_canonical_index(values)
@@ -236,7 +241,9 @@ class TestPyFunction:
     def test_from_int_binary_func(self, a, b, c):
         input_size = 3
         output_size = 5
-        py_function = PyFunction.from_int_binary_func(lambda x, y: x + y, input_size, output_size, big_endian=True)
+        py_function = PyFunction.from_int_binary_func(
+            lambda x, y: x + y, input_size, output_size, big_endian=True
+        )
         args_a = canonical_index_to_input(a, input_size)
         args_b = canonical_index_to_input(b, input_size)
         values = py_function.evaluate(list(args_a) + list(args_b))
