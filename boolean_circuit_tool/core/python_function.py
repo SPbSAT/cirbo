@@ -61,7 +61,10 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
             return func(*args)
 
         s = inspect.signature(func)
-        input_size = len(s.parameters)
+        input_size = sum(
+            v.kind == v.KEYWORD_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD
+            for v in s.parameters.values()
+        )
         return PyFunctionModel(f, input_size=input_size, output_size=output_size)
 
     def __init__(
