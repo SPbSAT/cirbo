@@ -226,13 +226,19 @@ class TestPyFunction:
     def test_from_int_unary_func(self, a, b):
         input_size = 3
         output_size = 6
-        py_function = PyFunction.from_int_unary_func(
+        py_function1 = PyFunction.from_int_unary_func(
             lambda x: x**2, input_size, output_size, big_endian=True
         )
+        py_function2 = PyFunction.from_int_unary_func(
+            lambda x: x ** 2, input_size, output_size, big_endian=False
+        )
         args_a = canonical_index_to_input(a, input_size)
-        values = py_function.evaluate(args_a)
-        b_val = input_to_canonical_index(values)
-        assert b == b_val
+        values1 = py_function1.evaluate(args_a)
+        values2 = py_function2.evaluate(args_a[::-1])
+        b_val1 = input_to_canonical_index(values1)
+        b_val2 = input_to_canonical_index(values2[::-1])
+        assert b == b_val1
+        assert b == b_val2
 
     @pytest.mark.parametrize(
         "a, b, c",
@@ -246,14 +252,20 @@ class TestPyFunction:
     def test_from_int_binary_func(self, a, b, c):
         input_size = 3
         output_size = 5
-        py_function = PyFunction.from_int_binary_func(
+        py_function1 = PyFunction.from_int_binary_func(
             lambda x, y: x + y, input_size, output_size, big_endian=True
+        )
+        py_function2 = PyFunction.from_int_binary_func(
+            lambda x, y: x + y, input_size, output_size, big_endian=False
         )
         args_a = canonical_index_to_input(a, input_size)
         args_b = canonical_index_to_input(b, input_size)
-        values = py_function.evaluate(list(args_a) + list(args_b))
-        c_val = input_to_canonical_index(values)
-        assert c == c_val
+        values1 = py_function1.evaluate(list(args_a) + list(args_b))
+        values2 = py_function2.evaluate(list(args_a[::-1]) + list(args_b)[::-1])
+        c_val1 = input_to_canonical_index(values1)
+        c_val2 = input_to_canonical_index(values2[::-1])
+        assert c == c_val1
+        assert c == c_val2
 
     @pytest.mark.parametrize(
         "inputs, value",
