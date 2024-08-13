@@ -85,7 +85,7 @@ def test_mix_ckt_gates():
     C0.add_gate(gate.Gate('5', gate.XOR, ('1', '2')))
     C0.add_gate(gate.Gate('6', gate.AND, ('2', '4')))
     C0.add_gate(gate.Gate('7', gate.ALWAYS_FALSE))
-    C0.add_gate(gate.Gate('8', gate.ALWAYS_TRUE, ('1',)))
+    C0.add_gate(gate.Gate('8', gate.ALWAYS_TRUE))
     C0.add_gate(gate.Gate('9', gate.LNOT, ('7', '3')))
     C0.add_gate(gate.Gate('10', gate.RNOT, ('4', '8')))
     C0.add_gate(gate.Gate('11', gate.LEQ, ('2', '4')))
@@ -102,6 +102,18 @@ def test_mix_ckt_gates():
     C1.into_bench()
 
     assert C0.get_truth_table() == C1.get_truth_table()
+    assert set(C1.get_gate_users('1')) & set(['3', '4', '5', '7', '8']) == set(
+        ['3', '4', '5', '7', '8']
+    )
+    assert len(C1.get_gate_users('1')) == 7
+    assert C1.get_gate_users('3') == []
+    assert len(C1.get_gate_users('7')) == 1
+    assert C1.get_gate_users('8') == ['10']
+    assert C0.get_gate_users('2') == ['4', '5', '6', '11', '12']
+    assert '12' not in C1.get_gate_users('2')
+    assert '11' not in C1.get_gate_users('2')
+    assert set(C1.get_gate_users('2')) & set(['4', '5', '6']) == set(['4', '5', '6'])
+    assert len(C1.get_gate_users('2')) == 5
 
 
 def test_block():
