@@ -7,11 +7,9 @@ import typing as tp
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import (
     AND,
-    Gate,
     GateType,
     IFF,
     INPUT,
-    Label,
     NAND,
     NOR,
     NOT,
