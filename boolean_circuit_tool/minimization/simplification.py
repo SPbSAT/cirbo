@@ -234,17 +234,15 @@ def _find_equivalent_gates(circuit: Circuit) -> list[list[str]]:
     :return: a list of groups, each containing labels of equivalent gates
 
     """
-    input_size = len(circuit.inputs)
-    input_combinations = list(itertools.product([False, True], repeat=input_size))
     gate_truth_tables = collections.defaultdict(list)
-
-    for inputs in input_combinations:
+    circuit.get_truth_table()
+    for inputs in itertools.product((False, True), repeat=circuit.input_size):
         assignment: dict[str, GateState] = {
             input_label: value for input_label, value in zip(circuit.inputs, inputs)
         }
-        gate_values = circuit.evaluate_circuit(assignment)
-        for gate_label, output in gate_values.items():
-            gate_truth_tables[gate_label].append(output)
+        _full_assignment = circuit.evaluate_full_circuit(assignment)
+        for label, value in _full_assignment.items():
+            gate_truth_tables[label].append(value)
 
     truth_table_to_gates = collections.defaultdict(list)
     for gate_label, truth_table in gate_truth_tables.items():

@@ -1187,6 +1187,34 @@ class Circuit(BooleanFunction):
             on_dfs_end_hook=on_dfs_end_hook,
         )
 
+    def evaluate_full_circuit(
+        self,
+        assignment: dict[Label, GateState],
+    ) -> dict[Label, GateState]:
+        """
+        Evaluate all gates of the circuit based on the provided assignment.
+
+        :param assignment: full or partial assignment for inputs.
+        :return: outputs dictionary with the obtained values.
+
+        `assignment` can be on any gate of the circuit.
+
+        """
+        assignment_dict: dict[str, GateState] = dict(assignment)
+        for _input in self._inputs:
+            assignment_dict.setdefault(_input, Undefined)
+
+        # Traverse this circuit in topological sorting from inputs to outputs.
+        for gate in self.top_sort(inverse=True):
+            if gate.gate_type == INPUT:
+                continue
+
+            assignment_dict[gate.label] = gate.operator(
+                *(assignment_dict[op] for op in gate.operands)
+            )
+
+        return assignment_dict
+
     def evaluate_circuit(
         self,
         assignment: dict[Label, GateState],
@@ -1194,7 +1222,10 @@ class Circuit(BooleanFunction):
         outputs: tp.Optional[tp.Sequence[Label]] = None,
     ) -> dict[Label, GateState]:
         """
-        Evaluate the circuit with the given input values and return full assignment.
+        Evaluate the circuit with the given partial assignment and return full
+        assignment.
+
+        Note: part unreachable from provided `outputs` will be `Undefined`.
 
         :param assignment: full or partial assignment for inputs.
         :param outputs: set of outputs which need to be evaluated. Those outputs will
@@ -1204,7 +1235,6 @@ class Circuit(BooleanFunction):
         `assignment` can be on any gate of the circuit.
 
         """
-
         assignment_dict: dict[str, GateState] = dict(assignment)
         for _input in self._inputs:
             assignment_dict.setdefault(_input, Undefined)

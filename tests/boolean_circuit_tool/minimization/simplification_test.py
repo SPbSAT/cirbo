@@ -197,12 +197,11 @@ expected_groups_4 = [['AND1', 'AND2'], ['OR1', 'OR2'], ['XOR1', 'XOR2']]
         (original_circuit_4, expected_groups_4),
     ],
 )
-@pytest.mark.skip(reason="need to be fixed")
 def test_find_equivalent_gates(original_circuit: Circuit, expected_groups):
     equivalent_groups = _find_equivalent_gates(original_circuit)
-    assert sorted(equivalent_groups) == sorted(
-        expected_groups
-    ), "Failed test on _find_equivalent_gates"
+    assert sorted(map(sorted, equivalent_groups)) == sorted(
+        map(sorted, expected_groups)
+    )
 
 
 # Test case 1 for _replace_equivalent_gates
@@ -236,13 +235,10 @@ expected_circuit_5.mark_as_output('XOR2')
         (original_circuit_5, expected_circuit_5),
     ],
 )
-@pytest.mark.skip(reason="need to be fixed")
 def test_replace_equivalent_gates(original_circuit: Circuit, expected_circuit: Circuit):
     equivalent_groups = _find_equivalent_gates(original_circuit)
     simplified_circuit = _replace_equivalent_gates(original_circuit, equivalent_groups)
-    assert are_circuits_isomorphic(
-        simplified_circuit, expected_circuit
-    ), "Failed test on _replace_equivalent_gates"
+    assert are_circuits_isomorphic(simplified_circuit, expected_circuit)
 
 
 # Test case 1 for merge_same_successors
@@ -319,7 +315,6 @@ expected_circuit_7.mark_as_output('OR1')
         (original_circuit_7, expected_circuit_7),
     ],
 )
-@pytest.mark.skip(reason="need to be fixed")
 def test_remove_identities(original_circuit: Circuit, expected_circuit: Circuit):
     simplified_circuit = remove_identities(original_circuit)
     assert are_circuits_isomorphic(

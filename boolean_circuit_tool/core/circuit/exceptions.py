@@ -45,7 +45,7 @@ class CircuitGateAlreadyExistsError(CircuitError):
 
 
 class CircuitIsCyclicalError(CircuitError):
-    """Error the circuit has a cycle."""
+    """Error that circuit has a cycle."""
 
     pass
 
