@@ -4,9 +4,10 @@ from boolean_circuit_tool.core.circuit import Circuit, Gate, gate
 from boolean_circuit_tool.minimization.simplification import (
     _find_equivalent_gates,
     _replace_equivalent_gates,
+    collapse_unary_operators,
     merge_same_successors,
     remove_identities,
-    remove_leaves_and_double_not,
+    remove_redundant_gates,
 )
 
 
@@ -30,31 +31,97 @@ def are_circuits_isomorphic(circuit1: Circuit, circuit2: Circuit) -> bool:
     return True
 
 
-# Test case 1 for remove_leaves_and_double_not
+def test_remove_redundant_gates():
+    original = Circuit()
+    original.add_inputs(['I1', 'I2', 'I3', 'I4'])
+    original.emplace_gate('AND1', gate.AND, ('I1', 'I2'))
+    original.emplace_gate('EX1', gate.NOT, ('AND1',))
+    original.emplace_gate('NOT1', gate.NOT, ('I1', 'I2'))
+    original.emplace_gate('EX2', gate.AND, ('NOT1', 'I3'))
+    original.emplace_gate('OUT1', gate.AND, ('NOT1', 'AND1'))
+    original.emplace_gate('OUT2', gate.NOT, ('I4',))
+    original.emplace_gate('EX3', gate.NOT, ('OUT2',))
+    original.set_outputs(['OUT1', 'OUT2'])
+
+    expected = Circuit()
+    expected.add_inputs(['I1', 'I2', 'I3', 'I4'])
+    expected.emplace_gate('AND1', gate.AND, ('I1', 'I2'))
+    expected.emplace_gate('NOT1', gate.NOT, ('I1', 'I2'))
+    expected.emplace_gate('OUT1', gate.AND, ('NOT1', 'AND1'))
+    expected.emplace_gate('OUT2', gate.NOT, ('I4',))
+    expected.set_outputs(['OUT1', 'OUT2'])
+
+    expected_no_inputs = Circuit()
+    expected_no_inputs.add_inputs(['I1', 'I2', 'I4'])
+    expected_no_inputs.emplace_gate('AND1', gate.AND, ('I1', 'I2'))
+    expected_no_inputs.emplace_gate('NOT1', gate.NOT, ('I1', 'I2'))
+    expected_no_inputs.emplace_gate('OUT1', gate.AND, ('NOT1', 'AND1'))
+    expected_no_inputs.emplace_gate('OUT2', gate.NOT, ('I4',))
+    expected_no_inputs.set_outputs(['OUT1', 'OUT2'])
+
+    simplified = remove_redundant_gates(original)
+    assert simplified == expected
+    simplified = remove_redundant_gates(original, allow_inputs_removal=True)
+    assert simplified == expected_no_inputs
+
+
+# Test case 1 for collapse_unary_operators:
+#   - output collapses
+#   - same outputs count as distinct.
+#   - odd Not doesn't collapse
+#   - even Not collapses (including LNOT, RNOT)
+#   - any IFF collapses (including LIFF, RIFF)
+#
 original_circuit_1 = Circuit()
 original_circuit_1.add_gate(Gate('input1', gate.INPUT))
 original_circuit_1.add_gate(Gate('input2', gate.INPUT))
 original_circuit_1.emplace_gate('AND1', gate.AND, ('input1', 'input2'))
+original_circuit_1.emplace_gate('AND2', gate.AND, ('input1', 'input2'))
 original_circuit_1.emplace_gate('NOT1', gate.NOT, ('AND1',))
 original_circuit_1.emplace_gate('NOT2', gate.NOT, ('NOT1',))
-original_circuit_1.emplace_gate('leaf1', gate.NOT, ('AND1',))
+original_circuit_1.mark_as_output('NOT2')
+original_circuit_1.emplace_gate('LNOT3', gate.LNOT, ('AND1', 'input1'))
 original_circuit_1.emplace_gate(
-    'leaf2',
-    gate.AND,
+    'RNOT4',
+    gate.RNOT,
     (
-        'leaf1',
         'input2',
+        'LNOT3',
     ),
 )
-original_circuit_1.mark_as_output('NOT2')
+original_circuit_1.mark_as_output('RNOT4')
+original_circuit_1.emplace_gate('NOT5', gate.NOT, ('AND1',))
+original_circuit_1.mark_as_output('NOT5')
+original_circuit_1.emplace_gate('IFF1', gate.IFF, ('AND2',))
+original_circuit_1.emplace_gate('IFF2', gate.IFF, ('IFF1',))
+original_circuit_1.mark_as_output('IFF2')
+original_circuit_1.emplace_gate('LIFF3', gate.LIFF, ('AND2', 'input1'))
+original_circuit_1.emplace_gate(
+    'RIFF4',
+    gate.RIFF,
+    (
+        'input2',
+        'LIFF3',
+    ),
+)
+original_circuit_1.mark_as_output('RIFF4')
+original_circuit_1.emplace_gate('IFF5', gate.IFF, ('AND2',))
+original_circuit_1.mark_as_output('IFF5')
 
 expected_circuit_1 = Circuit()
 expected_circuit_1.add_gate(Gate('input1', gate.INPUT))
 expected_circuit_1.add_gate(Gate('input2', gate.INPUT))
 expected_circuit_1.emplace_gate('AND1', gate.AND, ('input1', 'input2'))
+expected_circuit_1.emplace_gate('AND2', gate.AND, ('input1', 'input2'))
 expected_circuit_1.mark_as_output('AND1')
+expected_circuit_1.mark_as_output('AND1')
+expected_circuit_1.emplace_gate('NOT5', gate.NOT, ('AND1',))
+expected_circuit_1.mark_as_output('NOT5')
+expected_circuit_1.mark_as_output('AND2')
+expected_circuit_1.mark_as_output('AND2')
+expected_circuit_1.mark_as_output('AND2')
 
-# Test case 2 for remove_leaves_and_double_not
+# Test case 2 for collapse_unary_operators
 original_circuit_2 = Circuit()
 original_circuit_2.add_gate(Gate('input1', gate.INPUT))
 original_circuit_2.add_gate(Gate('input2', gate.INPUT))
@@ -84,13 +151,11 @@ expected_circuit_2.mark_as_output('AND2')
         (original_circuit_2, expected_circuit_2),
     ],
 )
-def test_remove_leaves_and_double_not(
-    original_circuit: Circuit, expected_circuit: Circuit
-):
-    simplified_circuit = remove_leaves_and_double_not(original_circuit)
-    assert are_circuits_isomorphic(
-        simplified_circuit, expected_circuit
-    ), "Failed test on remove_leaves_and_double_not"
+def test_collapse_unary_gates(original_circuit: Circuit, expected_circuit: Circuit):
+    simplified_circuit = remove_redundant_gates(
+        collapse_unary_operators(original_circuit)
+    )
+    assert simplified_circuit == expected_circuit
 
 
 # Test case 1 for _find_equivalent_gates
