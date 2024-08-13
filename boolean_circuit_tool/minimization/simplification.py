@@ -536,13 +536,10 @@ def cleanup(circuit: Circuit) -> Circuit:
 
     """
     return functools.reduce(
-        lambda _circ, _method: _method(circuit),  # type: ignore
+        lambda _circ, _method: _method(_circ),  # type: ignore
         [
-            remove_identities,
-            collapse_equivalent_gates,
             remove_redundant_gates,
             collapse_unary_operators,
-            remove_identities,
         ],
         circuit,
     )
