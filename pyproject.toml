@@ -119,7 +119,7 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*"]
+module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*", "graphviz.*"]
 
 
 [tool.pytest.ini_options]

@@ -6,7 +6,10 @@
 Python >=3.9 is used to cover all currently
 [maintained versions](https://devguide.python.org/versions/).
 
-1. Install dev version of `python3.9` (e.g. `sudo apt install python3.9-dev`)
+1. Install following packages using your package manager:
+   - dev version of `python3.9` and `python3.9-distutils` (e.g. `sudo apt install python3.9-dev`)
+   - `cmake` and suitable C++ compiler
+   - `graphviz` library.
 1. Init and update repository submodules `git submodule update --init --recursive`
 1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
 1. Build extensions locally by running `poetry build`

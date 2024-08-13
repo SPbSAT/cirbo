@@ -1545,15 +1545,15 @@ class Circuit(BooleanFunction):
             )
         ]
 
-    def draw(
+    def into_graphviz_digraph(
         self,
         *,
         draw_blocks: bool = False,
         draw_labels: bool = False,
         name: str = 'Circuit',
-    ) -> None:
+    ) -> graphviz.Digraph:
         """
-        Draw the circuit.
+        Convert circuit to graphviz.Digraph.
 
         :param draw_blocks: if draw_blocks == True circuit's block are highlighted with
             a square, otherwise not.
@@ -1561,16 +1561,105 @@ class Circuit(BooleanFunction):
             the gate is written, if draw_labels == False circuit node names is type of
             operator.
         :param name: name of graph.
+        :return: graph
 
         """
-        graph: graphviz.Digraph = self._convert_to_Digraph(
-            draw_blocks=draw_blocks,
-            draw_labels=draw_labels,
-            name=name,
-        )
-        graph.view()
+        _gate_type_to_name: dict[GateType, str] = {
+            NOT: u"\u00AC",
+            AND: u"\u2227",
+            NAND: u"\u00AC\u2227",
+            OR: u"\u2228",
+            NOR: u"\u00AC\u2228",
+            XOR: u"\u2295",
+            NXOR: u"\u00AC\u2295",
+            IFF: "IFF",
+            INPUT: "",
+        }
 
-    def save_drawing(
+        # Define node name formatting.
+        if draw_labels:
+
+            def _format_node_name(gate: Gate) -> str:
+                return f'{gate.label} {_gate_type_to_name[gate.gate_type]}'
+
+        else:
+
+            def _format_node_name(gate: Gate) -> str:
+                return f'{_gate_type_to_name[gate.gate_type]}'
+
+        graph: graphviz.Digraph = graphviz.Digraph(name)
+
+        # Add all circuit nodes to graphviz digraph.
+        for gate_label, gate in self._gates.items():
+            graph.node(
+                gate_label,
+                label=_format_node_name(gate),
+                shape='circle',
+            )
+            for operand in gate.operands:
+                graph.edge(operand, gate_label)
+
+        # Redraw inputs with different shape.
+        for _input in self._inputs:
+            graph.node(_input, label=_input, color='white')
+
+        # Redraw outputs with different shape.
+        for _output in self._outputs:
+            graph.node(_output, shape="doublecircle")
+
+        # Draw blocks as dot subgraphs if required.
+        if draw_blocks and len(self._blocks.values()) > 0:
+
+            nested_blocks: dict[Label, list[Label]] = collections.defaultdict(list)
+            nested_blocks_rev: dict[Label, list[Label]] = collections.defaultdict(list)
+            block_to_gates: dict[Label, set[Label]] = {}
+
+            for _block in self._blocks.values():
+                _block_gates = set(_block.gates)
+
+                # Calculate blocks nestness
+                for _other_block_label, _other_block_gates in block_to_gates.items():
+                    intersection = _block_gates & _other_block_gates
+                    if intersection:
+                        if (
+                            intersection != _block_gates
+                            and intersection != _other_block_gates
+                        ):
+                            raise OverlappingBlocksError(
+                                "Can't draw circuit with overlapping blocks. Either disable "
+                                "'draw_blocks' option, or provide another circuit."
+                            )
+                        elif intersection == _block_gates:
+                            nested_blocks[_other_block_label].append(_block.name)
+                            nested_blocks_rev[_block.name].append(_other_block_label)
+                        else:
+                            nested_blocks[_block.name].append(_other_block_label)
+                            nested_blocks_rev[_other_block_label].append(_block.name)
+
+                block_to_gates[_block.name] = _block_gates
+
+            # Function to draw nested subgraphs.
+            def _draw_subgraph(_sg, _block_label):
+                _sg.attr(color='blue')
+                for _gate in self.get_block(_block_label).gates:
+                    _sg.node(_gate)
+                _sg.attr(label=_block_label)
+                for _subblock in nested_blocks[_block_label]:
+                    with _sg.subgraph(name='cluster_' + _subblock) as _sbg:
+                        _draw_subgraph(_sbg, _subblock)
+
+            for block_label in self.blocks.keys():
+                dependencies = nested_blocks_rev[block_label]
+                if dependencies == []:
+                    with graph.subgraph(name='cluster_' + block_label) as sg:
+                        _draw_subgraph(sg, block_label)
+
+        graph.attr(label=name)
+        graph.attr(fontsize='20')
+
+        return graph
+
+    def render_graph(
         self,
         path: str,
         *,
@@ -1590,7 +1679,7 @@ class Circuit(BooleanFunction):
         :param name: name of graph.
 
         """
-        graph: graphviz.Digraph = self._convert_to_Digraph(
+        graph: graphviz.Digraph = self.into_graphviz_digraph(
             draw_blocks=draw_blocks,
             draw_labels=draw_labels,
             name=name,
@@ -1804,120 +1893,6 @@ class Circuit(BooleanFunction):
         for label in self._gates:
             if gate_states[label] == TraverseState.UNVISITED:
                 unvisited_hook(self.get_gate(label), gate_states)
-
-    def _convert_to_Digraph(
-        self,
-        *,
-        draw_blocks: bool = False,
-        draw_labels: bool = False,
-        name: str = 'Circuit',
-    ) -> graphviz.Digraph:
-        """
-        Convert circuit to graphviz.Digraph.
-
-        :param draw_blocks: if draw_blocks == True circuit's block are highlighted with
-            a square, otherwise not.
-        :param draw_labels: if draw_labels == True next to the operator type the name of
-            the gate is written, if draw_labels == False circuit node names is type of
-            operator.
-        :param name: name of graph.
-        :return: graph
-
-        """
-        _gate_type_to_name: dict[GateType, str] = {
-            NOT: u"\u00AC",
-            AND: u"\u2227",
-            NAND: u"\u00AC\u2227",
-            OR: u"\u2228",
-            NOR: u"\u00AC\u2228",
-            XOR: u"\u2295",
-            NXOR: u"\u00AC\u2295",
-            IFF: "IFF",
-            INPUT: "",
-        }
-
-        # Define node name formatting.
-        if draw_labels:
-
-            def _format_node_name(gate: Gate) -> str:
-                return f'{gate.label} {_gate_type_to_name[gate.gate_type]}'
-
-        else:
-
-            def _format_node_name(gate: Gate) -> str:
-                return f'{_gate_type_to_name[gate.gate_type]}'
-
-        graph: graphviz.Digraph = graphviz.Digraph(name)
-
-        # Add all circuit nodes to graphviz digraph.
-        for gate_label, gate in self._gates.items():
-            graph.node(
-                gate_label,
-                label=_format_node_name(gate),
-                shape='circle',
-            )
-            for operand in gate.operands:
-                graph.edge(operand, gate_label)
-
-        # Redraw inputs with different shape.
-        for _input in self._inputs:
-            graph.node(_input, label=_input, color='white')
-
-        # Redraw outputs with different shape.
-        for _output in self._outputs:
-            graph.node(_output, shape="doublecircle")
-
-        # Draw blocks as dot subgraphs if required.
-        if draw_blocks and len(self._blocks.values()) > 0:
-
-            nested_blocks: dict[Label, list[Label]] = collections.defaultdict(list)
-            nested_blocks_rev: dict[Label, list[Label]] = collections.defaultdict(list)
-            block_to_gates: dict[Label, set[Label]] = {}
-
-            for _block in self._blocks.values():
-                _block_gates = set(_block.gates)
-
-                # Calculate blocks nestness
-                for _other_block_label, _other_block_gates in block_to_gates.items():
-                    intersection = _block_gates & _other_block_gates
-                    if intersection:
-                        if (
-                            intersection != _block_gates
-                            and intersection != _other_block_gates
-                        ):
-                            raise OverlappingBlocksError(
-                                "Can't draw circuit with overlapping blocks. Either disable "
-                                "'draw_blocks' option, or provide another circuit."
-                            )
-                        elif intersection == _block_gates:
-                            nested_blocks[_other_block_label].append(_block.name)
-                            nested_blocks_rev[_block.name].append(_other_block_label)
-                        else:
-                            nested_blocks[_block.name].append(_other_block_label)
-                            nested_blocks_rev[_other_block_label].append(_block.name)
-
-                block_to_gates[_block.name] = _block_gates
-
-            # Function to draw nested subgraphs.
-            def _draw_subgraph(_sg, _block_label):
-                _sg.attr(color='blue')
-                for _gate in self.get_block(_block_label).gates:
-                    _sg.node(_gate)
-                _sg.attr(label=_block_label)
-                for _subblock in nested_blocks[_block_label]:
-                    with _sg.subgraph(name='cluster_' + _subblock) as _sbg:
-                        _draw_subgraph(_sbg, _subblock)
-
-            for block_label in self.blocks.keys():
-                dependencies = nested_blocks_rev[block_label]
-                if dependencies == []:
-                    with graph.subgraph(name='cluster_' + block_label) as sg:
-                        _draw_subgraph(sg, block_label)
-
-        graph.attr(label=name)
-        graph.attr(fontsize='20')
-
-        return graph
 
     def __copy__(self):
         new_circuit = Circuit()
