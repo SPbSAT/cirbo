@@ -12,7 +12,12 @@ from boolean_circuit_tool.core.boolean_function import (
     RawTruthTableModel,
 )
 from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
+from boolean_circuit_tool.core.exceptions import BadCallableError
 from boolean_circuit_tool.core.logic import DontCare, TriValue
+from boolean_circuit_tool.core.utils import (
+    canonical_index_to_input,
+    input_to_canonical_index,
+)
 
 
 __all__ = [
@@ -23,12 +28,6 @@ __all__ = [
     'FunctionModelType',
     'FunctionModelTypeTs',
 ]
-
-from boolean_circuit_tool.core.utils import (
-    canonical_index_to_input,
-    input_to_canonical_index,
-)
-
 FunctionModelType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[TriValue]]
 FunctionType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[bool]]
 
@@ -62,10 +61,16 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
             return func(*args)
 
         s = inspect.signature(func)
-        input_size = sum(
-            v.kind == v.POSITIONAL_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD
-            for v in s.parameters.values()
-        )
+        input_size = len(s.parameters)
+        for param in s.parameters.values():
+            if (param.kind != param.POSITIONAL_ONLY) and (
+                param.kind != param.POSITIONAL_OR_KEYWORD
+            ):
+                raise BadCallableError(
+                    f"Provided callable {func} has unsupported "
+                    f"parameters kind: {param.kind}."
+                )
+
         return PyFunctionModel(f, input_size=input_size, output_size=output_size)
 
     def __init__(
@@ -215,8 +220,8 @@ class PyFunction(BooleanFunction):
     ):
         def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             assert len(args) == 2 * input_int_len
-            args1 = args[: len(args) // 2]
-            args2 = args[len(args) // 2 :]
+            args1 = args[:input_int_len]
+            args2 = args[input_int_len:]
             if not big_endian:
                 args1 = args1[::-1]
                 args2 = args2[::-1]
@@ -246,15 +251,21 @@ class PyFunction(BooleanFunction):
             empty `func` evaluation during this object initialization.
 
         """
-        s = inspect.signature(func)
-        input_size = sum(
-            v.kind == v.POSITIONAL_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD
-            for v in s.parameters.values()
-        )
 
         @functools.wraps(func)
         def f(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
             return func(*args)
+
+        s = inspect.signature(func)
+        input_size = len(s.parameters)
+        for param in s.parameters.values():
+            if (param.kind != param.POSITIONAL_ONLY) and (
+                param.kind != param.POSITIONAL_OR_KEYWORD
+            ):
+                raise BadCallableError(
+                    f"Provided callable {func} has unsupported "
+                    f"parameters kind: {param.kind}."
+                )
 
         return PyFunction(f, input_size=input_size, output_size=output_size)
 
