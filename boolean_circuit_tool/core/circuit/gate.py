@@ -151,6 +151,8 @@ class Gate:
     def format_gate(self):
         if self.gate_type == INPUT:
             return f"INPUT({self._label})"
+        if self.gate_type == IFF:
+            return f"{self._label} = BUFF({', '.join(self._operands)})"
         return f"{self._label} = {self.gate_type.name}({', '.join(self._operands)})"
 
     def __eq__(self, value: object) -> bool:
