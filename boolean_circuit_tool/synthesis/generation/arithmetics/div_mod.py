@@ -3,8 +3,10 @@ import typing as tp
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
+    generate_list_of_input_labels,
     PLACEHOLDER_STR,
     validate_equal_sizes,
+    validate_even,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
     add_subtract_with_compare,
@@ -32,9 +34,9 @@ def generate_div_mod(
 
     """
 
-    assert inp_len % 2 == 0
+    validate_even(inp_len)
     n = inp_len // 2
-    input_labels = [f'x{i}' for i in range(2 * n)]
+    input_labels = generate_list_of_input_labels(inp_len)
     a_labels = input_labels[:n]
     b_labels = input_labels[n:]
 
@@ -43,17 +45,11 @@ def generate_div_mod(
         b_labels = b_labels[::-1]
 
     circuit = Circuit.bare_circuit_with_labels(a_labels + b_labels)
-    div, mod = add_div_mod(circuit, a_labels, b_labels, big_endian=big_endian)
-    div = list(div)
-    mod = list(mod)
+    div, mod = add_div_mod(circuit, a_labels, b_labels)
     if big_endian:
         div = div[::-1]
         mod = mod[::-1]
-
-    for i in div:
-        circuit.mark_as_output(i)
-    for i in mod:
-        circuit.mark_as_output(i)
+    circuit.set_inputs(div + mod)
     return circuit
 
 

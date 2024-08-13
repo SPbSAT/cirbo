@@ -2,7 +2,10 @@ import typing as tp
 import uuid
 
 from boolean_circuit_tool.core.circuit import Circuit, gate
-from boolean_circuit_tool.synthesis.generation.exceptions import DifferentShapesError
+from boolean_circuit_tool.synthesis.generation.exceptions import (
+    BadShapesError,
+    DifferentShapesError,
+)
 
 
 __all__ = [
@@ -41,6 +44,12 @@ def validate_equal_sizes(
         )
 
 
+def validate_even(size: int):
+    """Raises if size (usually in generation) are not even."""
+    if size % 2 != 0:
+        raise BadShapesError("Generation size of this function must be even.")
+
+
 def generate_random_label(circuit: Circuit) -> gate.Label:
     """
     Utility to generate random unoccupied name for new gate in `circuit`.
@@ -53,6 +62,17 @@ def generate_random_label(circuit: Circuit) -> gate.Label:
     while circuit.has_gate(_name):
         _name = "new_" + uuid.uuid4().hex
     return _name
+
+
+def generate_list_of_input_labels(size: int) -> list[gate.Label]:
+    """
+    Utility to generate input labels for new circuit.
+
+    :param size: number of inputs for we must choose a label.
+    :return: list of gate names.
+
+    """
+    return [f'input{i}' for i in range(size)]
 
 
 binary_tt_to_type = {
