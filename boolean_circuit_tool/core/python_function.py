@@ -197,10 +197,11 @@ class PyFunction(BooleanFunction):
             if not big_endian:
                 args = args[::-1]
             index = input_to_canonical_index(args)
-            result = func(index)
+            number = func(index)
+            result = canonical_index_to_input(number, output_size)
             if not big_endian:
                 result = result[::-1]
-            return canonical_index_to_input(result, output_size)
+            return result
 
         return PyFunction(func=_func, input_size=input_size)
 
@@ -220,10 +221,11 @@ class PyFunction(BooleanFunction):
                 args2 = args2[::-1]
             index1 = input_to_canonical_index(args1)
             index2 = input_to_canonical_index(args2)
-            result = func(index1, index2)
+            number = func(index1, index2)
+            result = canonical_index_to_input(number, output_size)
             if not big_endian:
                 result = result[::-1]
-            return canonical_index_to_input(result, output_size)
+            return result
 
         return PyFunction(func=_func, input_size=2 * input_size)
 
