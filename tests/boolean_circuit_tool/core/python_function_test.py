@@ -9,7 +9,10 @@ from boolean_circuit_tool.core.python_function import (
     PyFunction,
     PyFunctionModel,
 )
-from boolean_circuit_tool.core.utils import canonical_index_to_input
+from boolean_circuit_tool.core.utils import (
+    canonical_index_to_input,
+    input_to_canonical_index,
+)
 
 
 def f_max(x1: bool, x2: bool, x3: bool) -> tp.Sequence[bool]:
@@ -196,10 +199,61 @@ class TestPyFunction:
             (f_sum, 3, 2),
         ],
     )
-    def test_sizes(self, function: FunctionType, input_size: int, output_size: int):
-        bf = PyFunction(function)
+    def test_sizes(self, function, input_size, output_size):
+        bf = PyFunction.from_positional(function)
         assert bf.input_size == input_size
         assert bf.output_size == output_size
+
+        def function_from_sequence(args):
+            return function(*args)
+
+        bf = PyFunction(function_from_sequence, input_size)
+        assert bf.input_size == input_size
+        assert bf.output_size == output_size
+
+    @pytest.mark.parametrize(
+        "a, b",
+        [
+            (1, 1),
+            (2, 4),
+            (3, 9),
+            (4, 16),
+            (5, 25),
+            (6, 35),
+            (7, 49),
+        ],
+    )
+    def test_from_int_unary_func(self, a, b):
+        input_size = 3
+        output_size = 6
+        py_function = PyFunction.from_int_unary_func(
+            lambda x: x**2, input_size, output_size, big_endian=True
+        )
+        args_a = canonical_index_to_input(a, input_size)
+        values = py_function.evaluate(args_a)
+        b_val = input_to_canonical_index(values)
+        assert b == b_val
+
+    @pytest.mark.parametrize(
+        "a, b, c",
+        [
+            (1, 2, 3),
+            (3, 4, 7),
+            (5, 3, 8),
+            (6, 7, 13),
+        ],
+    )
+    def test_from_int_binary_func(self, a, b, c):
+        input_size = 3
+        output_size = 5
+        py_function = PyFunction.from_int_binary_func(
+            lambda x, y: x + y, input_size, output_size, big_endian=True
+        )
+        args_a = canonical_index_to_input(a, input_size)
+        args_b = canonical_index_to_input(b, input_size)
+        values = py_function.evaluate(list(args_a) + list(args_b))
+        c_val = input_to_canonical_index(values)
+        assert c == c_val
 
     @pytest.mark.parametrize(
         "inputs, value",

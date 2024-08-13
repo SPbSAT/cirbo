@@ -24,6 +24,11 @@ __all__ = [
     'FunctionModelTypeTs',
 ]
 
+from boolean_circuit_tool.core.utils import (
+    canonical_index_to_input,
+    input_to_canonical_index,
+)
+
 FunctionModelType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[TriValue]]
 FunctionType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[bool]]
 
@@ -58,7 +63,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
 
         s = inspect.signature(func)
         input_size = sum(
-            v.kind == v.KEYWORD_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD
+            v.kind == v.POSITIONAL_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD
             for v in s.parameters.values()
         )
         return PyFunctionModel(f, input_size=input_size, output_size=output_size)
@@ -184,32 +189,32 @@ class PyFunction(BooleanFunction):
     @staticmethod
     def from_int_unary_func(
         func: tp.Callable[[int], int],
-        input_size: int,
-        output_size: int,
+        input_int_len: int,
+        output_int_len: int,
         big_endian: bool = False,
     ):
         def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
-            assert len(args) == input_size
+            assert len(args) == input_int_len
             if not big_endian:
                 args = args[::-1]
             index = input_to_canonical_index(args)
             number = func(index)
-            result = canonical_index_to_input(number, output_size)
+            result = canonical_index_to_input(number, output_int_len)
             if not big_endian:
                 result = result[::-1]
             return result
 
-        return PyFunction(func=_func, input_size=input_size)
+        return PyFunction(func=_func, input_size=input_int_len)
 
     @staticmethod
     def from_int_binary_func(
         func: tp.Callable[[int, int], int],
-        input_size: int,
-        output_size: int,
+        input_int_len: int,
+        output_int_len: int,
         big_endian: bool = False,
     ):
         def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
-            assert len(args) == 2 * input_size
+            assert len(args) == 2 * input_int_len
             args1 = args[: len(args) // 2]
             args2 = args[len(args) // 2 :]
             if not big_endian:
@@ -218,12 +223,12 @@ class PyFunction(BooleanFunction):
             index1 = input_to_canonical_index(args1)
             index2 = input_to_canonical_index(args2)
             number = func(index1, index2)
-            result = canonical_index_to_input(number, output_size)
+            result = canonical_index_to_input(number, output_int_len)
             if not big_endian:
                 result = result[::-1]
             return result
 
-        return PyFunction(func=_func, input_size=2 * input_size)
+        return PyFunction(func=_func, input_size=2 * input_int_len)
 
     @staticmethod
     def from_positional(
@@ -243,7 +248,7 @@ class PyFunction(BooleanFunction):
         """
         s = inspect.signature(func)
         input_size = sum(
-            v.kind == v.KEYWORD_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD
+            v.kind == v.POSITIONAL_ONLY or v.kind == v.POSITIONAL_OR_KEYWORD
             for v in s.parameters.values()
         )
 
