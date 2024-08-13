@@ -27,6 +27,7 @@ from .summation import (
     add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_with_shift,
+    generate_sum_n_bits,
 )
 
 
@@ -55,6 +56,7 @@ __all__ = [
     'add_sub_two_numbers',
     'add_subtract_with_compare',
     # summation.py
+    'generate_sum_n_bits',
     'add_sum2',
     'add_sum3',
     'add_sum_n_bits',

@@ -14,6 +14,7 @@ from boolean_circuit_tool.synthesis.generation.helpers import GenerationBasis
 
 
 __all__ = [
+    "generate_sum_n_bits",
     "add_sum2",
     "add_sum3",
     "add_sum_n_bits",
@@ -258,6 +259,32 @@ def add_sum3_aig(
     g6 = add_gate_from_tt(circuit, g4, g5, '0010')
     g7 = add_gate_from_tt(circuit, g2, g5, '0111')
     return list([g6, g7])
+
+
+def generate_sum_n_bits(
+    n: int,
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.ALL,
+    big_endian: bool = False,
+) -> Circuit:
+    """
+    Generates a circuit that have sum of n bits in result.
+
+    :param n: number of input bits (must be even)
+    :param basis: in which basis should generated function lie. Supported [ALL, AIG].
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+
+    """
+    circuit = Circuit.bare_circuit(n)
+    res = add_sum_n_bits(
+        circuit,
+        circuit.inputs,
+        basis=basis,
+        big_endian=big_endian,
+    )
+    circuit.set_outputs(res)
+    return circuit
 
 
 def add_sum_n_bits(

@@ -3,7 +3,6 @@ import typing as tp
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
-    generate_list_of_input_labels,
     PLACEHOLDER_STR,
     validate_equal_sizes,
     validate_even,
@@ -32,12 +31,11 @@ def generate_div_mod(inp_len: int, *, big_endian: bool = False) -> Circuit:
     """
 
     validate_even(inp_len)
-    input_labels = generate_list_of_input_labels(inp_len)
-    circuit = Circuit.bare_circuit_with_labels(input_labels)
+    circuit = Circuit.bare_circuit(inp_len)
     div, mod = add_div_mod(
         circuit,
-        input_labels[: (inp_len // 2)],
-        input_labels[(inp_len // 2) :],
+        circuit.inputs[: (inp_len // 2)],
+        circuit.inputs[(inp_len // 2) :],
         big_endian=big_endian,
     )
     circuit.set_outputs(div + mod)

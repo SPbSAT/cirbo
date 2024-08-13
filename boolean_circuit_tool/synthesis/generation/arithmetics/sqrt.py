@@ -3,7 +3,6 @@ import typing as tp
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
-    generate_list_of_input_labels,
     reverse_if_big_endian,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
@@ -33,11 +32,10 @@ def generate_sqrt(
         format
 
     """
-    input_labels = generate_list_of_input_labels(inp_len)
-    circuit = Circuit.bare_circuit_with_labels(input_labels)
+    circuit = Circuit.bare_circuit(inp_len)
     res = add_sqrt(
         circuit,
-        input_labels,
+        circuit.inputs,
         big_endian=big_endian,
     )
     circuit.set_outputs(res)
