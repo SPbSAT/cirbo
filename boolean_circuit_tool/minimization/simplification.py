@@ -37,8 +37,8 @@ from boolean_circuit_tool.core.circuit.gate import (
 __all__ = [
     'remove_redundant_gates',
     'collapse_unary_operators',
-    'delete_equivalent_gates',
-    'merge_same_successors',
+    'collapse_equivalent_gates',
+    'collapse_equivalent_gates_sparse',
     'remove_identities',
     'cleanup',
 ]
@@ -272,10 +272,13 @@ def _replace_equivalent_gates(
     new_circuit = Circuit()
 
     for group in equivalent_groups:
-        if len(group) > 1:
-            keep = group[0]
-            for gate_to_replace in group[1:]:
-                replacement_map[gate_to_replace] = keep
+        if len(group) <= 1:
+            continue
+
+        _group_iter = iter(group)
+        keep = next(_group_iter)
+        for gate_to_replace in _group_iter:
+            replacement_map[gate_to_replace] = keep
 
     for gate_label, gate in circuit.gates.items():
         new_gate_label = replacement_map.get(gate_label, gate_label)
@@ -287,20 +290,25 @@ def _replace_equivalent_gates(
             new_gate = Gate(new_gate_label, gate.gate_type, new_operands)
             new_circuit.add_gate(new_gate)
 
-        if gate_label in circuit.outputs:
-            if new_gate_label not in new_circuit.outputs:
-                new_circuit.mark_as_output(new_gate_label)
+    # preserve original order of outputs.
+    new_circuit.set_outputs(
+        [
+            replacement_map.get(output_label, output_label)
+            for output_label in circuit.outputs
+        ]
+    )
 
     return new_circuit
 
 
-def delete_equivalent_gates(circuit: Circuit) -> Circuit:
+def collapse_equivalent_gates(circuit: Circuit) -> Circuit:
     """
     Finds groups of equivalent gates using the full truth table comparison and replaces
     them with a single gate, updating all the references to the old ones.
 
     Warning: the execution time grows exponentially as the number of inputs increases.
-    For circuits with more than 20 inputs it is recommended to use merge_same_successors().
+    For circuits with more than 20 inputs it is recommended to use alternative
+    `collapse_equivalent_gates_sparse` methods.
 
     :param circuit: the original circuit to be simplified
     :return: new simplified version of the circuit
@@ -310,7 +318,11 @@ def delete_equivalent_gates(circuit: Circuit) -> Circuit:
     return _replace_equivalent_gates(circuit, equivalent_gate_groups)
 
 
-def merge_same_successors(circuit: Circuit, num_samples: int = 1000) -> Circuit:
+def collapse_equivalent_gates_sparse(
+    circuit: Circuit,
+    *,
+    num_samples: int = 1000,
+) -> Circuit:
     """
     Simplifies the circuit by first grouping gates based on partial truth tables using
     random input samples, then merging gates with the same operation and operands.
@@ -328,7 +340,7 @@ def merge_same_successors(circuit: Circuit, num_samples: int = 1000) -> Circuit:
         assignment = {
             input_label: value for input_label, value in zip(circuit.inputs, inputs)
         }
-        gate_values = circuit.evaluate_circuit(assignment)
+        gate_values = circuit.evaluate_full_circuit(assignment)
         return {gate: gate_values[gate] for gate in circuit.gates}
 
     def group_gates_by_partial_truth_tables(circuit, num_samples):
@@ -527,7 +539,7 @@ def cleanup(circuit: Circuit) -> Circuit:
         lambda _circ, _method: _method(circuit),  # type: ignore
         [
             remove_identities,
-            delete_equivalent_gates,
+            collapse_equivalent_gates,
             remove_redundant_gates,
             collapse_unary_operators,
             remove_identities,

@@ -4,8 +4,8 @@ from boolean_circuit_tool.core.circuit import Circuit, Gate, gate
 from boolean_circuit_tool.minimization.simplification import (
     _find_equivalent_gates,
     _replace_equivalent_gates,
+    collapse_equivalent_gates_sparse,
     collapse_unary_operators,
-    merge_same_successors,
     remove_identities,
     remove_redundant_gates,
 )
@@ -241,7 +241,7 @@ def test_replace_equivalent_gates(original_circuit: Circuit, expected_circuit: C
     assert are_circuits_isomorphic(simplified_circuit, expected_circuit)
 
 
-# Test case 1 for merge_same_successors
+# Test case 1 for collapse_equivalent_gates_sparse
 original_circuit_6 = Circuit()
 original_circuit_6.add_gate(Gate('input1', gate.INPUT))
 original_circuit_6.add_gate(Gate('input2', gate.INPUT))
@@ -272,12 +272,13 @@ expected_circuit_6.mark_as_output('XOR2')
         (original_circuit_6, expected_circuit_6),
     ],
 )
-@pytest.mark.skip(reason="need to be fixed")
-def test_merge_same_successors(original_circuit: Circuit, expected_circuit: Circuit):
-    simplified_circuit = merge_same_successors(original_circuit)
+def test_collapse_equivalent_gates_sparse(
+    original_circuit: Circuit, expected_circuit: Circuit
+):
+    simplified_circuit = collapse_equivalent_gates_sparse(original_circuit)
     assert are_circuits_isomorphic(
         simplified_circuit, expected_circuit
-    ), "Failed test on merge_same_successors"
+    ), "Failed test on collapse_equivalent_gates_sparse"
 
 
 # Test case 1 for remove_identities
