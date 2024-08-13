@@ -1,5 +1,3 @@
-import io
-
 import pytest
 
 # Package can be compiled without ABC extension when
@@ -11,7 +9,6 @@ except ImportError:
     pass
 
 from boolean_circuit_tool.core.circuit import AND, Circuit, Gate, INPUT, NOT, OR
-from boolean_circuit_tool.core.parser.bench import BenchToCircuit
 
 ckt1 = Circuit()
 ckt1.add_gate(Gate('x', INPUT))
@@ -61,9 +58,7 @@ def test_run_abc_commands():
 def test_abc_dc2(circuit: Circuit, expected_size: int):
     command = "strash; dc2"
     simp_ckt_str = run_abc_commands(circuit.format_circuit(), command)
-    _parser = BenchToCircuit()
-    with io.StringIO(simp_ckt_str) as file:
-        simp_ckt = _parser.convert_to_circuit(file)
+    simp_ckt = Circuit.from_bench_string(simp_ckt_str)
     assert simp_ckt.get_truth_table() == circuit.get_truth_table()
     assert simp_ckt.gates_number() == expected_size
 
@@ -73,9 +68,7 @@ def test_abc_dc2(circuit: Circuit, expected_size: int):
 def test_abc_fraig(circuit: Circuit, expected_size: int):
     command = "strash; fraig"
     simp_ckt_str = run_abc_commands(circuit.format_circuit(), command)
-    _parser = BenchToCircuit()
-    with io.StringIO(simp_ckt_str) as file:
-        simp_ckt = _parser.convert_to_circuit(file)
+    simp_ckt = Circuit.from_bench_string(simp_ckt_str)
     assert simp_ckt.get_truth_table() == circuit.get_truth_table()
     assert simp_ckt.gates_number() == expected_size
 
@@ -85,9 +78,7 @@ def test_abc_fraig(circuit: Circuit, expected_size: int):
 def test_abc_rewrite(circuit: Circuit, expected_size: int):
     command = "strash; rewrite"
     simp_ckt_str = run_abc_commands(circuit.format_circuit(), command)
-    _parser = BenchToCircuit()
-    with io.StringIO(simp_ckt_str) as file:
-        simp_ckt = _parser.convert_to_circuit(file)
+    simp_ckt = Circuit.from_bench_string(simp_ckt_str)
     assert simp_ckt.get_truth_table() == circuit.get_truth_table()
     assert simp_ckt.gates_number() == expected_size
 
@@ -97,8 +88,6 @@ def test_abc_rewrite(circuit: Circuit, expected_size: int):
 def test_abc_simplify(circuit: Circuit, expected_size: int):
     command = "strash; dc2; drw; rewrite; refactor; resub"
     simp_ckt_str = run_abc_commands(circuit.format_circuit(), command)
-    _parser = BenchToCircuit()
-    with io.StringIO(simp_ckt_str) as file:
-        simp_ckt = _parser.convert_to_circuit(file)
+    simp_ckt = Circuit.from_bench_string(simp_ckt_str)
     assert simp_ckt.get_truth_table() == circuit.get_truth_table()
     assert simp_ckt.gates_number() == expected_size
