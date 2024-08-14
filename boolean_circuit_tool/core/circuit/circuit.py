@@ -1920,7 +1920,6 @@ class Circuit(Function):
         """
         View the circuit as a graph.
 
-        :param path: path where you want to save the drawing.
         :param draw_blocks: if draw_blocks == True circuit's block are highlighted with
             a square, otherwise not.
         :param draw_labels: if draw_labels == True next to the operator type the name of
