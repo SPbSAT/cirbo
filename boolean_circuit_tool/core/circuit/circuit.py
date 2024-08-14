@@ -827,7 +827,7 @@ class Circuit(Function):
 
         return self
 
-    def left_connect_circuit(
+    def connect_left(
         self,
         other: tp_ext.Self,
         this_connectors: tp.Sequence[gate.Label],
@@ -853,7 +853,6 @@ class Circuit(Function):
         :return: this circuit after modification
 
         """
-
         return self.connect_circuit(
             other,
             this_connectors,
@@ -863,7 +862,7 @@ class Circuit(Function):
             add_prefix=add_prefix,
         )
 
-    def right_connect_circuit(
+    def connect_right(
         self,
         other: tp_ext.Self,
         other_connectors: tp.Sequence[gate.Label],
@@ -889,11 +888,41 @@ class Circuit(Function):
         :return: this circuit after modification
 
         """
-
         return self.connect_circuit(
             other,
             self.inputs,
             other_connectors,
+            right_connect=True,
+            name=name,
+            add_prefix=add_prefix,
+        )
+
+    def connect_inputs(
+        self,
+        other: tp_ext.Self,
+        *,
+        name: gate.Label = '',
+        add_prefix: bool = True,
+    ) -> tp_ext.Self:
+        """
+        Connecting a new circuit (`other`) to the base one, where inputs from the new
+        circuit will be connecting to inputs from base circuit. All outputs of the new
+        circuit wil be added to the outputs of the base circuit.
+
+        :param other: a new circuit that should expand the basic one
+        :param name: new block's name. If `name` is an empty string, then
+            no new block is created, and the gates are added to the circuit without a prefix
+        :param add_prefix: If add_prefix == False, than the gates are added to the circuit
+            without a prefix, and it doesn't matter if `name` is an empty string or
+            not. If add_prefix == True, the gates are added to the circuit with a prefix only
+            if `name` is not an empty string
+        :return: this circuit after modification
+
+        """
+        return self.connect_circuit(
+            other,
+            self.inputs,
+            other.inputs,
             right_connect=True,
             name=name,
             add_prefix=add_prefix,
@@ -1642,7 +1671,7 @@ class Circuit(Function):
         draw_labels: bool = False,
         name_graph: str = '',
         fontsize: str = '20',
-        change_labels: bool = False,
+        autorename_labels: bool = False,
         as_bench: bool = False,
     ) -> graphviz.Digraph:
         """
@@ -1655,7 +1684,7 @@ class Circuit(Function):
             operator.
         :param name_graph: name of graph.
         :param fontsize: fontsize for label of graph.
-        :param change_labels: replace gates' labels with `x_{i}`, where `i` is the
+        :param autorename_labels: replace gates' labels with `x_{i}`, where `i` is the
             ordinal number of the gate in the circuit (`circuit.gates`)
         :param as_bench: draw the circuit in bench format
         :return: graph
@@ -1688,7 +1717,7 @@ class Circuit(Function):
         if as_bench:
             circuit.into_bench()
 
-        if change_labels:
+        if autorename_labels:
             labels = {
                 _gate_label: f'x_{i}' for i, _gate_label in enumerate(circuit.gates)
             }
@@ -1823,7 +1852,7 @@ class Circuit(Function):
                     ]:
                         continue
                     _sg.node(_gate)
-                _sg.attr(label=_block_label, fontcolor='blue')
+                _sg.attr(label=_block_label, fontcolor='blue', fontsize='10')
                 for _subblock in nested_blocks[_block_label]:
                     with _sg.subgraph(name='cluster_' + _subblock) as _sbg:
                         _draw_subgraph(_sbg, _subblock)
@@ -1846,9 +1875,9 @@ class Circuit(Function):
         *,
         draw_blocks: bool = True,
         draw_labels: bool = False,
-        name_graph: str = 'Circuit',
+        name_graph: str = '',
         fontsize: str = '20',
-        change_labels: bool = False,
+        autorename_labels: bool = False,
         as_bench: bool = False,
     ) -> None:
         """
@@ -1862,7 +1891,7 @@ class Circuit(Function):
             operator.
         :param name_graph: name of graph.
         :param fontsize: fontsize for label of graph.
-        :param change_labels: replace gates' labels with `x_{i}`, where `i` is the
+        :param autorename_labels: replace gates' labels with `x_{i}`, where `i` is the
             ordinal number of the gate in the circuit (`circuit.gates`).
         :param as_bench: draw the circuit in bench format.
         :param fontsize: fontsize for label of graph.
@@ -1873,10 +1902,47 @@ class Circuit(Function):
             draw_labels=draw_labels,
             name_graph=name_graph,
             fontsize=fontsize,
-            change_labels=change_labels,
+            autorename_labels=autorename_labels,
             as_bench=as_bench,
         )
         graph.render(path)
+
+    def view_graph(
+        self,
+        *,
+        draw_blocks: bool = True,
+        draw_labels: bool = False,
+        name_graph: str = '',
+        fontsize: str = '20',
+        autorename_labels: bool = False,
+        as_bench: bool = False,
+    ) -> None:
+        """
+        View the circuit as a graph.
+
+        :param path: path where you want to save the drawing.
+        :param draw_blocks: if draw_blocks == True circuit's block are highlighted with
+            a square, otherwise not.
+        :param draw_labels: if draw_labels == True next to the operator type the name of
+            the gate is written, if draw_labels == False circuit node names is type of
+            operator.
+        :param name_graph: name of graph.
+        :param fontsize: fontsize for label of graph.
+        :param autorename_labels: replace gates' labels with `x_{i}`, where `i` is the
+            ordinal number of the gate in the circuit (`circuit.gates`).
+        :param as_bench: draw the circuit in bench format.
+        :param fontsize: fontsize for label of graph.
+
+        """
+        graph: graphviz.Digraph = self.into_graphviz_digraph(
+            draw_blocks=draw_blocks,
+            draw_labels=draw_labels,
+            name_graph=name_graph,
+            fontsize=fontsize,
+            autorename_labels=autorename_labels,
+            as_bench=as_bench,
+        )
+        graph.view()
 
     def save_to_file(self, path: str) -> None:
         """

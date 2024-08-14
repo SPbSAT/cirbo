@@ -401,7 +401,7 @@ def test_block():
 
     # this_connectors=mix
     manipulateC2 = copy.copy(C2)
-    manipulateC2.left_connect_circuit(C3, ['B', 'D', 'F'], name='C3')
+    manipulateC2.connect_left(C3, ['B', 'D', 'F'], name='C3')
     assert manipulateC2.gates == {
         'A': Gate('A', INPUT),
         'B': Gate('B', INPUT),
@@ -470,9 +470,7 @@ def test_block():
     manipulateC6 = copy.copy(C0)
     manipulateC6.make_block_from_slice('inp', C0.inputs, C0.inputs)
     assert manipulateC6.get_block('inp').gates == []
-    manipulateC6.left_connect_circuit(
-        C1, manipulateC6.get_block('inp').inputs, name='C1'
-    )
+    manipulateC6.connect_left(C1, manipulateC6.get_block('inp').inputs, name='C1')
     assert manipulateC6.gates == {
         'A': Gate('A', INPUT),
         'B': Gate('B', INPUT),
@@ -521,9 +519,9 @@ def test_block():
     assert manipulateC8.outputs == ['C', 'C1@C']
 
     with pytest.raises(CircuitValidationError):
-        manipulateC8.right_connect_circuit(manipulateC6, manipulateC6.inputs)
+        manipulateC8.connect_right(manipulateC6, manipulateC6.inputs)
 
-    manipulateC8.right_connect_circuit(manipulateC6, manipulateC6.inputs, name='2')
+    manipulateC8.connect_right(manipulateC6, manipulateC6.inputs, name='2')
     assert manipulateC8.gates == {
         '1@A': Gate('1@A', INPUT),
         '1@B': Gate('1@B', INPUT),
