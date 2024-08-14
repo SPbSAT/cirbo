@@ -21,8 +21,8 @@ __all__ = [
 ]
 
 if tp.TYPE_CHECKING:
-    from boolean_circuit_tool.core.circuit.circuit import Block, Circuit, Gate
-    from boolean_circuit_tool.core.circuit.gate import Label
+    from boolean_circuit_tool.core.circuit.circuit import Block, Circuit
+    from boolean_circuit_tool.core.circuit.gate import Gate, Label
 
 
 def check_gates_exist(gates: tp.Sequence['Label'], circuit: 'Circuit') -> None:
