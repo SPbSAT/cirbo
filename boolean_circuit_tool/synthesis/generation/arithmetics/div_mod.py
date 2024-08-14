@@ -13,13 +13,39 @@ from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
 
 __all__ = [
     'add_div_mod',
+    'generate_div_mod',
 ]
+
+
+def generate_div_mod(n: int, *, big_endian: bool = False) -> Circuit:
+    """
+    Generates a circuit that have div and mod two numbers (one number is first n bits,
+    other is second n bits) in result.
+
+    :param n: the number of bits in each number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: circuit that count div and mod.
+
+    """
+
+    circuit = Circuit.bare_circuit(2 * n)
+    div, mod = add_div_mod(
+        circuit,
+        circuit.inputs[:n],
+        circuit.inputs[n:],
+        big_endian=big_endian,
+    )
+    circuit.set_outputs(div + mod)
+    return circuit
 
 
 def add_div_mod(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False
 ) -> tuple[list[gate.Label], list[gate.Label]]:
     """
     Function make div two integers with equal size.
@@ -27,11 +53,16 @@ def add_div_mod(
     :param circuit: The general circuit.
     :param input_labels_a: bits of divisible in increase order.
     :param input_labels_b: bits of divider in increase order.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
     :return: first list is result for div, second list is result for mod.
 
     """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
     validate_equal_sizes(input_labels_a, input_labels_b)
     n = len(input_labels_a)
 
@@ -81,5 +112,9 @@ def add_div_mod(
         result[i] = add_gate_from_tt(circuit, result[i], pref[-1], "0001")
     for i in range(n):
         now[i] = add_gate_from_tt(circuit, now[i], pref[-1], "0001")
+
+    if big_endian:
+        result.reverse()
+        now.reverse()
 
     return result, now
