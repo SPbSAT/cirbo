@@ -208,29 +208,6 @@ def _get_subcircuits(
             users: list[Label] = circuit.get_gate_users(node)
             oper_type: str = circuit.get_gate(node).gate_type.name
 
-            if oper_type == 'NOT':
-                circuit_tt[node] = MAX_PATTERN - circuit_tt[operands[0]]
-            elif oper_type == 'AND':
-                circuit_tt[node] = circuit_tt[operands[0]] & circuit_tt[operands[1]]
-            elif oper_type == 'NAND':
-                circuit_tt[node] = MAX_PATTERN - (
-                    circuit_tt[operands[0]] & circuit_tt[operands[1]]
-                )
-            elif oper_type == 'OR':
-                circuit_tt[node] = circuit_tt[operands[0]] | circuit_tt[operands[1]]
-            elif oper_type == 'NOR':
-                circuit_tt[node] = MAX_PATTERN - (
-                    circuit_tt[operands[0]] | circuit_tt[operands[1]]
-                )
-            elif oper_type == 'XOR':
-                circuit_tt[node] = circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
-            elif oper_type == 'NXOR':
-                circuit_tt[node] = MAX_PATTERN - (
-                    circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
-                )
-            else:
-                raise UnsupportedOperationError()
-
             # if oper_type == 'NOT':
             #     circuit_tt[node] = MAX_PATTERN - circuit_tt[operands[0]]
             # elif oper_type == 'AND':
@@ -251,29 +228,52 @@ def _get_subcircuits(
             #     circuit_tt[node] = MAX_PATTERN - (
             #         circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
             #     )
-            # elif oper_type == 'GEQ':
-            #     circuit_tt[node] = MAX_PATTERN - (
-            #         circuit_tt[operands[0]] | (MAX_PATTERN - circuit_tt[operands[1]])
-            #     )
-            # elif oper_type == 'LT':
-            #     circuit_tt[node] = MAX_PATTERN - (
-            #         MAX_PATTERN
-            #         - (
-            #             circuit_tt[operands[0]]
-            #             | (MAX_PATTERN - circuit_tt[operands[1]])
-            #         )
-            #     )
-            # elif oper_type == 'LEQ':
-            #     circuit_tt[node] = MAX_PATTERN - (
-            #         (MAX_PATTERN - circuit_tt[operands[0]]) | circuit_tt[operands[1]]
-            #     )
-            # elif oper_type == 'GT':
-            #     circuit_tt[node] = MAX_PATTERN - (
-            #         MAX_PATTERN - (MAX_PATTERN - circuit_tt[operands[0]])
-            #         | circuit_tt[operands[1]]
-            #     )
             # else:
             #     raise UnsupportedOperationError()
+
+            if oper_type == 'NOT':
+                circuit_tt[node] = MAX_PATTERN - circuit_tt[operands[0]]
+            elif oper_type == 'AND':
+                circuit_tt[node] = circuit_tt[operands[0]] & circuit_tt[operands[1]]
+            elif oper_type == 'NAND':
+                circuit_tt[node] = MAX_PATTERN - (
+                    circuit_tt[operands[0]] & circuit_tt[operands[1]]
+                )
+            elif oper_type == 'OR':
+                circuit_tt[node] = circuit_tt[operands[0]] | circuit_tt[operands[1]]
+            elif oper_type == 'NOR':
+                circuit_tt[node] = MAX_PATTERN - (
+                    circuit_tt[operands[0]] | circuit_tt[operands[1]]
+                )
+            elif oper_type == 'XOR':
+                circuit_tt[node] = circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
+            elif oper_type == 'NXOR':
+                circuit_tt[node] = MAX_PATTERN - (
+                    circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
+                )
+            elif oper_type == 'GEQ':
+                circuit_tt[node] = MAX_PATTERN - (
+                    circuit_tt[operands[0]] | (MAX_PATTERN - circuit_tt[operands[1]])
+                )
+            elif oper_type == 'LT':
+                circuit_tt[node] = MAX_PATTERN - (
+                    MAX_PATTERN
+                    - (
+                        circuit_tt[operands[0]]
+                        | (MAX_PATTERN - circuit_tt[operands[1]])
+                    )
+                )
+            elif oper_type == 'LEQ':
+                circuit_tt[node] = MAX_PATTERN - (
+                    (MAX_PATTERN - circuit_tt[operands[0]]) | circuit_tt[operands[1]]
+                )
+            elif oper_type == 'GT':
+                circuit_tt[node] = MAX_PATTERN - (
+                    MAX_PATTERN - (MAX_PATTERN - circuit_tt[operands[0]])
+                    | circuit_tt[operands[1]]
+                )
+            else:
+                raise UnsupportedOperationError()
 
             if oper_type != 'NOT':
                 circuit_size += 1

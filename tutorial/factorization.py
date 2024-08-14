@@ -15,7 +15,7 @@ def factorization(number: int) -> Circuit:
     g1 = add_equal(ckt, xs1, 1)
     g2 = add_equal(ckt, xs2, 1)
     g3 = add_equal(ckt, outs, number)
-    ckt.add_gate(Gate('g4', NOR, (g1, g2)))
-    ckt.add_gate(Gate('g5', AND, ('g4', g3)))
+    ckt.emplace_gate('g4', NOR, (g1, g2))
+    ckt.emplace_gate('g5', AND, ('g4', g3))
     ckt.mark_as_output('g5')
     return ckt
