@@ -142,11 +142,11 @@ def add_sum3(
     validate_const_size(input_labels, 3)
     x1, x2, x3 = input_labels
     g1 = add_gate_from_tt(circuit, x1, x2, '0110')
-    g2 = add_gate_from_tt(circuit, g1, x3, '0110')
-    g3 = add_gate_from_tt(circuit, x1, x2, '0001')
-    g4 = add_gate_from_tt(circuit, g1, x3, '0001')
+    g2 = add_gate_from_tt(circuit, x2, x3, '0110')
+    g3 = add_gate_from_tt(circuit, g1, g2, '0111')
+    g4 = add_gate_from_tt(circuit, g1, x3, '0110')
     g5 = add_gate_from_tt(circuit, g3, g4, '0110')
-    return list([g2, g5])
+    return list([g4, g5])
 
 
 # given x1, x2, and (x2 oplus x3), computes the binary representation

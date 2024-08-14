@@ -48,7 +48,7 @@ def validate_equal_sizes(
 
 
 def validate_even(size: int):
-    """Raises if size (usually in generation) are not even."""
+    """Raises BadShapesError if size (usually in generation) is not even."""
     if size % 2 != 0:
         raise BadShapesError("Generation size of this function must be even.")
 

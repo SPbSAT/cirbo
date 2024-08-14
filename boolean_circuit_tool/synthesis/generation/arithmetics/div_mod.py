@@ -5,7 +5,6 @@ from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     PLACEHOLDER_STR,
     validate_equal_sizes,
-    validate_even,
 )
 from boolean_circuit_tool.synthesis.generation.arithmetics.subtraction import (
     add_subtract_with_compare,
@@ -18,24 +17,23 @@ __all__ = [
 ]
 
 
-def generate_div_mod(inp_len: int, *, big_endian: bool = False) -> Circuit:
+def generate_div_mod(n: int, *, big_endian: bool = False) -> Circuit:
     """
     Generates a circuit that have div and mod two numbers (one number is first n bits,
     other is second n bits) in result.
 
-    :param inp_len: number of input bits (must be even)
+    :param n: the number of bits in each number.
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
     :return: circuit that count div and mod.
 
     """
 
-    validate_even(inp_len)
-    circuit = Circuit.bare_circuit(inp_len)
+    circuit = Circuit.bare_circuit(2 * n)
     div, mod = add_div_mod(
         circuit,
-        circuit.inputs[: (inp_len // 2)],
-        circuit.inputs[(inp_len // 2) :],
+        circuit.inputs[:n],
+        circuit.inputs[n:],
         big_endian=big_endian,
     )
     circuit.set_outputs(div + mod)

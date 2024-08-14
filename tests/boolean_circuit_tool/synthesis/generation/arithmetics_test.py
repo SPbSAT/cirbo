@@ -18,6 +18,7 @@ from boolean_circuit_tool.synthesis.generation.arithmetics import (
     add_square,
     add_square_pow2_m1,
     add_sum_n_bits,
+    generate_sum_n_bits,
 )
 
 TEST_SIZE = 100
@@ -240,7 +241,7 @@ def test_div_mod(x, big_endian):
 
 @pytest.mark.parametrize("basis", [GenerationBasis.ALL, GenerationBasis.AIG])
 @pytest.mark.parametrize(
-    "x",
+    "n",
     list(range(1, 18))
     + [
         60,
@@ -249,15 +250,36 @@ def test_div_mod(x, big_endian):
     ],
 )
 @pytest.mark.parametrize("big_endian", [True, False])
-def test_sum_n_bits(basis, x, big_endian):
+def test_add_sum_n_bits(basis, n, big_endian):
     ckt = Circuit()
-    input_labels = [f'x{i}' for i in range(x)]
-    for i in range(x):
+    input_labels = [f'x{i}' for i in range(n)]
+    for i in range(n):
         ckt.add_gate(Gate(input_labels[i], INPUT))
     res = add_sum_n_bits(ckt, input_labels, basis=basis, big_endian=big_endian)
     ckt.set_outputs(res)
     for test in range(TEST_SIZE):
-        input_labels = [random.choice([0, 1]) for _ in range(x)]
+        input_labels = [random.choice([0, 1]) for _ in range(n)]
+        res = ckt.evaluate(input_labels)
+        if not big_endian:
+            res.reverse()
+        assert sum_naive(input_labels) == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.ALL, GenerationBasis.AIG])
+@pytest.mark.parametrize(
+    "n",
+    list(range(1, 18))
+    + [
+        60,
+        128,
+        pytest.param(1000, marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_generate_sum_n_bits(basis, n, big_endian):
+    ckt = generate_sum_n_bits(n, basis=basis, big_endian=big_endian)
+    for test in range(TEST_SIZE):
+        input_labels = [random.choice([0, 1]) for _ in range(n)]
         res = ckt.evaluate(input_labels)
         if not big_endian:
             res.reverse()
