@@ -13,7 +13,7 @@ from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
 from boolean_circuit_tool.circuits_db.db import CircuitsDatabase
-from boolean_circuit_tool.core.boolean_function import BooleanFunctionModel
+from boolean_circuit_tool.core.boolean_function import FunctionModel
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -159,7 +159,7 @@ class CircuitFinderSat:
 
     def __init__(
         self,
-        boolean_function_model: BooleanFunctionModel,
+        boolean_function_model: FunctionModel,
         number_of_gates: int,
         *,
         basis: tp.Union[Basis, tp.List[Operation]] = Basis.XAIG,

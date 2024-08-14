@@ -4,8 +4,8 @@ import math
 import typing as tp
 
 from boolean_circuit_tool.core.boolean_function import (
-    BooleanFunction,
-    BooleanFunctionModel,
+    Function,
+    FunctionModel,
     RawTruthTable,
     RawTruthTableModel,
 )
@@ -69,7 +69,7 @@ def _parse_trival(x: tp.Union[str, TriValue, tp.Literal[0, 1]]) -> TriValue:
     raise BadBooleanValue()
 
 
-class TruthTableModel(BooleanFunctionModel['TruthTable']):
+class TruthTableModel(FunctionModel['TruthTable']):
     """Boolean function model given as a truth table with don't care outputs."""
 
     def __init__(self, table: TruthTableModelArg):
@@ -161,7 +161,7 @@ class TruthTableModel(BooleanFunctionModel['TruthTable']):
         )
 
 
-class TruthTable(BooleanFunction):
+class TruthTable(Function):
     """Boolean function given as a truth table."""
 
     def __init__(self, table: TruthTableArg):
@@ -243,31 +243,31 @@ class TruthTable(BooleanFunction):
                 return False
         return True
 
-    def is_monotonic(self, *, inverse: bool) -> bool:
+    def is_monotone(self, inverse: bool = False) -> bool:
         """
-        Check if all outputs are monotonic (output value doesn't decrease when
+        Check if all outputs are monotone (output value doesn't decrease when
         inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
 
         :param inverse: if True, will check that output values doesn't
         increase when inputs are enumerated in classic order.
-        :return: True iff this function is monotonic.
+        :return: True iff this function is monotone.
 
         """
 
         return all(
-            self.is_monotonic_at(i, inverse=inverse) for i in range(self.output_size)
+            self.is_monotone_at(i, inverse=inverse) for i in range(self.output_size)
         )
 
-    def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
+    def is_monotone_at(self, output_index: int, inverse: bool = False) -> bool:
         """
-        Check if output `output_index` is monotonic (output value doesn't
+        Check if output `output_index` is monotone (output value doesn't
         decrease when inputs are enumerated in a classic order: 0000, 0001,
         0010, 0011 ...).
 
         :param output_index: index of desired output.
         :param inverse: if True, will check that output value doesn't
         increase when inputs are enumerated in classic order.
-        :return: True iff output `output_index` is monotonic.
+        :return: True iff output `output_index` is monotone.
 
         """
         ones_started = False

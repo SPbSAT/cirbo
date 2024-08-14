@@ -4,6 +4,7 @@ import itertools
 
 import pytest
 
+from boolean_circuit_tool.core import Function
 from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateAlreadyExistsError,
@@ -31,6 +32,10 @@ from boolean_circuit_tool.core.circuit.gate import (
     XOR,
 )
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
+
+
+def test_implements_protocol():
+    assert isinstance(Circuit, Function)
 
 
 def test_create_circuit():
@@ -131,6 +136,90 @@ def test_create_circuit():
     assert instance.input_size == 0
     assert instance.output_size == 0
     assert instance.gates == {}
+
+
+def test_bare_circuit():
+    C0 = Circuit()
+    C0.add_inputs(['x0', 'x1', 'x2'])
+
+    C1: Circuit = Circuit.bare_circuit(3, prefix='x')
+    assert C0 == C1
+
+    C1: Circuit = Circuit.bare_circuit(3, prefix='x', set_as_outputs=True)
+    assert C0 != C1
+
+    C0.set_outputs(C0.inputs)
+    assert C0 == C1
+
+
+def test_bare_circuit_with_labels():
+    new_inputs = ['x0', 'x1', 'x2']
+
+    C0 = Circuit()
+    C0.add_inputs(new_inputs)
+
+    C1: Circuit = Circuit.bare_circuit_with_labels(new_inputs)
+    assert C0 == C1
+
+    C1: Circuit = Circuit.bare_circuit_with_labels(new_inputs, set_as_outputs=True)
+    assert C0 != C1
+
+    C0.set_outputs(C0.inputs)
+    assert C0 == C1
+
+
+def test_eq():
+    instance_one = Circuit()
+    instance_one.add_gate(Gate('A', INPUT))
+    instance_one.add_gate(Gate('B', INPUT))
+    instance_one.add_gate(Gate('C', AND, ('A', 'B')))
+    instance_one.add_gate(Gate('D', OR, ('C', 'B')))
+    instance_one.mark_as_output('C')
+    instance_one.mark_as_output('D')
+    instance_one.mark_as_output('C')
+
+    instance_two = Circuit()
+    instance_two.add_gate(Gate('A', INPUT))
+    instance_two.add_gate(Gate('B', INPUT))
+    instance_two.add_gate(Gate('C', OR, ('A', 'B')))  # different operator
+    instance_two.add_gate(Gate('D', AND, ('C', 'B')))
+    instance_two.mark_as_output('C')
+    instance_two.mark_as_output('D')
+    instance_two.mark_as_output('C')
+
+    instance_three = Circuit()
+    instance_three.add_gate(Gate('A', INPUT))
+    instance_three.add_gate(Gate('B', INPUT))
+    instance_three.add_gate(Gate('C', AND, ('A', 'B')))
+    instance_three.add_gate(Gate('D', OR, ('C', 'B')))
+    instance_three.mark_as_output('C')
+    instance_three.mark_as_output('D')  # different outputs
+
+    instance_four = Circuit()
+    instance_four.add_gate(Gate('A', INPUT))
+    instance_four.add_gate(Gate('B', INPUT))
+    instance_four.add_gate(Gate('C', AND, ('A', 'B')))
+    instance_four.add_gate(Gate('D', OR, ('C', 'B')))
+    instance_four.mark_as_output('C')
+    instance_four.mark_as_output('D')
+    instance_four.mark_as_output('C')
+    # differs only in blocks
+    instance_four.make_block('BLOCK_1', ['A', 'B', 'C'], outputs=['C'])
+    instance_four.make_block('BLOCK_2', ['A', 'B', 'D'], outputs=['D'])
+
+    assert instance_one == instance_one
+    assert instance_one != instance_two
+    assert instance_one != instance_three
+    assert instance_one == instance_four
+
+    assert instance_two == instance_two
+    assert instance_two != instance_three
+    assert instance_two != instance_four
+
+    assert instance_three == instance_three
+    assert instance_three != instance_four
+
+    assert instance_four == instance_four
 
 
 def test_find_inputs_outputs():
@@ -1268,7 +1357,7 @@ def test_is_constant_at():
     assert instance.is_constant_at(1) == False
 
 
-def test_is_monotonic():
+def test_is_monotone():
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1276,8 +1365,8 @@ def test_is_monotonic():
     instance.add_gate(Gate('C', AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    assert instance.is_monotonic(inverse=False) == True
-    assert instance.is_monotonic(inverse=True) == False
+    assert instance.is_monotone(inverse=False) == True
+    assert instance.is_monotone(inverse=True) == False
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1285,8 +1374,8 @@ def test_is_monotonic():
     instance.add_gate(Gate('C', AND, ('A', 'B')))
     instance.mark_as_output('C')
 
-    assert instance.is_monotonic(inverse=False) == True
-    assert instance.is_monotonic(inverse=True) == True
+    assert instance.is_monotone(inverse=False) == True
+    assert instance.is_monotone(inverse=True) == True
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1295,11 +1384,11 @@ def test_is_monotonic():
     instance.add_gate(Gate('D', OR, ('C', 'B')))
     instance.mark_as_output('D')
 
-    assert instance.is_monotonic(inverse=False) == False
-    assert instance.is_monotonic(inverse=True) == False
+    assert instance.is_monotone(inverse=False) == False
+    assert instance.is_monotone(inverse=True) == False
 
 
-def test_is_monotonic_at():
+def test_is_monotone_at():
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1310,12 +1399,12 @@ def test_is_monotonic_at():
     instance.mark_as_output('C')
     instance.mark_as_output('E')
 
-    assert instance.is_monotonic(inverse=False) == True
-    assert instance.is_monotonic(inverse=True) == False
-    assert instance.is_monotonic_at(0, inverse=False) == True
-    assert instance.is_monotonic_at(0, inverse=True) == True
-    assert instance.is_monotonic_at(1, inverse=False) == True
-    assert instance.is_monotonic_at(1, inverse=True) == False
+    assert instance.is_monotone(inverse=False) == True
+    assert instance.is_monotone(inverse=True) == False
+    assert instance.is_monotone_at(0, inverse=False) == True
+    assert instance.is_monotone_at(0, inverse=True) == True
+    assert instance.is_monotone_at(1, inverse=False) == True
+    assert instance.is_monotone_at(1, inverse=True) == False
 
     instance = Circuit()
     instance.add_gate(Gate('A', INPUT))
@@ -1329,14 +1418,14 @@ def test_is_monotonic_at():
     instance.mark_as_output('E')
     instance.mark_as_output('G')
 
-    assert instance.is_monotonic(inverse=False) == False
-    assert instance.is_monotonic(inverse=True) == False
-    assert instance.is_monotonic_at(0, inverse=False) == True
-    assert instance.is_monotonic_at(0, inverse=True) == True
-    assert instance.is_monotonic_at(1, inverse=False) == True
-    assert instance.is_monotonic_at(1, inverse=True) == False
-    assert instance.is_monotonic_at(2, inverse=False) == False
-    assert instance.is_monotonic_at(2, inverse=True) == False
+    assert instance.is_monotone(inverse=False) == False
+    assert instance.is_monotone(inverse=True) == False
+    assert instance.is_monotone_at(0, inverse=False) == True
+    assert instance.is_monotone_at(0, inverse=True) == True
+    assert instance.is_monotone_at(1, inverse=False) == True
+    assert instance.is_monotone_at(1, inverse=True) == False
+    assert instance.is_monotone_at(2, inverse=False) == False
+    assert instance.is_monotone_at(2, inverse=True) == False
 
 
 def test_is_symmetric():

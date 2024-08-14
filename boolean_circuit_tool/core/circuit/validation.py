@@ -21,8 +21,8 @@ __all__ = [
 ]
 
 if tp.TYPE_CHECKING:
-    from boolean_circuit_tool.core.circuit.circuit import Block, Circuit, Gate
-    from boolean_circuit_tool.core.circuit.gate import Label
+    from boolean_circuit_tool.core.circuit.circuit import Block, Circuit
+    from boolean_circuit_tool.core.circuit.gate import Gate, Label
 
 
 def check_gates_exist(gates: tp.Sequence['Label'], circuit: 'Circuit') -> None:
@@ -70,7 +70,8 @@ def check_circuit_has_no_cycles(circuit: 'Circuit') -> None:
     from boolean_circuit_tool.core.circuit.circuit import TraverseState
 
     def on_discover_hook(
-        gate: 'Gate', gate_states: tp.Mapping['Label', 'TraverseState']
+        gate: 'Gate',
+        gate_states: tp.Mapping['Label', 'TraverseState'],
     ):
         if gate_states[gate.label] == TraverseState.ENTERED:
             raise CircuitValidationError(

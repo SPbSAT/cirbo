@@ -11,11 +11,16 @@ from boolean_circuit_tool.synthesis.generation.generation import (
 
 @pytest.mark.parametrize("n", range(1, 10))
 @pytest.mark.parametrize("m", range(1, 20))
-def test_generate_plus_one(n: int, m: int):
-    circuit = generate_plus_one(n, m)
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_generate_plus_one(n: int, m: int, big_endian: bool):
+    circuit = generate_plus_one(n, m, big_endian=big_endian)
     for i in range(2**n):
         inp = canonical_index_to_input(i, n)
         out = canonical_index_to_input(i + 1, m)
+
+        if not big_endian:
+            inp = inp[::-1]
+            out = out[::-1]
 
         test_out = circuit.evaluate(inp)
         assert test_out == out
