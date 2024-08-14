@@ -1722,7 +1722,9 @@ class Circuit(Function):
                 return _find_operand(_gate.operands[1])
             return _gate.label
 
-        graph: graphviz.Digraph = graphviz.Digraph(name_graph)
+        graph: graphviz.Digraph = graphviz.Digraph(
+            name_graph if name_graph != '' else 'Circuit'
+        )
 
         # Add all circuit nodes to graphviz digraph.
         for gate_label, cur_gate in circuit._gates.items():
@@ -1832,8 +1834,9 @@ class Circuit(Function):
                     with graph.subgraph(name='cluster_' + block_label) as sg:
                         _draw_subgraph(sg, block_label)
 
-        graph.attr(label=name_graph)
-        graph.attr(fontsize=fontsize)
+        if name_graph != '':
+            graph.attr(label=name_graph)
+            graph.attr(fontsize=fontsize)
 
         return graph
 
