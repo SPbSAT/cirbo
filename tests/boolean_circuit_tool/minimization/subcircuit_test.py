@@ -3,7 +3,16 @@ import collections
 import pytest
 
 from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import AND, Gate, INPUT, LEQ, NOT, OR, XOR
+from boolean_circuit_tool.core.circuit.gate import (
+    AND,
+    Gate,
+    INPUT,
+    LEQ,
+    LIFF,
+    NOT,
+    OR,
+    XOR,
+)
 from boolean_circuit_tool.minimization.exception import UnsupportedOperationError
 from boolean_circuit_tool.minimization.subcircuit import (
     _generate_inputs_tt,
@@ -238,7 +247,6 @@ def test_minimize_subcircuits4():
     assert minimized_circuit.size == 26
 
 
-@pytest.mark.skip(reason="no time to fix right now")
 def test_exception():
     # Test exception for unsupported operations
     instance = Circuit()
@@ -248,7 +256,7 @@ def test_exception():
     instance.add_gate(Gate('C', INPUT))
     instance.add_gate(Gate('D', XOR, ('A', 'B')))
     instance.add_gate(Gate('E', OR, ('B', 'C')))
-    instance.add_gate(Gate('F', LEQ, ('D', 'E')))
+    instance.add_gate(Gate('F', LIFF, ('D', 'E')))
     instance.mark_as_output('F')
 
     with pytest.raises(UnsupportedOperationError):
@@ -257,7 +265,7 @@ def test_exception():
         )
 
     instance.remove_gate('F')
-    instance.add_gate(Gate('F', OR, ('D', 'E')))
+    instance.add_gate(Gate('F', LEQ, ('D', 'E')))
     instance.mark_as_output('F')
 
     minimized_circuit = minimize_subcircuits(
