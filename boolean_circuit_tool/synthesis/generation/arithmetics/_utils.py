@@ -2,7 +2,10 @@ import typing as tp
 import uuid
 
 from boolean_circuit_tool.core.circuit import Circuit, gate
-from boolean_circuit_tool.synthesis.generation.exceptions import DifferentShapesError
+from boolean_circuit_tool.synthesis.generation.exceptions import (
+    BadShapesError,
+    DifferentShapesError,
+)
 
 
 __all__ = [
@@ -10,7 +13,10 @@ __all__ = [
     'add_gate_from_tt',
     'validate_const_size',
     'validate_equal_sizes',
+    'validate_even',
     'generate_random_label',
+    'generate_list_of_input_labels',
+    'reverse_if_big_endian',
 ]
 
 
@@ -41,6 +47,12 @@ def validate_equal_sizes(
         )
 
 
+def validate_even(size: int):
+    """Raises BadShapesError if size (usually in generation) is not even."""
+    if size % 2 != 0:
+        raise BadShapesError("Generation size of this function must be even.")
+
+
 def generate_random_label(circuit: Circuit) -> gate.Label:
     """
     Utility to generate random unoccupied name for new gate in `circuit`.
@@ -53,6 +65,26 @@ def generate_random_label(circuit: Circuit) -> gate.Label:
     while circuit.has_gate(_name):
         _name = "new_" + uuid.uuid4().hex
     return _name
+
+
+def generate_list_of_input_labels(size: int) -> list[gate.Label]:
+    """
+    Utility to generate input labels for new circuit.
+
+    :param size: number of inputs for we must choose a label.
+    :return: list of gate names.
+
+    """
+    return [f'input{i}' for i in range(size)]
+
+
+def reverse_if_big_endian(
+    seq: tp.Iterable[gate.Label], big_endian: bool
+) -> list[gate.Label]:
+    res = list(seq)
+    if big_endian:
+        res.reverse()
+    return res
 
 
 binary_tt_to_type = {
