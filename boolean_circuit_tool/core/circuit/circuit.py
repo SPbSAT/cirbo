@@ -1640,8 +1640,10 @@ class Circuit(Function):
         *,
         draw_blocks: bool = True,
         draw_labels: bool = False,
-        name: str = 'Circuit',
+        name_graph: str = '',
         fontsize: str = '20',
+        change_labels: bool = False,
+        as_bench: bool = False,
     ) -> graphviz.Digraph:
         """
         Convert circuit to graphviz.Digraph.
@@ -1651,22 +1653,25 @@ class Circuit(Function):
         :param draw_labels: if draw_labels == True next to the operator type the name of
             the gate is written, if draw_labels == False circuit node names is type of
             operator.
-        :param name: name of graph.
+        :param name_graph: name of graph.
         :param fontsize: fontsize for label of graph.
+        :param change_labels: replace gates' labels with `x_{i}`, where `i` is the
+            ordinal number of the gate in the circuit (`circuit.gates`)
+        :param as_bench: draw the circuit in bench format
         :return: graph
 
         """
         _gate_type_to_name: dict[gate.GateType, str] = {
             gate.INPUT: "",
-            gate.ALWAYS_TRUE: "TRUE",
-            gate.ALWAYS_FALSE: "FALSE",
+            gate.ALWAYS_TRUE: "1",
+            gate.ALWAYS_FALSE: "0",
             gate.AND: u"\u2227",
             gate.GEQ: u"\u2265",
             gate.GT: u"\u003E",
             gate.IFF: "IFF",
             gate.LEQ: u"\u2264",
             gate.LIFF: "LIFF",
-            gate.LNOT: "LNOT",
+            gate.LNOT: u"\u00AC",
             gate.LT: u"\u003C",
             gate.NAND: u"\u00AC\u2227",
             gate.NOR: u"\u00AC\u2228",
@@ -1674,64 +1679,106 @@ class Circuit(Function):
             gate.NXOR: u"\u00AC\u2295",
             gate.OR: u"\u2228",
             gate.RIFF: "RIFF",
-            gate.RNOT: "RNOT",
+            gate.RNOT: u"\u00AC",
             gate.XOR: u"\u2295",
         }
 
+        circuit: Circuit = copy.copy(self)
+
+        if as_bench:
+            circuit.into_bench()
+
+        if change_labels:
+            labels = {
+                _gate_label: f'x_{i}' for i, _gate_label in enumerate(circuit.gates)
+            }
+        else:
+            labels = {_gate_label: _gate_label for _gate_label in circuit.gates}
+
         # Define node name formatting.
         if draw_labels:
-
-            def _format_node_name(_gate: gate.Gate) -> str:
-                return f'{_gate.label} {_gate_type_to_name[_gate.gate_type]}'
-
+            _create_node = lambda _gate_label, _gate: graph.node(
+                _gate_label,
+                label=f'{labels[_gate.label]}: {_gate_type_to_name[_gate.gate_type]}',
+                shape='circle',
+                fontsize='10',
+            )
         else:
+            _create_node = lambda _gate_label, _gate: graph.node(
+                _gate_label,
+                label=f'{_gate_type_to_name[_gate.gate_type]}',
+                shape='circle',
+                fixedsize='true',
+                fontsize='10',
+                height='0.25',
+                width='0.25',
+            )
 
-            def _format_node_name(_gate: gate.Gate) -> str:
-                return f'{_gate_type_to_name[_gate.gate_type]}'
+        def _find_operand(operand: gate.Label) -> gate.Label:
+            _gate = circuit.get_gate(operand)
+            if _gate.gate_type in [gate.IFF, gate.LIFF]:
+                return _find_operand(_gate.operands[0])
+            elif _gate.gate_type == gate.RIFF:
+                return _find_operand(_gate.operands[1])
+            return _gate.label
 
-        graph: graphviz.Digraph = graphviz.Digraph(name)
+        graph: graphviz.Digraph = graphviz.Digraph(
+            name_graph if name_graph != '' else 'Circuit'
+        )
 
         # Add all circuit nodes to graphviz digraph.
-        for gate_label, cur_gate in self._gates.items():
-            graph.node(
-                gate_label,
-                label=_format_node_name(cur_gate),
-                shape='circle',
-            )
-            i = 1
-            if cur_gate.gate_type in [
-                gate.GT,
-                gate.GEQ,
-                gate.LT,
-                gate.LEQ,
-                gate.LNOT,
-                gate.RNOT,
-                gate.LIFF,
-                gate.RIFF,
-            ]:
-                for operand in cur_gate.operands:
+        for gate_label, cur_gate in circuit._gates.items():
+
+            if cur_gate.gate_type in [gate.IFF, gate.LIFF, gate.RIFF]:
+                continue
+
+            _create_node(gate_label, cur_gate)
+
+            if cur_gate.gate_type in [gate.GT, gate.GEQ, gate.LT, gate.LEQ]:
+                for i, operand in enumerate(cur_gate.operands):
                     graph.edge(
-                        operand,
+                        _find_operand(operand),
                         gate_label,
                         headlabel=f'{i}',
                         labeldistance='2',
                         fontcolor='red',
+                        fontsize='10',
+                        arrowhead='vee',
+                        penwidth='0.3',
                     )
-                    i += 1
+            elif cur_gate.gate_type == gate.LNOT:
+                graph.edge(
+                    _find_operand(cur_gate.operands[0]),
+                    gate_label,
+                    arrowhead='vee',
+                    penwidth='0.3',
+                )
+            elif cur_gate.gate_type == gate.RNOT:
+                graph.edge(
+                    _find_operand(cur_gate.operands[1]),
+                    gate_label,
+                    arrowhead='vee',
+                    penwidth='0.3',
+                )
             else:
                 for operand in cur_gate.operands:
-                    graph.edge(operand, gate_label)
+                    graph.edge(
+                        _find_operand(operand),
+                        gate_label,
+                        arrowhead='vee',
+                        penwidth='0.3',
+                    )
 
         # Redraw inputs with different shape.
-        for _input in self._inputs:
-            graph.node(_input, label=_input, color='white')
+        for _input in circuit._inputs:
+            graph.node(_input, label=labels[_input], shape='ellipse', color='white')
 
         # Redraw outputs with different shape.
-        for _output in self._outputs:
-            graph.node(_output, shape="doublecircle")
+        for _output in circuit._outputs:
+            graph.node(_find_operand(_output), fillcolor="gray", style="rounded,filled")
 
         # Draw blocks as dot subgraphs if required.
-        if draw_blocks and len(self._blocks.values()) > 0:
+        if draw_blocks and len(circuit._blocks.values()) > 0:
 
             nested_blocks: dict[gate.Label, list[gate.Label]] = collections.defaultdict(
                 list
@@ -1741,7 +1788,7 @@ class Circuit(Function):
             )
             block_to_gates: dict[gate.Label, set[gate.Label]] = {}
 
-            for _block in self._blocks.values():
+            for _block in circuit._blocks.values():
                 _block_gates = set(_block.gates)
 
                 # Calculate blocks nestness
@@ -1768,21 +1815,28 @@ class Circuit(Function):
             # Function to draw nested subgraphs.
             def _draw_subgraph(_sg, _block_label):
                 _sg.attr(color='blue')
-                for _gate in self.get_block(_block_label).gates:
+                for _gate in circuit.get_block(_block_label).gates:
+                    if circuit.get_gate(_gate).gate_type in [
+                        gate.IFF,
+                        gate.LIFF,
+                        gate.RIFF,
+                    ]:
+                        continue
                     _sg.node(_gate)
                 _sg.attr(label=_block_label, fontcolor='blue')
                 for _subblock in nested_blocks[_block_label]:
                     with _sg.subgraph(name='cluster_' + _subblock) as _sbg:
                         _draw_subgraph(_sbg, _subblock)
 
-            for block_label in self.blocks.keys():
+            for block_label in circuit.blocks.keys():
                 dependencies = nested_blocks_rev[block_label]
                 if dependencies == []:
                     with graph.subgraph(name='cluster_' + block_label) as sg:
                         _draw_subgraph(sg, block_label)
 
-        graph.attr(label=name)
-        graph.attr(fontsize=fontsize)
+        if name_graph != '':
+            graph.attr(label=name_graph)
+            graph.attr(fontsize=fontsize)
 
         return graph
 
@@ -1792,8 +1846,10 @@ class Circuit(Function):
         *,
         draw_blocks: bool = True,
         draw_labels: bool = False,
-        name: str = 'Circuit',
+        name_graph: str = 'Circuit',
         fontsize: str = '20',
+        change_labels: bool = False,
+        as_bench: bool = False,
     ) -> None:
         """
         Save the circuit to the file like a drawing.
@@ -1804,15 +1860,21 @@ class Circuit(Function):
         :param draw_labels: if draw_labels == True next to the operator type the name of
             the gate is written, if draw_labels == False circuit node names is type of
             operator.
-        :param name: name of graph.
+        :param name_graph: name of graph.
+        :param fontsize: fontsize for label of graph.
+        :param change_labels: replace gates' labels with `x_{i}`, where `i` is the
+            ordinal number of the gate in the circuit (`circuit.gates`).
+        :param as_bench: draw the circuit in bench format.
         :param fontsize: fontsize for label of graph.
 
         """
         graph: graphviz.Digraph = self.into_graphviz_digraph(
             draw_blocks=draw_blocks,
             draw_labels=draw_labels,
-            name=name,
+            name_graph=name_graph,
             fontsize=fontsize,
+            change_labels=change_labels,
+            as_bench=as_bench,
         )
         graph.render(path)
 
