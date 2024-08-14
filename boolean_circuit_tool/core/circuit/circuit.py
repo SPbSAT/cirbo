@@ -905,10 +905,9 @@ class Circuit(Function):
         add_prefix: bool = True,
     ) -> tp_ext.Self:
         """
-        Connecting a new circuit (`other`) to the base one, where `other_connectors`
-        (gates of the new circuit) will be connecting to inputs from base circuit. All
-        inputs and outputs of the new circuit which not be in connecting are added to
-        the inputs and outputs of the base circuit, respectively.
+        Connecting a new circuit (`other`) to the base one, where inputs from the new
+        circuit will be connecting to inputs from base circuit. All outputs of the new
+        circuit wil be added to the outputs of the base circuit.
 
         :param other: a new circuit that should expand the basic one
         :param name: new block's name. If `name` is an empty string, then
