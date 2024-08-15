@@ -6,16 +6,10 @@ from math import ceil, log2
 
 
 def factorization(number: int) -> Circuit:
-    n = ceil(log2(number))
-    ckt = Circuit()
-    xs1 = [f'x{i}' for i in range(n)]
-    xs2 = [f'x{i}' for i in range(n, 2 * n)]
-    ckt.add_inputs(xs1 + xs2)
-    outs = add_mul(ckt, xs1, xs2)
-    g1 = add_equal(ckt, xs1, 1)
-    g2 = add_equal(ckt, xs2, 1)
+    n = ceil(math.log2(number + 1))
+    ckt = Circuit.bare_circuit(input_size=2 * (n - 1))
+    p, q = ckt.inputs[:n - 1], ckt.inputs[n - 1:]
+    outs = add_mul(ckt, q, p)
     g3 = add_equal(ckt, outs, number)
-    ckt.emplace_gate('g4', NOR, (g1, g2))
-    ckt.emplace_gate('g5', AND, ('g4', g3))
-    ckt.mark_as_output('g5')
+    ckt.mark_as_output(g3)
     return ckt
