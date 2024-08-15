@@ -239,7 +239,7 @@ def test_div_mod(x, big_endian):
         assert div_mod_naive(input_labels_a, input_labels_b) == res
 
 
-@pytest.mark.parametrize("basis", [GenerationBasis.ALL, GenerationBasis.AIG])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
 @pytest.mark.parametrize(
     "n",
     list(range(1, 18))
@@ -265,7 +265,7 @@ def test_add_sum_n_bits(basis, n, big_endian):
         assert sum_naive(input_labels) == res
 
 
-@pytest.mark.parametrize("basis", [GenerationBasis.ALL, GenerationBasis.AIG])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
 @pytest.mark.parametrize(
     "n",
     list(range(1, 18))

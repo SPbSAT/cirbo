@@ -1,10 +1,12 @@
 import pytest
 
+from extensions.abc_wrapper.src.abc import abc_transform
+
 # Package can be compiled without ABC extension when
 # environment variable DISABLE_ABC_CEXT=1 is set.
 #
 try:
-    from abc_wrapper import run_abc_commands
+    from abc_wrapper import run_abc_commands_c
 except ImportError:
     pass
 
@@ -50,15 +52,14 @@ ckt2.mark_as_output('g11')
 
 @pytest.mark.ABC
 def test_run_abc_commands():
-    assert callable(run_abc_commands)
+    assert callable(run_abc_commands_c)
 
 
 @pytest.mark.ABC
 @pytest.mark.parametrize("circuit, expected_size", [(ckt1, 1), (ckt2, 4)])
 def test_abc_dc2(circuit: Circuit, expected_size: int):
     command = "strash; dc2"
-    simp_ckt_str = run_abc_commands(circuit.format_circuit(), command)
-    simp_ckt = Circuit.from_bench_string(simp_ckt_str)
+    simp_ckt = abc_transform(circuit, command)
     assert simp_ckt.get_truth_table() == circuit.get_truth_table()
     assert simp_ckt.gates_number() == expected_size
 
@@ -67,8 +68,7 @@ def test_abc_dc2(circuit: Circuit, expected_size: int):
 @pytest.mark.parametrize("circuit, expected_size", [(ckt1, 2), (ckt2, 10)])
 def test_abc_fraig(circuit: Circuit, expected_size: int):
     command = "strash; fraig"
-    simp_ckt_str = run_abc_commands(circuit.format_circuit(), command)
-    simp_ckt = Circuit.from_bench_string(simp_ckt_str)
+    simp_ckt = abc_transform(circuit, command)
     assert simp_ckt.get_truth_table() == circuit.get_truth_table()
     assert simp_ckt.gates_number() == expected_size
 
@@ -77,8 +77,7 @@ def test_abc_fraig(circuit: Circuit, expected_size: int):
 @pytest.mark.parametrize("circuit, expected_size", [(ckt1, 4), (ckt2, 6)])
 def test_abc_rewrite(circuit: Circuit, expected_size: int):
     command = "strash; rewrite"
-    simp_ckt_str = run_abc_commands(circuit.format_circuit(), command)
-    simp_ckt = Circuit.from_bench_string(simp_ckt_str)
+    simp_ckt = abc_transform(circuit, command)
     assert simp_ckt.get_truth_table() == circuit.get_truth_table()
     assert simp_ckt.gates_number() == expected_size
 
@@ -87,7 +86,6 @@ def test_abc_rewrite(circuit: Circuit, expected_size: int):
 @pytest.mark.parametrize("circuit, expected_size", [(ckt1, 1), (ckt2, 4)])
 def test_abc_simplify(circuit: Circuit, expected_size: int):
     command = "strash; dc2; drw; rewrite; refactor; resub"
-    simp_ckt_str = run_abc_commands(circuit.format_circuit(), command)
-    simp_ckt = Circuit.from_bench_string(simp_ckt_str)
+    simp_ckt = abc_transform(circuit, command)
     assert simp_ckt.get_truth_table() == circuit.get_truth_table()
     assert simp_ckt.gates_number() == expected_size

@@ -9,7 +9,7 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(abc_wrapper, m) {
     m.doc() = "Example doc";
-    m.def("run_abc_commands", &runAbcCommands, "Enumerates cuts.");
+    m.def("run_abc_commands_c", &runAbcCommands, "Run ABC.");
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

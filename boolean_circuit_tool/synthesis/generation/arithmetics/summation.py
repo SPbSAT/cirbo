@@ -264,14 +264,14 @@ def add_sum3_aig(
 def generate_sum_n_bits(
     n: int,
     *,
-    basis: tp.Union[str, GenerationBasis] = GenerationBasis.ALL,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> Circuit:
     """
     Generates a circuit that have sum of n bits in result.
 
     :param n: number of input bits (must be even)
-    :param basis: in which basis should generated function lie. Supported [ALL, AIG].
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
 
@@ -291,7 +291,7 @@ def add_sum_n_bits(
     circuit: Circuit,
     input_labels: tp.Iterable[gate.Label],
     *,
-    basis: tp.Union[str, GenerationBasis] = GenerationBasis.ALL,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -299,7 +299,7 @@ def add_sum_n_bits(
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
-    :param basis: in which basis should generated function lie. Supported [ALL, AIG].
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
     :return: list containing labels of sum bits.
@@ -315,7 +315,7 @@ def add_sum_n_bits(
     else:
         _basis = basis
 
-    if _basis == GenerationBasis.ALL:
+    if _basis == GenerationBasis.XAIG:
         return reverse_if_big_endian(
             _add_sum_n_bits(
                 circuit=circuit,
