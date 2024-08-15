@@ -7,7 +7,7 @@ def block(x: bool, y: bool, z: bool):
     s = x + 2 * y + 4 * z
     return [DontCare] if s > 6 else [True] if s >= 3 else [False]
 
-ckt = Circuit().bare_circuit(input_size=6)
+ckt = Circuit.bare_circuit(input_size=6)
 out = add_sum_n_bits(ckt, ckt.inputs)
 func = PyFunction.from_positional(block)
 finder = CircuitFinderSat(func, 2, basis='XAIG')

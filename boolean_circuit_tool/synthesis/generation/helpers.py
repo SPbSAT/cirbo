@@ -11,7 +11,7 @@ __all__ = [
 class GenerationBasis(enum.Enum):
     """Represents basis which is need to be used for generation."""
 
-    # Basis that has no restrictions.
-    ALL = "ALL"
+    # Basis that can contain only gates which can be encoded in XAIG format.
+    XAIG = "XAIG"
     # Basis that can contain only gates which can be encoded in AIG format.
     AIG = "AIG"

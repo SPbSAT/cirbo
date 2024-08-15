@@ -3,8 +3,8 @@ from boolean_circuit_tool.core.circuit.gate import Gate, OR
 from boolean_circuit_tool.synthesis.generation import generate_pairwise_xor
 from boolean_circuit_tool.synthesis.generation.arithmetics import generate_sum_n_bits
 
-aig = generate_sum_n_bits(n=3, basis='AIG')
-xaig = generate_sum_n_bits(n=3, basis='ALL')
+aig = generate_sum_n_bits(3, basis='AIG')
+xaig = generate_sum_n_bits(3, basis='XAIG')
 
 mtr = Circuit().add_circuit(aig, name='aig')
 mtr.connect_inputs(xaig, name='xaig')
