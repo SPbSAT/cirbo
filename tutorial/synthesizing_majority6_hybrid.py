@@ -10,7 +10,10 @@ def block(x: bool, y: bool, z: bool):
 ckt = Circuit.bare_circuit(input_size=6)
 out = add_sum_n_bits(ckt, ckt.inputs)
 func = PyFunction.from_positional(block)
-finder = CircuitFinderSat(func, 2, basis='XAIG')
+finder = CircuitFinderSat(
+    func, 2, basis='XAIG')
 new_block = finder.find_circuit()
-ckt.connect_circuit(new_block, out, new_block.inputs, name='new_block', add_prefix=False)
+ckt.connect_circuit(
+    new_block, out, new_block.inputs,
+    name='new_block')
 ckt.view_graph()

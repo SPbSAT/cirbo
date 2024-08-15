@@ -167,3 +167,7 @@ setup.py
 
 # abc.history artifacts
 abc.history
+
+# graphviz artifacts
+*.gv.pdf
+*.gv
