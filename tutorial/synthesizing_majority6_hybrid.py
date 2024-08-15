@@ -7,7 +7,6 @@ def geq3_py(x: bool, y: bool, z: bool):
     s = x + 2 * y + 4 * z
     return [DontCare] if s > 6 else [True] if s >= 3 else [False]
 
-
 ckt = generate_sum_n_bits(n=6)
 func = PyFunctionModel.from_positional(
     geq3_py)
