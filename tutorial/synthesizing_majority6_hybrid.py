@@ -8,10 +8,8 @@ def geq3_py(x: bool, y: bool, z: bool):
     return [DontCare] if s > 6 else [True] if s >= 3 else [False]
 
 ckt = generate_sum_n_bits(n=6)
-func = PyFunctionModel.from_positional(
-    geq3_py)
-finder = CircuitFinderSat(
-    func, 2, basis='XAIG')
-geq3 = finder.find_circuit()
+m = PyFunctionModel.from_positional(geq3_py)
+cfs = CircuitFinderSat(m, 2, basis='XAIG')
+geq3 = cfs.find_circuit()
 ckt.extend_circuit(geq3, name='geq3')
 ckt.view_graph()
