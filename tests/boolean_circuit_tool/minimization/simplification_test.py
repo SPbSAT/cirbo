@@ -2,12 +2,16 @@ import pytest
 
 from boolean_circuit_tool.core.circuit import Circuit, Gate, gate
 from boolean_circuit_tool.minimization.simplification import (
-    _find_equivalent_gates,
-    _replace_equivalent_gates,
-    collapse_equivalent_gates_sparse,
     collapse_unary_operators,
-    remove_identities,
     remove_redundant_gates,
+)
+from boolean_circuit_tool.minimization.simplification._simplification_bu import (
+    collapse_equivalent_gates_sparse,
+    remove_identities,
+)
+from boolean_circuit_tool.minimization.simplification.collapse_equivalent_gates import (
+    _find_equivalent_gates_groups,
+    _replace_equivalent_gates,
 )
 
 
@@ -158,7 +162,7 @@ def test_collapse_unary_gates(original_circuit: Circuit, expected_circuit: Circu
     assert simplified_circuit == expected_circuit
 
 
-# Test case 1 for _find_equivalent_gates
+# Test case 1 for _find_equivalent_gates_groups
 original_circuit_3 = Circuit()
 original_circuit_3.add_gate(Gate('input1', gate.INPUT))
 original_circuit_3.add_gate(Gate('input2', gate.INPUT))
@@ -173,7 +177,7 @@ original_circuit_3.mark_as_output('AND2')
 
 expected_groups_3 = [['input1', 'NOT2'], ['NOT1', 'NOT3'], ['AND1', 'NOT5', 'AND2']]
 
-# Test case 2 for _find_equivalent_gates
+# Test case 2 for _find_equivalent_gates_groups
 original_circuit_4 = Circuit()
 original_circuit_4.add_gate(Gate('input1', gate.INPUT))
 original_circuit_4.add_gate(Gate('input2', gate.INPUT))
@@ -198,7 +202,7 @@ expected_groups_4 = [['AND1', 'AND2'], ['OR1', 'OR2'], ['XOR1', 'XOR2']]
     ],
 )
 def test_find_equivalent_gates(original_circuit: Circuit, expected_groups):
-    equivalent_groups = _find_equivalent_gates(original_circuit)
+    equivalent_groups = _find_equivalent_gates_groups(original_circuit)
     assert sorted(map(sorted, equivalent_groups)) == sorted(
         map(sorted, expected_groups)
     )
@@ -236,7 +240,7 @@ expected_circuit_5.mark_as_output('XOR2')
     ],
 )
 def test_replace_equivalent_gates(original_circuit: Circuit, expected_circuit: Circuit):
-    equivalent_groups = _find_equivalent_gates(original_circuit)
+    equivalent_groups = _find_equivalent_gates_groups(original_circuit)
     simplified_circuit = _replace_equivalent_gates(original_circuit, equivalent_groups)
     assert are_circuits_isomorphic(simplified_circuit, expected_circuit)
 
