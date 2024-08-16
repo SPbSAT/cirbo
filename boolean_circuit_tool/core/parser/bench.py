@@ -4,19 +4,9 @@ import abc
 import logging
 import typing as tp
 
+from boolean_circuit_tool.core.circuit import gate
+
 from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import (
-    AND,
-    GateType,
-    IFF,
-    INPUT,
-    NAND,
-    NOR,
-    NOT,
-    NXOR,
-    OR,
-    XOR,
-)
 from boolean_circuit_tool.core.circuit.validation import check_gates_exist
 from boolean_circuit_tool.core.parser.abstract import AbstractParser
 
@@ -53,14 +43,25 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
         super(AbstractBenchParser, self).__init__(*args, **kwargs)
         # Dict of specific processing methods for gates
         self._processings: dict[str, tp.Callable[..., tp.Iterable]] = {
-            NOT.name: self._process_not,
-            AND.name: self._process_and,
-            NAND.name: self._process_nand,
-            OR.name: self._process_or,
-            NOR.name: self._process_nor,
-            XOR.name: self._process_xor,
-            NXOR.name: self._process_nxor,
-            IFF.name: self._process_iff,
+            gate.NOT.name: self._process_not,
+            gate.AND.name: self._process_and,
+            gate.NAND.name: self._process_nand,
+            gate.OR.name: self._process_or,
+            gate.NOR.name: self._process_nor,
+            gate.XOR.name: self._process_xor,
+            gate.NXOR.name: self._process_nxor,
+            gate.GEQ.name: self._process_geq,
+            gate.GT.name: self._process_gt,
+            gate.LEQ.name: self._process_leq,
+            gate.LT.name: self._process_lt,
+            gate.LNOT.name: self._process_lnot,
+            gate.RNOT.name: self._process_rnot,
+            gate.LIFF.name: self._process_liff,
+            gate.RIFF.name: self._process_riff,
+            gate.IFF.name: self._process_iff,
+            "BUFF": self._process_iff,
+            gate.ALWAYS_TRUE.name: self._process_always_true,
+            gate.ALWAYS_FALSE.name: self._process_always_false,
         }
 
     def _process_line(self, line: str) -> tp.Iterable:
@@ -112,6 +113,11 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     def _process_operator_gate(self, line: str) -> tp.Iterable:
         _operator, _out, _operands = self._parse_operator_gate(line)
         try:
+            if (
+                _operator == gate.ALWAYS_FALSE.name
+                or _operator == gate.ALWAYS_TRUE.name
+            ):
+                return self._processings[_operator](_out)
             return self._processings[_operator](_out, *_operands)
         except KeyError:
             raise ValueError(f"Unknown operator {_operator}!")
@@ -158,6 +164,46 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     def _process_iff(self, out: str, arg: str):
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def _process_geq(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_gt(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_leq(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_lt(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_lnot(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_rnot(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_liff(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_riff(self, out: str, arg1: str, arg2: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_always_true(self, out: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def _process_always_false(self, out: str):
+        raise NotImplementedError()
+
 
 class BenchToCircuit(AbstractBenchParser):
     """Parser that processes stream of .bench file lines and returns new Circuit
@@ -179,12 +225,12 @@ class BenchToCircuit(AbstractBenchParser):
             check_gates_exist(gate.operands, self._circuit)
         return []
 
-    def _add_gate(self, out: str, gate_type: GateType, arg1: str, *args: str):
+    def _add_gate(self, out: str, gate_type: gate.GateType, *args: str):
         """Add gate into the circuit without checking the initialization of operands."""
         self._circuit._emplace_gate(
             label=out,
             gate_type=gate_type,
-            operands=(arg1, *args),
+            operands=(*args,),
         )
         return []
 
@@ -192,7 +238,7 @@ class BenchToCircuit(AbstractBenchParser):
         """Parses line with input gate."""
         _gate = line[6:].strip(') \n')
         logger.debug(f'\tAdding input gate: {_gate}')
-        self._circuit._emplace_gate(_gate, INPUT)
+        self._circuit._emplace_gate(_gate, gate.INPUT)
         return []
 
     def _process_output_gate(self, line: str) -> list:
@@ -203,25 +249,55 @@ class BenchToCircuit(AbstractBenchParser):
         return []
 
     def _process_not(self, out: str, arg: str):
-        return self._add_gate(out, NOT, arg)
+        return self._add_gate(out, gate.NOT, arg)
 
     def _process_xor(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, XOR, arg1, arg2, *args)
+        return self._add_gate(out, gate.XOR, arg1, arg2, *args)
 
     def _process_nxor(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, NXOR, arg1, arg2, *args)
+        return self._add_gate(out, gate.NXOR, arg1, arg2, *args)
 
     def _process_or(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, OR, arg1, arg2, *args)
+        return self._add_gate(out, gate.OR, arg1, arg2, *args)
 
     def _process_nor(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, NOR, arg1, arg2, *args)
+        return self._add_gate(out, gate.NOR, arg1, arg2, *args)
 
     def _process_and(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, AND, arg1, arg2, *args)
+        return self._add_gate(out, gate.AND, arg1, arg2, *args)
 
     def _process_nand(self, out: str, arg1: str, arg2: str, *args: str):
-        return self._add_gate(out, NAND, arg1, arg2, *args)
+        return self._add_gate(out, gate.NAND, arg1, arg2, *args)
 
     def _process_iff(self, out: str, arg: str):
-        return self._add_gate(out, IFF, arg)
+        return self._add_gate(out, gate.IFF, arg)
+
+    def _process_geq(self, out: str, arg1: str, arg2: str):
+        return self._add_gate(out, gate.GEQ, arg1, arg2)
+
+    def _process_gt(self, out: str, arg1: str, arg2: str):
+        return self._add_gate(out, gate.GT, arg1, arg2)
+
+    def _process_leq(self, out: str, arg1: str, arg2: str):
+        return self._add_gate(out, gate.LEQ, arg1, arg2)
+
+    def _process_lt(self, out: str, arg1: str, arg2: str):
+        return self._add_gate(out, gate.LT, arg1, arg2)
+
+    def _process_lnot(self, out: str, arg1: str, arg2: str):
+        return self._add_gate(out, gate.LNOT, arg1, arg2)
+
+    def _process_rnot(self, out: str, arg1: str, arg2: str):
+        return self._add_gate(out, gate.RNOT, arg1, arg2)
+
+    def _process_liff(self, out: str, arg1: str, arg2: str):
+        return self._add_gate(out, gate.LIFF, arg1, arg2)
+
+    def _process_riff(self, out: str, arg1: str, arg2: str):
+        return self._add_gate(out, gate.RIFF, arg1, arg2)
+
+    def _process_always_true(self, out: str):
+        return self._add_gate(out, gate.ALWAYS_TRUE)
+
+    def _process_always_false(self, out: str):
+        return self._add_gate(out, gate.ALWAYS_FALSE)
