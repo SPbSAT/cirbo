@@ -62,7 +62,8 @@ def check_block_has_not_users(
     exclusion_gates: tp.Optional[set['Label']] = None,
 ) -> None:
     """
-    Check that gates from block hasn't users in the circuit outside itself.
+    Check that gates from a block that is not on the exclusion list do not have users in
+    the circuit outside itself.
 
     :param block: the block for checking
     :param circuit: the circuit
