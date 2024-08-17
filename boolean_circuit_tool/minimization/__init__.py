@@ -3,13 +3,13 @@ simplification algorithms located in pacakge `simplification` and represented in
 composition in the method `cleanup` and subcircuit minimization algorithm defined by
 `minimize_subcircuits` method."""
 
-from .simplification import cleanup, CollapseUnaryOperators, RemoveRedundantGates
+from .simplification import cleanup, MergeUnaryOperators, RemoveRedundantGates
 from .subcircuit import minimize_subcircuits
 
 __all__ = [
     # simplification.py
     'RemoveRedundantGates',
-    'CollapseUnaryOperators',
+    'MergeUnaryOperators',
     'cleanup',
     # subcircuit.py
     'minimize_subcircuits',

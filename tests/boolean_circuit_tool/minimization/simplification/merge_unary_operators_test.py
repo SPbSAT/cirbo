@@ -1,19 +1,20 @@
 import pytest
 
 from boolean_circuit_tool.core.circuit import Circuit, Gate, gate
-from boolean_circuit_tool.minimization.simplification import CollapseUnaryOperators
+from boolean_circuit_tool.minimization.simplification import MergeUnaryOperators
 
 
-# Test case 1 for CollapseUnaryOperators:
-#   - output collapses
+# Test case 1 for MergeUnaryOperators:
+#   - output merges
 #   - same outputs count as distinct.
-#   - odd Not doesn't collapse
-#   - even Not collapses (including LNOT, RNOT)
-#   - any IFF collapses (including LIFF, RIFF)
+#   - odd Not doesn't merge
+#   - even Not merges (including LNOT, RNOT)
+#   - any IFF merges (including LIFF, RIFF)
 #
 original_circuit_1 = Circuit()
 original_circuit_1.add_gate(Gate('input1', gate.INPUT))
 original_circuit_1.add_gate(Gate('input2', gate.INPUT))
+original_circuit_1.add_gate(Gate('input3', gate.INPUT))
 original_circuit_1.emplace_gate('AND1', gate.AND, ('input1', 'input2'))
 original_circuit_1.emplace_gate('AND2', gate.AND, ('input1', 'input2'))
 original_circuit_1.emplace_gate('NOT1', gate.NOT, ('AND1',))
@@ -50,6 +51,7 @@ original_circuit_1.mark_as_output('IFF5')
 expected_circuit_1 = Circuit()
 expected_circuit_1.add_gate(Gate('input1', gate.INPUT))
 expected_circuit_1.add_gate(Gate('input2', gate.INPUT))
+expected_circuit_1.add_gate(Gate('input3', gate.INPUT))
 expected_circuit_1.emplace_gate('AND1', gate.AND, ('input1', 'input2'))
 expected_circuit_1.emplace_gate('AND2', gate.AND, ('input1', 'input2'))
 expected_circuit_1.mark_as_output('AND1')
@@ -60,10 +62,11 @@ expected_circuit_1.mark_as_output('AND2')
 expected_circuit_1.mark_as_output('AND2')
 expected_circuit_1.mark_as_output('AND2')
 
-# Test case 2 for CollapseUnaryOperators
+# Test case 2 for MergeUnaryOperators
 original_circuit_2 = Circuit()
 original_circuit_2.add_gate(Gate('input1', gate.INPUT))
 original_circuit_2.add_gate(Gate('input2', gate.INPUT))
+original_circuit_2.add_gate(Gate('input3', gate.INPUT))
 original_circuit_2.emplace_gate('NOT1', gate.NOT, ('input1',))
 original_circuit_2.emplace_gate('AND1', gate.AND, ('NOT1', 'input2'))
 original_circuit_2.emplace_gate('NOT2', gate.NOT, ('NOT1',))
@@ -77,6 +80,7 @@ original_circuit_2.mark_as_output('AND2')
 expected_circuit_2 = Circuit()
 expected_circuit_2.add_gate(Gate('input1', gate.INPUT))
 expected_circuit_2.add_gate(Gate('input2', gate.INPUT))
+expected_circuit_2.add_gate(Gate('input3', gate.INPUT))
 expected_circuit_2.emplace_gate('NOT1', gate.NOT, ('input1',))
 expected_circuit_2.emplace_gate('AND1', gate.AND, ('NOT1', 'input2'))
 expected_circuit_2.emplace_gate('AND2', gate.AND, ('NOT1', 'AND1'))
@@ -90,6 +94,6 @@ expected_circuit_2.mark_as_output('AND2')
         (original_circuit_2, expected_circuit_2),
     ],
 )
-def test_collapse_unary_gates(original_circuit: Circuit, expected_circuit: Circuit):
-    simplified_circuit = CollapseUnaryOperators().transform(original_circuit)
+def test_merge_unary_gates(original_circuit: Circuit, expected_circuit: Circuit):
+    simplified_circuit = MergeUnaryOperators().transform(original_circuit)
     assert simplified_circuit == expected_circuit

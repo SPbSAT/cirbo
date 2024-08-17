@@ -41,7 +41,7 @@ class Transformer(metaclass=abc.ABCMeta):
 
     @staticmethod
     def linearize_transformers(
-        transformers: tp.Union[tp.Iterable['Transformer'], 'TransformerComposition'],
+        transformers: tp.Iterable['Transformer'],
     ) -> tp.Iterable['Transformer']:
         """
         Prepares iterator over `Transformer` objects originally given either as a
@@ -56,7 +56,7 @@ class Transformer(metaclass=abc.ABCMeta):
 
     @staticmethod
     def linearize_reduce_transformers(
-        transformers: tp.Union[tp.Iterable['Transformer'], 'TransformerComposition'],
+        transformers: tp.Iterable['Transformer'],
     ) -> tp.Iterable['Transformer']:
         """
         Prepares iterator over `Transformer` objects originally given either as a
@@ -64,7 +64,8 @@ class Transformer(metaclass=abc.ABCMeta):
         idempotent transformers.
 
         :param transformers: iterable over either transformers or their compositions
-        :return: flatten list of `Transformers` where consequent idempotent transformers are reduced.
+        :return: flatten list of `Transformers` where consequent idempotent transformers
+        are reduced.
 
         """
         _prev: tp.Optional[Transformer] = None

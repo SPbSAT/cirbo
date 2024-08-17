@@ -1,10 +1,10 @@
-import functools
 import logging
 
 from boolean_circuit_tool.core.circuit import Circuit
 from boolean_circuit_tool.core.circuit.transformer import Transformer
-from .collapse_equivalent_gates import CollapseEquivalentGates
-from .collapse_unary_operators import CollapseUnaryOperators
+from .merge_duplicate_gates import MergeDuplicateGates
+from .merge_equivalent_gates import MergeEquivalentGates
+from .merge_unary_operators import MergeUnaryOperators
 from .remove_redundant_gates import RemoveRedundantGates
 
 
@@ -28,7 +28,8 @@ def cleanup(circuit: Circuit) -> Circuit:
         circuit,
         [
             RemoveRedundantGates(),
-            CollapseUnaryOperators(),
-            CollapseEquivalentGates(),
+            MergeUnaryOperators(),
+            MergeDuplicateGates(),
+            MergeEquivalentGates(),
         ],
     )

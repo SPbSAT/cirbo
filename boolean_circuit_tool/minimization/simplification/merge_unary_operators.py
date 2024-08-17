@@ -12,7 +12,7 @@ from boolean_circuit_tool.minimization.simplification.remove_redundant_gates imp
 
 
 __all__ = [
-    'CollapseUnaryOperators',
+    'MergeUnaryOperators',
 ]
 
 
@@ -30,20 +30,16 @@ _unary_to_operand_getter = {
 }
 
 
-class CollapseUnaryOperators(Transformer):
+class MergeUnaryOperators(Transformer):
     """
-    Simplifies the circuit by collapsing consecutive unary gates . Collapses double NOTs
-    A = NOT(NOT(B)) => A = B and eliminates IFFs.
+    Simplifies the circuit by collapsing consecutive unary gates . Merges double NOTs A
+    = NOT(NOT(B)) => A = B and eliminates IFFs.
 
     Traverses the circuit recursively, starting from the output gates, and rebuilds
     the circuit collapsing paths through redundant unary gates.
 
     Notes: Output gates labels may change after this method is applied, but their
     order will be preserved.
-
-    Note: gates are not removed after this method is applied, and only operands of
-    gates are revamped. It is recommended to call `RemoveRedundantGates` right
-    after this method.
 
     Note: will also remap LNOT, RNOT, LIFF, RIFF to their transitive significant
     operand if path reduction is possible.
@@ -62,7 +58,7 @@ class CollapseUnaryOperators(Transformer):
         _new_circuit = Circuit()
 
         # redirection links that will
-        # allow us to collapse paths.
+        # allow us to merge paths.
         #
         # contains to predecessor path to which consists of even number of NOTs
         _not_to_even_parent: dict[Label, Label] = {}
@@ -117,8 +113,9 @@ class CollapseUnaryOperators(Transformer):
                 return gate_label
 
         # rebuild circuit from inputs to outputs with remapping.
-        def _on_exit_hook_impl(_gate: Gate, _: tp.Mapping):
+        def _process_gate(_gate: Gate, _: tp.Mapping):
             nonlocal _new_circuit, _not_to_even_parent, _iff_to_parent
+
             _new_circuit.emplace_gate(
                 label=_gate.label,
                 gate_type=_gate.gate_type,
@@ -129,7 +126,9 @@ class CollapseUnaryOperators(Transformer):
         more_itertools.consume(
             circuit.dfs(
                 circuit.outputs,
-                on_exit_hook=_on_exit_hook_impl,
+                on_exit_hook=_process_gate,
+                unvisited_hook=_process_gate,
+                topsort_unvisited=True,
             )
         )
 

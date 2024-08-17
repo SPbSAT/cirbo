@@ -1,12 +1,10 @@
 import collections
-import itertools
 import logging
 import typing as tp
 
 import more_itertools
 
-from boolean_circuit_tool.core.circuit import Circuit, GateState
-from boolean_circuit_tool.core.circuit.gate import Gate, Label
+from boolean_circuit_tool.core.circuit import Circuit, Gate, Label
 from boolean_circuit_tool.core.circuit.transformer import Transformer
 from boolean_circuit_tool.minimization.simplification.remove_redundant_gates import (
     RemoveRedundantGates,
@@ -14,21 +12,21 @@ from boolean_circuit_tool.minimization.simplification.remove_redundant_gates imp
 
 
 __all__ = [
-    'CollapseEquivalentGates',
+    'MergeEquivalentGates',
 ]
 
 
 logger = logging.getLogger(__name__)
 
 
-class CollapseEquivalentGates(Transformer):
+class MergeEquivalentGates(Transformer):
     """
     Finds groups of equivalent gates using the full truth table comparison and replaces
     them with a single gate, updating all the references to the old ones.
 
     Warning: the execution time grows exponentially as the number of inputs increases.
     For circuits with more than 20 inputs it is recommended to use alternative
-    `CollapseDuplicateGates` methods.
+    `MergeDuplicateGates` methods.
 
     """
 
@@ -55,15 +53,7 @@ def _find_equivalent_gates_groups(circuit: Circuit) -> list[list[Label]]:
 
     """
     # Evaluate truth table of each gate in the circuit.
-    _gate_to_tt = collections.defaultdict(list)
-    for _input_values in itertools.product((False, True), repeat=circuit.input_size):
-        _input_assignment: dict[str, GateState] = {
-            input_label: value
-            for input_label, value in zip(circuit.inputs, _input_values)
-        }
-        _full_assignment = circuit.evaluate_full_circuit(_input_assignment)
-        for gate_label, value in _full_assignment.items():
-            _gate_to_tt[gate_label].append(value)
+    _gate_to_tt = circuit.get_gates_truth_table()
 
     # Find which gates have same truth table.
     _tt_to_gates = collections.defaultdict(list)
@@ -108,39 +98,20 @@ def _replace_equivalent_gates(
             _old_to_new_gate[gate_to_replace] = keep
 
     # map gate label to its new name.
-    def _remap_gate(gate_label: Label):
+    def _get_gate_new_name(_label: Label):
         nonlocal _old_to_new_gate
-        return _old_to_new_gate.get(gate_label, gate_label)
+        return _old_to_new_gate.get(_label, _label)
 
     # rebuild circuit from inputs to outputs with remapping.
-    def _on_exit_hook_impl(gate: Gate, _: tp.Mapping):
+    def _process_gate(_gate: Gate, _: tp.Mapping):
         nonlocal _new_circuit, _old_to_new_gate
-        # Either new or same label.
-        _new_label = _remap_gate(gate.label)
 
-        # If circuit already contains "keep" gate,
-        # no need to add it again, just return.
-        if _new_circuit.has_gate(_new_label):
-            return
-
-        if gate.label not in _old_to_new_gate:
-            # If gate doesn't need to be remapped
-            # just add it to circuit.
-            _new_circuit.emplace_gate(
-                label=_new_label,
-                gate_type=gate.gate_type,
-                operands=tuple(map(_remap_gate, gate.operands)),
-            )
-            return
-
-        # Need to add "keep" gate after first occurrence
-        # of its equivalent gate to not break a topsort
-        # order when adding its users.
-        _new_circuit.get_gate(_new)
+        # Add all gates, even equivalent ones, but link
+        # users of the latest to "keep" representative.
         _new_circuit.emplace_gate(
-            label=_new_label,
-            gate_type=gate.gate_type,
-            operands=tuple(map(_remap_gate, gate.operands)),
+            label=_gate.label,
+            gate_type=_gate.gate_type,
+            operands=tuple(map(_get_gate_new_name, _gate.operands)),
         )
         return
 
@@ -148,7 +119,9 @@ def _replace_equivalent_gates(
     more_itertools.consume(
         circuit.dfs(
             circuit.outputs,
-            on_exit_hook=_on_exit_hook_impl,
+            on_exit_hook=_process_gate,
+            unvisited_hook=_process_gate,
+            topsort_unvisited=True,
         )
     )
 
@@ -156,6 +129,6 @@ def _replace_equivalent_gates(
     _new_circuit.set_inputs(circuit.inputs)
 
     # mark outputs in new circuit by remapping them to their equivalent ones.
-    _new_circuit.set_outputs(list(map(_remap_gate, circuit.outputs)))
+    _new_circuit.set_outputs(list(map(_get_gate_new_name, circuit.outputs)))
 
     return _new_circuit

@@ -7,13 +7,16 @@ the input circuit.
 """
 
 from .cleanup import cleanup
-from .collapse_equivalent_gates import CollapseEquivalentGates
-from .collapse_unary_operators import CollapseUnaryOperators
+from .merge_duplicate_gates import MergeDuplicateGates
+from .merge_equivalent_gates import MergeEquivalentGates
+from .merge_unary_operators import MergeUnaryOperators
 from .remove_redundant_gates import RemoveRedundantGates
 
 
 __all__ = [
     'RemoveRedundantGates',
-    'CollapseUnaryOperators',
+    'MergeDuplicateGates',
+    'MergeEquivalentGates',
+    'MergeUnaryOperators',
     'cleanup',
 ]
