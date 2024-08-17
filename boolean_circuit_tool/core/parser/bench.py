@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 __all__ = ['AbstractBenchParser', 'BenchToCircuit']
 
 
+VDD_NAME = "VDD"
+BUFF_NAME = "BUFF"
+
+
 class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
     """
     Base abstract class for CircuitSAT.BENCH Parsers.
@@ -59,10 +63,10 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             gate.LIFF.name: self._process_liff,
             gate.RIFF.name: self._process_riff,
             gate.IFF.name: self._process_iff,
-            "BUFF": self._process_iff,
+            BUFF_NAME: self._process_iff,
             gate.ALWAYS_TRUE.name: self._process_always_true,
             gate.ALWAYS_FALSE.name: self._process_always_false,
-            "vdd": self._process_always_true,
+            VDD_NAME: self._process_always_true,
         }
 
     def _process_line(self, line: str) -> tp.Iterable:
@@ -92,8 +96,9 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             raise ValueError(f"Can't parse {line}.")
 
         _out = line[:_eq_idx].strip(' ')
-        logger.debug(f"\tLine read as: NAME gate: {_out}; ")
-        return _out, line[_eq_idx + 1 :].strip(' ')
+        _body = line[_eq_idx + 1 :].strip(' ')
+        logger.debug(f"\tLine read as: GATE NAME: {_out}; BODY: {_body}; ")
+        return _out, _body
 
     def _parse_operator_gate(self, line: str) -> tuple[str, list[str]]:
         """
@@ -111,7 +116,7 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
 
         _operator_str = line[:_lbkt_idx].strip(' ').upper()
         _args_str = line[(_lbkt_idx + 1) : _rbkt_idx].strip(' ')
-        logger.debug(f"OPERATOR: `{_operator_str}`; " f"OPERANDS: `{_args_str}`;")
+        logger.debug(f"OPERATOR: `{_operator_str}`; OPERANDS: `{_args_str}`;")
 
         _operands = [a.strip(' ') for a in _args_str.split(",")]
         logger.debug(
@@ -123,11 +128,12 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
 
     def _process_operator_gate(self, line: str) -> tp.Iterable:
 
-        _out, line = self._parse_name_gate(line)
-        if line[:3].lower() == "vdd":
-            return self._processings["vdd"](_out)
+        _out, _body = self._parse_name_gate(line)
+        # for working with `abc`, which can return a gate of type `vdd`
+        if _body[:3].upper() == VDD_NAME:
+            return self._processings[VDD_NAME](_out)
 
-        _operator, _operands = self._parse_operator_gate(line)
+        _operator, _operands = self._parse_operator_gate(_body)
         try:
             if (
                 _operator == gate.ALWAYS_FALSE.name
