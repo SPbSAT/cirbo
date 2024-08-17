@@ -1,4 +1,11 @@
-from boolean_circuit_tool.sat.cnf.cnf import Clause, Cnf, CnfRaw, Lit
+from .cnf import Clause, Cnf, CnfRaw, Lit
+from .tseytin import tseytin_transformation
 
 
-__all__ = ['Lit', 'Clause', 'CnfRaw', 'Cnf', 'tseytin_transformation']
+__all__ = [
+    'Lit',
+    'Clause',
+    'CnfRaw',
+    'Cnf',
+    'tseytin_transformation',
+]

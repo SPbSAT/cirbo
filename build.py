@@ -20,6 +20,9 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
+# Disables building extensions and subdirectories related to ABC
+DISABLE_ABC_CEXT = bool(os.environ.get('DISABLE_ABC_CEXT', False))
+
 
 # A CMakeExtension needs a sourcedir instead of a file list.
 # The name must be the _single_ output extension from the CMake build.
@@ -62,6 +65,9 @@ class CMakeBuild(build_ext):
 
         # In this example, we pass in the version to C++. You might not need to.
         cmake_args += [f"-DEXAMPLE_VERSION_INFO={self.distribution.get_version()}"]
+        
+        if DISABLE_ABC_CEXT:
+            cmake_args += [f"-DDISABLE_ABC_CEXT=ON"]
 
         if self.compiler.compiler_type != "msvc":
             # Using Ninja-build since it a) is available as a wheel and b)
@@ -126,12 +132,16 @@ class CMakeBuild(build_ext):
         subprocess.run(
             ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
         )
-
+ 
 
 ext_modules = [
     CMakeExtension("dummy_extension"),
     CMakeExtension("mockturtle_wrapper"),
 ]
+
+
+if not DISABLE_ABC_CEXT:
+    ext_modules.append(CMakeExtension("abc_wrapper"))
 
 
 def build(setup_kwargs):

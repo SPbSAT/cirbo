@@ -16,6 +16,7 @@ __all__ = [
     'TraverseMethodError',
     'CreateBlockError',
     'DeleteBlockError',
+    'OverlappingBlocksError',
     'ReplaceSubcircuitError',
 ]
 
@@ -46,7 +47,7 @@ class CircuitGateAlreadyExistsError(CircuitError):
 
 
 class CircuitIsCyclicalError(CircuitError):
-    """Error the circuit has a cycle."""
+    """Error that circuit has a cycle."""
 
     pass
 
@@ -96,6 +97,12 @@ class CreateBlockError(CircuitError):
 
 class DeleteBlockError(CircuitError):
     """Represents error in deleting block in the circuit."""
+
+    pass
+
+
+class OverlappingBlocksError(CircuitError):
+    """Represents error that circuit has overlapping blocks."""
 
     pass
 

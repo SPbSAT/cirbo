@@ -6,49 +6,95 @@ import typing as tp
 import typing_extensions as tpe
 
 from boolean_circuit_tool.core.boolean_function import (
-    BooleanFunction,
-    BooleanFunctionModel,
+    Function,
+    FunctionModel,
     RawTruthTable,
     RawTruthTableModel,
 )
 from boolean_circuit_tool.core.circuit.utils import input_iterator_with_fixed_sum
+from boolean_circuit_tool.core.exceptions import BadCallableError
 from boolean_circuit_tool.core.logic import DontCare, TriValue
+from boolean_circuit_tool.core.utils import (
+    canonical_index_to_input,
+    input_to_canonical_index,
+)
 
 
 __all__ = [
     'PyFunctionModel',
     'PyFunction',
     'FunctionType',
+    'FunctionTypeTs',
+    'FunctionModelType',
+    'FunctionModelTypeTs',
 ]
 
+
+FunctionModelType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[TriValue]]
+FunctionType = tp.Callable[[tp.Sequence[bool]], tp.Sequence[bool]]
+
 Ts = tpe.TypeVarTuple('Ts')
-FunctionModelType = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[TriValue]]
-FunctionType = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[bool]]
+FunctionModelTypeTs = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[TriValue]]
+FunctionTypeTs = tp.Callable[[bool, tpe.Unpack[Ts]], tp.Sequence[bool]]
 
 
-class PyFunctionModel(BooleanFunctionModel['PyFunction']):
+class PyFunctionModel(FunctionModel['PyFunction']):
     """Boolean function model given as a python callable with don't care outputs."""
 
-    def __init__(
-        self,
-        func: FunctionModelType,
+    @staticmethod
+    def from_positional(
+        func: FunctionModelTypeTs,
         *,
         output_size: tp.Optional[int] = None,
     ):
         """
+        Creates PyFunctionModel from function with signature (arg1: bool, arg2: bool,
+        ..., argN: bool) -> tp.Sequence[TriValue]
+
         :param func: python callable. If `output_size` is not provided, this callable
-               will be invoked once in the constructor to evaluate output size.
+            will be invoked once in the constructor to evaluate output size.
         :param output_size: optional size of func output. May be provided to avoid
-               empty `func` evaluation during this object initialization.
+            empty `func` evaluation during this object initialization.
 
         """
-        s = inspect.signature(func)
 
+        @functools.wraps(func)
+        def f(args: tp.Sequence[bool]) -> tp.Sequence[TriValue]:
+            return func(*args)
+
+        s = inspect.signature(func)
+        input_size = len(s.parameters)
+        for param in s.parameters.values():
+            if (param.kind != param.POSITIONAL_ONLY) and (
+                param.kind != param.POSITIONAL_OR_KEYWORD
+            ):
+                raise BadCallableError(
+                    f"Provided callable {func} has unsupported "
+                    f"parameters kind: {param.kind}."
+                )
+
+        return PyFunctionModel(f, input_size=input_size, output_size=output_size)
+
+    def __init__(
+        self,
+        func: FunctionModelType,
+        input_size: int,
+        *,
+        output_size: tp.Optional[int] = None,
+    ):
+        """
+        :param func: python callable with signature (args: tp.Sequence[bool])
+            -> tp.Sequence[bool]. If `output_size` is not provided, this callable
+            will be invoked once in the constructor to evaluate output size.
+        :param output_size: optional size of func output. May be provided to avoid
+            empty `func` evaluation during this object initialization.
+
+        """
         self._func = func
-        self._input_size = len(s.parameters)
+        self._input_size = input_size
 
         if output_size is None:
-            result = func(*([False] * self.input_size))
+            result = func([False] * self.input_size)
             self._output_size = len(result)
         else:
             self._output_size = output_size
@@ -75,7 +121,7 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
         :return: value of outputs evaluated for input values `inputs`.
 
         """
-        return self._func(*inputs)
+        return self._func(inputs)
 
     def check_at(self, inputs: tp.Sequence[bool], output_index: int) -> TriValue:
         """
@@ -125,45 +171,125 @@ class PyFunctionModel(BooleanFunctionModel['PyFunction']):
         # `wraps` helps to disguise function from itertools.signature,
         # allowing it to correctly see parameters set of original func.
         @functools.wraps(_old_callable)
-        def _new_callable(*args: bool) -> tp.Sequence[bool]:
-            answer = list(_old_callable(*args))
+        def _new_callable(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
+            answer = list(_old_callable(args))
 
             # replace undefined part of answer according to definition
+            args_tuple = tuple(args)
             for idx in range(_output_size):
                 if answer[idx] != DontCare:
                     continue
 
-                answer[idx] = definition[(args, idx)]
+                answer[idx] = definition[(args_tuple, idx)]
 
             # blindly believe in user input.
             return tp.cast(tp.Sequence[bool], answer)
 
-        return PyFunction(_new_callable, output_size=self.output_size)
+        return PyFunction(
+            _new_callable, output_size=self.output_size, input_size=self.input_size
+        )
 
 
-class PyFunction(BooleanFunction):
+class PyFunction(Function):
     """Boolean function given as a python callable."""
 
-    def __init__(
-        self,
-        func: FunctionType,
+    @staticmethod
+    def from_int_unary_func(
+        func: tp.Callable[[int], int],
+        input_int_len: int,
+        output_int_len: int,
+        big_endian: bool = False,
+    ):
+        def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
+            assert len(args) == input_int_len
+            if not big_endian:
+                args = args[::-1]
+            index = input_to_canonical_index(args)
+            number = func(index)
+            result = canonical_index_to_input(number, output_int_len)
+            if not big_endian:
+                result = result[::-1]
+            return result
+
+        return PyFunction(func=_func, input_size=input_int_len)
+
+    @staticmethod
+    def from_int_binary_func(
+        func: tp.Callable[[int, int], int],
+        input_int_len: int,
+        output_int_len: int,
+        big_endian: bool = False,
+    ):
+        def _func(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
+            assert len(args) == 2 * input_int_len
+            args1 = args[:input_int_len]
+            args2 = args[input_int_len:]
+            if not big_endian:
+                args1 = args1[::-1]
+                args2 = args2[::-1]
+            index1 = input_to_canonical_index(args1)
+            index2 = input_to_canonical_index(args2)
+            number = func(index1, index2)
+            result = canonical_index_to_input(number, output_int_len)
+            if not big_endian:
+                result = result[::-1]
+            return result
+
+        return PyFunction(func=_func, input_size=2 * input_int_len)
+
+    @staticmethod
+    def from_positional(
+        func: FunctionTypeTs,
         *,
         output_size: tp.Optional[int] = None,
     ):
         """
+        Creates PyFunction from function with signature (arg1: bool, arg2: bool, ...,
+        argN: bool) -> tp.Sequence[bool]
+
         :param func: python callable. If `output_size` is not provided, this callable
-               will be invoked once in the constructor to evaluate output size.
+            will be invoked once in the constructor to evaluate output size.
         :param output_size: optional size of func output. May be provided to avoid
-               empty `func` evaluation during this object initialization.
+            empty `func` evaluation during this object initialization.
 
         """
-        s = inspect.signature(func)
 
+        @functools.wraps(func)
+        def f(args: tp.Sequence[bool]) -> tp.Sequence[bool]:
+            return func(*args)
+
+        s = inspect.signature(func)
+        input_size = len(s.parameters)
+        for param in s.parameters.values():
+            if (param.kind != param.POSITIONAL_ONLY) and (
+                param.kind != param.POSITIONAL_OR_KEYWORD
+            ):
+                raise BadCallableError(
+                    f"Provided callable {func} has unsupported "
+                    f"parameters kind: {param.kind}."
+                )
+
+        return PyFunction(f, input_size=input_size, output_size=output_size)
+
+    def __init__(
+        self,
+        func: FunctionType,
+        input_size: int,
+        *,
+        output_size: tp.Optional[int] = None,
+    ):
+        """
+        :param func: python callable with signature (args: list[bool]) -> tp.Sequence[bool].
+            If `output_size` is not provided, this callable will be invoked once in the
+            constructor to evaluate output size.
+        :param output_size: optional size of func output. May be provided to avoid
+            empty `func` evaluation during this object initialization.
+        """
         self._func = func
-        self._input_size = len(s.parameters)
+        self._input_size = input_size
 
         if output_size is None:
-            result = func(*([False] * self.input_size))
+            result = func([False] * self.input_size)
             self._output_size = len(result)
         else:
             self._output_size = output_size
@@ -190,7 +316,7 @@ class PyFunction(BooleanFunction):
         :return: value of outputs evaluated for input values `inputs`.
 
         """
-        return self._func(*inputs)
+        return self._func(inputs)
 
     def evaluate_at(self, inputs: tp.Sequence[bool], output_index: int) -> bool:
         """
@@ -234,14 +360,14 @@ class PyFunction(BooleanFunction):
                 return False
         return True
 
-    def is_monotonic(self, *, inverse: bool) -> bool:
+    def is_monotone(self, inverse: bool = False) -> bool:
         """
-        Check if all outputs are monotonic (output value doesn't decrease when
+        Check if all outputs are monotone (output value doesn't decrease when
         inputs are enumerated in a classic order: 0000, 0001, 0010, 0011 ...).
 
         :param inverse: if True, will check that output values doesn't
         increase when inputs are enumerated in classic order.
-        :return: True iff this function is monotonic.
+        :return: True iff this function is monotone.
 
         """
         input_iter = itertools.product((False, True), repeat=self.input_size)
@@ -254,16 +380,16 @@ class PyFunction(BooleanFunction):
                 return False
         return True
 
-    def is_monotonic_at(self, output_index: int, *, inverse: bool) -> bool:
+    def is_monotone_at(self, output_index: int, inverse: bool = False) -> bool:
         """
-        Check if output `output_index` is monotonic (output value doesn't
+        Check if output `output_index` is monotone (output value doesn't
         decrease when inputs are enumerated in a classic order: 0000, 0001,
         0010, 0011 ...).
 
         :param output_index: index of desired output.
         :param inverse: if True, will check that output value doesn't
         increase when inputs are enumerated in classic order.
-        :return: True iff output `output_index` is monotonic.
+        :return: True iff output `output_index` is monotone.
 
         """
         ones_started = False

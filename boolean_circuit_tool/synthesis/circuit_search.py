@@ -13,7 +13,7 @@ from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
 from boolean_circuit_tool.circuits_db.db import CircuitsDatabase
-from boolean_circuit_tool.core.boolean_function import BooleanFunctionModel
+from boolean_circuit_tool.core.boolean_function import FunctionModel
 from boolean_circuit_tool.core.circuit import (
     ALWAYS_FALSE,
     ALWAYS_TRUE,
@@ -50,8 +50,9 @@ from boolean_circuit_tool.synthesis.exception import (
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'Operation',
     'Basis',
+    'resolve_basis',
+    'Operation',
     'CircuitFinderSat',
 ]
 
@@ -124,6 +125,19 @@ class Basis(enum.Enum):
     ]
 
 
+_str_to_basis = {
+    'AIG': Basis.AIG,
+    'XAIG': Basis.XAIG,
+    'FULL': Basis.FULL,
+}
+
+
+def resolve_basis(basis: tp.Union[str, Basis]) -> Basis:
+    if isinstance(basis, str):
+        return _str_to_basis[basis.upper()]
+    return basis
+
+
 _tt_to_gate_type: tp.Dict[tp.Tuple, GateType] = {
     (0, 0, 0, 0): ALWAYS_FALSE,
     (0, 0, 0, 1): AND,
@@ -159,10 +173,10 @@ class CircuitFinderSat:
 
     def __init__(
         self,
-        boolean_function_model: BooleanFunctionModel,
+        boolean_function_model: FunctionModel,
         number_of_gates: int,
         *,
-        basis: tp.Union[Basis, tp.List[Operation]] = Basis.XAIG,
+        basis: tp.Union[Basis, tp.List[Operation], str] = Basis.XAIG,
         need_normalized: bool = False,
     ):
         """
@@ -183,10 +197,15 @@ class CircuitFinderSat:
         g(0, 0) = 0.
 
         """
+        _basis: list[Operation]
+        if isinstance(basis, (str, Basis)):
+            _basis = resolve_basis(basis).value
+        else:
+            _basis = basis
 
         self._boolean_function = boolean_function_model
         self._output_truth_tables = boolean_function_model.get_model_truth_table()
-        self._basis_list = basis.value if isinstance(basis, Basis) else basis
+        self._basis_list = _basis
         self._forbidden_operations = list(set(Basis.FULL.value) - set(self._basis_list))
 
         self._input_gates = list(range(boolean_function_model.input_size))

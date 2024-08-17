@@ -26,6 +26,7 @@ more-itertools = "^10.4.0"
 typing-extensions = "^4.12.2"
 python-sat="^1.8.dev13"
 pebble = "^5.0.7"
+graphviz = "^0.20.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
@@ -118,13 +119,20 @@ check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*"]
+module = ["pysat.*", "pebble.*", "mockturtle_wrapper.*", "graphviz.*"]
 
 
 [tool.pytest.ini_options]
 # Suppress warnings for invalid escape sequences in pysat package
 
-addopts = "-m 'not db_aig and not db_xaig'"
+addopts = "-m 'not db_aig and not db_xaig and not slow and not ABC' --ignore=third_party"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "db_aig: marks tests that use aig database",
+    "db_xaig: marks tests that use xaig database",
+    "ABC: marks tests that use ABC extension (deselect with '-m \"not ABC\"')",
+
+]
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"
 ]

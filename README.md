@@ -6,7 +6,10 @@
 Python >=3.9 is used to cover all currently
 [maintained versions](https://devguide.python.org/versions/).
 
-1. Install dev version of `python3.9` (e.g. `sudo apt install python3.9-dev`)
+1. Install following packages using your package manager:
+   - dev version of `python3.9` and `python3.9-distutils` (e.g. `sudo apt install python3.9-dev`)
+   - `cmake` and suitable C++ compiler
+   - `graphviz` library.
 1. Init and update repository submodules `git submodule update --init --recursive`
 1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
 1. Build extensions locally by running `poetry build`
@@ -27,6 +30,14 @@ dependencies run `poetry build` and to install them after use `poetry install`.
 Note: to build dependencies one should have all building tools available
 in the system. Currently, dependencies require `C++` compiler and `cmake`
 to be available.
+
+Some extensions can be disabled using environment variables if one doesn't
+need them. For example `(export DISABLE_ABC_CEXT=1 && poetry build)` (parenthesis
+should be included) will build wheels without `ABC` bridge module. It can be
+helpful for CI or fast testing because `ABC` compilation times are heavy.
+
+Tests that use `ABC` extension can be skipped by passing option `-m 'not ABC'`
+to `pytest` run.
 
 ## Codestyle guidelines
 

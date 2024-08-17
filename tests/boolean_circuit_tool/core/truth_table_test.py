@@ -2,7 +2,11 @@ import random
 import typing as tp
 
 import pytest
-from boolean_circuit_tool.core.boolean_function import RawTruthTable
+from boolean_circuit_tool.core.boolean_function import (
+    Function,
+    FunctionModel,
+    RawTruthTable,
+)
 
 from boolean_circuit_tool.core.exceptions import (
     BadBooleanValue,
@@ -24,6 +28,14 @@ def generate_random_truth_table(input_size: int, output_size: int) -> RawTruthTa
         [random.choice([True, False]) for _ in range(2**input_size)]
         for _ in range(output_size)
     ]
+
+
+def test_model_implements_protocol():
+    assert isinstance(TruthTableModel, FunctionModel)
+
+
+def test_implements_protocol():
+    assert isinstance(TruthTable, Function)
 
 
 @pytest.mark.parametrize(
@@ -202,23 +214,23 @@ def test_is_out_constant(input_size: int):
     assert truth_table.is_constant()
 
 
-def test_is_monotonic_simple():
+def test_is_monotone_simple():
     tt = TruthTable(['1110', '0001'])
-    assert not tt.is_monotonic_at(0, inverse=False)
-    assert tt.is_monotonic_at(1, inverse=False)
-    assert not tt.is_monotonic(inverse=False)
-    assert tt.is_monotonic_at(0, inverse=True)
-    assert not tt.is_monotonic_at(1, inverse=True)
-    assert not tt.is_monotonic(inverse=True)
+    assert not tt.is_monotone_at(0, inverse=False)
+    assert tt.is_monotone_at(1, inverse=False)
+    assert not tt.is_monotone(inverse=False)
+    assert tt.is_monotone_at(0, inverse=True)
+    assert not tt.is_monotone_at(1, inverse=True)
+    assert not tt.is_monotone(inverse=True)
 
 
 @pytest.mark.parametrize("input_size", [3, 4, 5, 6, 7])
-def test_is_out_monotonic(input_size: int):
+def test_is_out_monotone(input_size: int):
     false_count = random.randint(0, 2**input_size)
-    monotonic_out = [False] * false_count + [True] * (2**input_size - false_count)
-    truth_table = TruthTable([monotonic_out])
-    assert truth_table.is_monotonic_at(0, inverse=False)
-    assert truth_table.is_monotonic(inverse=False)
+    monotone_out = [False] * false_count + [True] * (2**input_size - false_count)
+    truth_table = TruthTable([monotone_out])
+    assert truth_table.is_monotone_at(0, inverse=False)
+    assert truth_table.is_monotone(inverse=False)
 
 
 def generate_sum(

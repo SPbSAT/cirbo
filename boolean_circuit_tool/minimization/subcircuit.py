@@ -20,7 +20,11 @@ from boolean_circuit_tool.minimization.exception import (
     FailedValidationError,
     UnsupportedOperationError,
 )
-from boolean_circuit_tool.synthesis.circuit_search import Basis, CircuitFinderSat
+from boolean_circuit_tool.synthesis.circuit_search import (
+    Basis,
+    CircuitFinderSat,
+    resolve_basis,
+)
 from boolean_circuit_tool.synthesis.exception import NoSolutionError, SolverTimeOutError
 
 Cut = tuple[Label, ...]
@@ -224,6 +228,22 @@ def _get_subcircuits(
                 circuit_tt[node] = MAX_PATTERN - (
                     circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
                 )
+            elif oper_type == 'GEQ':
+                circuit_tt[node] = circuit_tt[operands[0]] | (
+                    MAX_PATTERN - circuit_tt[operands[1]]
+                )
+            elif oper_type == 'LT':
+                circuit_tt[node] = MAX_PATTERN - (
+                    circuit_tt[operands[0]] | (MAX_PATTERN - circuit_tt[operands[1]])
+                )
+            elif oper_type == 'LEQ':
+                circuit_tt[node] = (MAX_PATTERN - circuit_tt[operands[0]]) | circuit_tt[
+                    operands[1]
+                ]
+            elif oper_type == 'GT':
+                circuit_tt[node] = MAX_PATTERN - (
+                    (MAX_PATTERN - circuit_tt[operands[0]]) | circuit_tt[operands[1]]
+                )
             else:
                 raise UnsupportedOperationError()
 
@@ -366,7 +386,7 @@ def rename_subcircuit_gates(
 
 def minimize_subcircuits(
     circuit: Circuit,
-    basis: Basis,
+    basis: tp.Union[str, Basis],
     *,
     enable_validation: bool = False,
     max_subcircuit_size: int = 9,
@@ -402,6 +422,8 @@ def minimize_subcircuits(
         circuit.
 
     """
+    _basis = resolve_basis(basis)
+
     node_cuts: dict[Label, list[Cut]] = mw.enumerate_cuts(
         circuit.format_circuit(),
         cut_size,
@@ -473,7 +495,9 @@ def minimize_subcircuits(
         ]
         try:
             new_subcircuit: Circuit = CircuitFinderSat(
-                TruthTableModel(outputs_tt), size - 1, basis=basis
+                TruthTableModel(outputs_tt),
+                size - 1,
+                basis=_basis,
             ).find_circuit(time_limit=solver_time_limit_sec)
         except NoSolutionError:
             logger.debug("Smaller subcircuit not found")

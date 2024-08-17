@@ -1,6 +1,5 @@
 from boolean_circuit_tool.core.circuit import Circuit, gate
 from boolean_circuit_tool.sat.exceptions import MiterDifferentShapesError
-from boolean_circuit_tool.synthesis.generation.generation import generate_pairwise_xor
 
 __all__ = [
     'build_miter',
@@ -30,6 +29,8 @@ def build_miter(
     :return: a miter circuit of given circuits
 
     """
+    from boolean_circuit_tool.synthesis.generation import generate_pairwise_xor
+
     if (left.input_size != right.input_size) or (left.output_size != right.output_size):
         raise MiterDifferentShapesError()
 
