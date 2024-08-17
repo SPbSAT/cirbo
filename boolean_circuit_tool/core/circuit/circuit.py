@@ -37,7 +37,7 @@ from boolean_circuit_tool.core.circuit.utils import (
 )
 from boolean_circuit_tool.core.circuit.validation import (
     check_block_doesnt_exist,
-    check_block_has_not_users,
+    check_block_has_no_users,
     check_gate_has_not_users,
     check_gates_exist,
     check_label_doesnt_exist,
@@ -563,7 +563,7 @@ class Circuit(Function):
         :return: this circuit after modification
 
         """
-        check_block_has_not_users(self.get_block(block_label), self)
+        check_block_has_no_users(self.get_block(block_label), self)
 
         return self._remove_block(block_label)
 
@@ -892,10 +892,15 @@ class Circuit(Function):
         outputs_mapping: dict[gate.Label, gate.Label],
     ) -> tp_ext.Self:
         """
-        Replace subcircuit with a new one. In this case, the new subcircuit is added
-        completely (the subcircuit of the subcircuit is not allocated by
-        `inputs_mapping` and `outputs_mapping`), therefore all inputs from the new
-        subcircuit must be in `inputs_mapping`
+        Replace the subcircuit with a new one. The subcircuit is found by the keys of
+        the inputs_mapping and the outputs_mapping; all gates, except for the gate from
+        inputs_mapping, are borrowed by the gates from the subcircuit. Gates with the
+        deleted gates as their operands will use the gates from the new circuit;
+        accordingly, they must be specified in the outputs_mapping. Moreover, the new
+        subcircuit is added completely (the subcircuit of the subcircuit is not
+        allocated by `inputs_mapping` and `outputs_mapping` as it happens in the
+        original circuit). Therefore, all inputs from the new subcircuit must be in
+        `inputs_mapping.`
 
         :param subcircuit: new subcircuit.
         :param inputs_mapping: label to label mapping between circuit nodes and
@@ -905,6 +910,10 @@ class Circuit(Function):
         :return: modified circuit.
 
         """
+        if len(inputs_mapping) + len(outputs_mapping) != len(
+            inputs_mapping | outputs_mapping
+        ):
+            raise ReplaceSubcircuitError()
         check_gates_exist(list(inputs_mapping.keys()), self)
         check_gates_exist(list(outputs_mapping.keys()), self)
         check_gates_exist(list(outputs_mapping.values()), subcircuit)
@@ -920,7 +929,7 @@ class Circuit(Function):
                 self.rename_gate(old_label, new_label)
 
         for old_label, new_label in outputs_mapping.items():
-            if old_label != new_label and old_label not in inputs_mapping:
+            if old_label != new_label:
                 self.rename_gate(old_label, new_label)
 
         copy_outputs = copy.copy(self.outputs)
@@ -935,16 +944,16 @@ class Circuit(Function):
             list(inputs_mapping.values()),
             list(outputs_mapping.values()),
         )
-        check_block_has_not_users(
+        check_block_has_no_users(
             block=block_for_deleting,
             circuit=self,
             exclusion_gates=set(outputs_mapping.values()),
         )
         self._remove_block(block_for_deleting.name)
 
-        for new_gate_label in subcircuit.top_sort(inverse=True):
-            if new_gate_label.label not in inputs_mapping.values():
-                self.add_gate(new_gate_label)
+        for new_gate in subcircuit.top_sort(inverse=True):
+            if new_gate.label not in inputs_mapping.values():
+                self.add_gate(new_gate)
 
         self._outputs = copy_outputs
         self._gate_to_users = self._gate_to_users | copy_outputs_users

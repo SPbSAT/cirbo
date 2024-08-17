@@ -16,8 +16,8 @@ from boolean_circuit_tool.core.circuit.gate import (
 from boolean_circuit_tool.minimization.exception import UnsupportedOperationError
 from boolean_circuit_tool.minimization.subcircuit import (
     _generate_inputs_tt,
+    _get_internal_gates,
     _get_subcircuits,
-    get_internal_gates,
     minimize_subcircuits,
 )
 from boolean_circuit_tool.synthesis.circuit_search import Basis
@@ -128,29 +128,29 @@ def test_get_internal_gates():
     instance.add_gate(Gate('I', AND, ('D', 'A')))
     instance.add_gate(Gate('J', OR, ('I', 'E')))
 
-    assert sorted(get_internal_gates(instance, inputs=['A'], outputs=['E'])) == []
+    assert sorted(_get_internal_gates(instance, inputs=['A'], outputs=['E'])) == []
     assert sorted(
-        get_internal_gates(instance, inputs=['A', 'B', 'C', 'D'], outputs=['H'])
+        _get_internal_gates(instance, inputs=['A', 'B', 'C', 'D'], outputs=['H'])
     ) == ['E', 'F', 'G']
-    assert sorted(get_internal_gates(instance, inputs=['A', 'B'], outputs=['F'])) == [
+    assert sorted(_get_internal_gates(instance, inputs=['A', 'B'], outputs=['F'])) == [
         'E'
     ]
     assert sorted(
-        get_internal_gates(instance, inputs=['A', 'B', 'C'], outputs=['H'])
+        _get_internal_gates(instance, inputs=['A', 'B', 'C'], outputs=['H'])
     ) == ['E', 'F', 'G']
     assert sorted(
-        get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+        _get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
     ) == ['F', 'G']
     assert sorted(
-        get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+        _get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
     ) == ['F', 'G']
     assert sorted(
-        get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+        _get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
     ) == ['F', 'G']
     assert sorted(
-        get_internal_gates(instance, inputs=['A', 'B', 'C', 'D'], outputs=['H', 'J'])
+        _get_internal_gates(instance, inputs=['A', 'B', 'C', 'D'], outputs=['H', 'J'])
     ) == ['E', 'F', 'G', 'I']
-    assert sorted(get_internal_gates(instance, inputs=[], outputs=['J'])) == [
+    assert sorted(_get_internal_gates(instance, inputs=[], outputs=['J'])) == [
         'A',
         'D',
         'E',

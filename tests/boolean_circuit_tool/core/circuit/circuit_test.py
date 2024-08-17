@@ -1133,24 +1133,12 @@ def test_replace_subcircuit3():
 
     instance5 = copy.copy(instance)
     instance_to_replace_with5 = copy.copy(instance_to_replace_with)
-    instance5.replace_subcircuit(
-        subcircuit=instance_to_replace_with5,
-        inputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
-        outputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
-    )
-    assert instance5.gates == {
-        'K': Gate('K', INPUT),
-        'L': Gate('L', INPUT),
-        'M': Gate('M', INPUT),
-        'D': Gate('D', INPUT),
-        'E': Gate('E', AND, ('K', 'L')),
-        'F': Gate('F', OR, ('L', 'M')),
-        'G': Gate('G', XOR, ('E', 'F')),
-        'H': Gate('H', AND, ('D', 'G')),
-        'N': Gate('N', NOT, ('K',)),
-        'O': Gate('O', OR, ('L', 'N')),
-        'P': Gate('P', AND, ('O', 'M')),
-    }
+    with pytest.raises(ReplaceSubcircuitError):
+        instance5.replace_subcircuit(
+            subcircuit=instance_to_replace_with5,
+            inputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
+            outputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
+        )
 
 
 def test_replace_subcircuit4():

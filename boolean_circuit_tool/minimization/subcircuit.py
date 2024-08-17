@@ -308,7 +308,7 @@ def _eval_dont_cares(
     return subcircuits
 
 
-def get_internal_gates(
+def _get_internal_gates(
     circuit: "Circuit",
     inputs: list[Label],
     outputs: list[Label],
@@ -341,7 +341,7 @@ def get_internal_gates(
     return internal_gates
 
 
-def rename_subcircuit_gates(
+def _rename_subcircuit_gates(
     circuit: "Circuit",
     subcircuit: "Circuit",
     inputs_mapping: dict[Label, Label],
@@ -361,7 +361,7 @@ def rename_subcircuit_gates(
     :return: modified subcircuit.
 
     """
-    labels_to_remove: list[Label] = get_internal_gates(
+    labels_to_remove: list[Label] = _get_internal_gates(
         circuit,
         list(inputs_mapping.keys()),
         list(outputs_mapping.keys()),
@@ -538,7 +538,7 @@ def minimize_subcircuits(
 
         # Changing initial circuit
         new_circuit: Circuit = copy.deepcopy(circuit)
-        rename_subcircuit_gates(
+        _rename_subcircuit_gates(
             new_circuit, new_subcircuit, input_labels_mapping, output_labels_mapping
         )
         new_circuit.replace_subcircuit(
@@ -558,7 +558,7 @@ def minimize_subcircuits(
         for output in output_labels_mapping:
             node_states[output] = _NodeState.REMOVED  # todo: process carefully
 
-        for gate in get_internal_gates(
+        for gate in _get_internal_gates(
             circuit,
             list(input_labels_mapping.keys()),
             list(output_labels_mapping.keys()),

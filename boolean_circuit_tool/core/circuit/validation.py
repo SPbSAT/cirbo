@@ -16,7 +16,7 @@ __all__ = [
     'check_label_doesnt_exist',
     'check_block_doesnt_exist',
     'check_gate_has_not_users',
-    'check_block_has_not_users',
+    'check_block_has_no_users',
     'check_circuit_has_no_cycles',
 ]
 
@@ -56,7 +56,7 @@ def check_block_doesnt_exist(block_label: 'Label', circuit: 'Circuit') -> None:
         )
 
 
-def check_block_has_not_users(
+def check_block_has_no_users(
     block: 'Block',
     circuit: 'Circuit',
     exclusion_gates: tp.Optional[set['Label']] = None,
