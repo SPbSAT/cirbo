@@ -940,7 +940,6 @@ class Circuit(Function):
             circuit=self,
             exclusion_gates=set(outputs_mapping.values()),
         )
-
         self._remove_block(block_for_deleting.name)
 
         for new_gate_label in subcircuit.top_sort(inverse=True):
