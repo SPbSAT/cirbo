@@ -308,12 +308,12 @@ def test_all_types_of_gate():
     file_path = get_file_path('test_all_types_of_gate.bench')
     instance = Circuit().from_bench_file(file_path)
 
-    assert instance.size == 21
-    assert instance.gates_number([]) == 21
+    assert instance.size == 23
+    assert instance.gates_number([]) == 23
     assert instance.inputs == ['1', '2']
-    assert instance.outputs == ['21']
+    assert instance.outputs == ['21', '23']
     assert instance.input_size == 2
-    assert instance.output_size == 1
+    assert instance.output_size == 2
 
     assert instance._gates.keys() == {
         '1',
@@ -337,6 +337,8 @@ def test_all_types_of_gate():
         '19',
         '20',
         '21',
+        '22',
+        '23',
     }
 
     assert instance.get_gate('1').label == '1'
@@ -443,3 +445,13 @@ def test_all_types_of_gate():
     assert instance.get_gate('21').gate_type == IFF
     assert instance.get_gate('21').operands == ('20',)
     assert instance.get_gate_users('21') == []
+
+    assert instance.get_gate('22').label == '22'
+    assert instance.get_gate('22').gate_type == ALWAYS_TRUE
+    assert instance.get_gate('22').operands == ()
+    assert instance.get_gate_users('22') == ['23']
+
+    assert instance.get_gate('23').label == '23'
+    assert instance.get_gate('23').gate_type == NOT
+    assert instance.get_gate('23').operands == ('22',)
+    assert instance.get_gate_users('23') == []

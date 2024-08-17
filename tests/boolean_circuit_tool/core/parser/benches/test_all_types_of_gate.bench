@@ -20,5 +20,8 @@ INPUT(2)
 19 = RIFF(5, 6)
 20 = IFF(19)
 21 = BUFF(20)
+22 = vdd
+23 = NOT(22)
 
 OUTPUT(21)
+OUTPUT(23)

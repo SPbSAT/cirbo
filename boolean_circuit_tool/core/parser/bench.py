@@ -62,6 +62,7 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             "BUFF": self._process_iff,
             gate.ALWAYS_TRUE.name: self._process_always_true,
             gate.ALWAYS_FALSE.name: self._process_always_false,
+            "vdd": self._process_always_true,
         }
 
     def _process_line(self, line: str) -> tp.Iterable:
@@ -79,39 +80,54 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             # Operator Gate
             return self._process_operator_gate(line)
 
-    def _parse_operator_gate(self, line: str) -> tuple[str, str, list[str]]:
+    def _parse_name_gate(self, line: str) -> tuple[str, str]:
+        """
+        Parses line for finding gate's name.
+
+        :returns (gate's name: str, tail string: str).
+
+        """
+        _eq_idx = line.find('=')
+        if _eq_idx == -1:
+            raise ValueError(f"Can't parse {line}.")
+
+        _out = line[:_eq_idx].strip(' ')
+        logger.debug(f"\tLine read as: NAME gate: {_out}; ")
+        return _out, line[_eq_idx + 1 :].strip(' ')
+
+    def _parse_operator_gate(self, line: str) -> tuple[str, list[str]]:
         """
         Parses line with operator gate.
 
-        :returns (operator: str, result_gate: str, operands: List[str]).
+        :returns (operator: str, operands: List[str]).
 
         """
 
-        _eq_idx = line.find('=')
         _lbkt_idx = line.find('(')
         _rbkt_idx = line.find(')')
 
-        if _eq_idx == -1 or _lbkt_idx == -1 or _rbkt_idx == -1:
+        if _lbkt_idx == -1 or _rbkt_idx == -1:
             raise ValueError(f"Can't parse {line}.")
 
-        _operator_str = line[(_eq_idx + 1) : _lbkt_idx].strip(' ').upper()
-        _out = line[:_eq_idx].strip(' ')
+        _operator_str = line[:_lbkt_idx].strip(' ').upper()
         _args_str = line[(_lbkt_idx + 1) : _rbkt_idx].strip(' ')
-        logger.debug(
-            f"\tLine read as: OPERATOR: `{_operator_str}`; "
-            f"OPERATOR GATE: `{_out}`; OPERANDS: `{_args_str}`;"
-        )
+        logger.debug(f"OPERATOR: `{_operator_str}`; " f"OPERANDS: `{_args_str}`;")
 
         _operands = [a.strip(' ') for a in _args_str.split(",")]
         logger.debug(
             f"\tParsed line as: OPERATOR: `{_operator_str}`; "
-            f"OPERATOR GATE: `{_out}`; OPERANDS: `{_operands}`;"
+            f"OPERANDS: `{_operands}`;"
         )
 
-        return _operator_str, _out, _operands
+        return _operator_str, _operands
 
     def _process_operator_gate(self, line: str) -> tp.Iterable:
-        _operator, _out, _operands = self._parse_operator_gate(line)
+
+        _out, line = self._parse_name_gate(line)
+        if line[:3].lower() == "vdd":
+            return self._processings["vdd"](_out)
+
+        _operator, _operands = self._parse_operator_gate(line)
         try:
             if (
                 _operator == gate.ALWAYS_FALSE.name
@@ -119,6 +135,7 @@ class AbstractBenchParser(AbstractParser, metaclass=abc.ABCMeta):
             ):
                 return self._processings[_operator](_out)
             return self._processings[_operator](_out, *_operands)
+
         except KeyError:
             raise ValueError(f"Unknown operator {_operator}!")
 
