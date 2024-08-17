@@ -56,13 +56,28 @@ def check_block_doesnt_exist(block_label: 'Label', circuit: 'Circuit') -> None:
         )
 
 
-def check_block_has_not_users(block: 'Block', circuit: 'Circuit') -> None:
-    """Check that block hasn't users in the circuit outside itself."""
-    gates_set: set[Label] = set(block.gates)
+def check_block_has_not_users(
+    block: 'Block',
+    circuit: 'Circuit',
+    exclusion_gates: tp.Optional[set['Label']] = None,
+) -> None:
+    """
+    Check that gates from block hasn't users in the circuit outside itself.
+
+    :param block: the block for checking
+    :param circuit: the circuit
+    :param exclusion_gates: gates from the block that are allowed to have users
+
+    """
+    if exclusion_gates is None:
+        exclusion_gates = set()
+
+    gates_set: set['Label'] = set(block.gates)
     for gate in block.gates:
-        for user in circuit.get_gate_users(gate):
-            if user not in gates_set:
-                raise DeleteBlockError()
+        if gate not in exclusion_gates:
+            for user in circuit.get_gate_users(gate):
+                if user not in gates_set:
+                    raise DeleteBlockError()
 
 
 def check_circuit_has_no_cycles(circuit: 'Circuit') -> None:

@@ -4,6 +4,7 @@ import enum
 import itertools
 import logging
 import typing as tp
+import uuid
 
 import mockturtle_wrapper as mw
 import more_itertools
@@ -366,13 +367,20 @@ def rename_subcircuit_gates(
         list(outputs_mapping.keys()),
     )
 
+    tmp_mapping: dict[Label, Label] = {}  # used to avoid duplicating labels for nodes
+    subcircuit_gates: list[Label] = list(subcircuit.gates.keys())
+    for i, label in enumerate(subcircuit_gates):
+        new_label: Label = f"tmp_{i}" + uuid.uuid4().hex
+        tmp_mapping[label] = new_label
+        subcircuit.rename_gate(label, new_label)
+
     for label1, label2 in inputs_mapping.items():
-        subcircuit.rename_gate(old_label=label2, new_label=label1)
+        subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
         inputs_mapping[label1] = label1
 
     for label1, label2 in outputs_mapping.items():
         if label1 not in inputs_mapping:
-            subcircuit.rename_gate(old_label=label2, new_label=label1)
+            subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
             outputs_mapping[label1] = label1
 
     i = 0

@@ -11,6 +11,7 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateIsAbsentError,
     CircuitValidationError,
     CreateBlockError,
+    DeleteBlockError,
     GateDoesntExistError,
     GateHasUsersError,
     GateNotInputError,
@@ -1150,6 +1151,59 @@ def test_replace_subcircuit3():
         'O': Gate('O', OR, ('L', 'N')),
         'P': Gate('P', AND, ('O', 'M')),
     }
+
+
+def test_replace_subcircuit4():
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('A', 'B')))
+    instance.add_gate(Gate('F', OR, ('B', 'E')))
+    instance.add_gate(Gate('G', XOR, ('E', 'F')))
+    instance.add_gate(Gate('H', AND, ('D', 'G')))
+    instance.mark_as_output('H')
+
+    instance_to_replace_with = Circuit()
+    instance_to_replace_with.add_gate(Gate('K', INPUT))
+    instance_to_replace_with.add_gate(Gate('L', INPUT))
+    instance_to_replace_with.add_gate(Gate('M', INPUT))
+    instance_to_replace_with.add_gate(Gate('N', NOT, ('K',)))
+    instance_to_replace_with.add_gate(Gate('O', OR, ('L', 'N')))
+    instance_to_replace_with.add_gate(Gate('P', AND, ('O', 'M')))
+    instance_to_replace_with.mark_as_output('P')
+
+    result = Circuit()
+    result.add_gate(Gate('K', INPUT))
+    result.add_gate(Gate('L', INPUT))
+    result.add_gate(Gate('M', INPUT))
+    result.add_gate(Gate('D', INPUT))
+    result.add_gate(Gate('N', NOT, ('K',)))
+    result.add_gate(Gate('O', OR, ('L', 'N')))
+    result.add_gate(Gate('P', AND, ('O', 'M')))
+    result.add_gate(Gate('G', XOR, ('O', 'P')))
+    result.add_gate(Gate('H', AND, ('D', 'G')))
+    result.mark_as_output('H')
+
+    instance1 = copy.copy(instance)
+    instance_to_replace_with1 = copy.copy(instance_to_replace_with)
+    with pytest.raises(DeleteBlockError):
+        instance1.replace_subcircuit(
+            subcircuit=instance_to_replace_with1,
+            inputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
+            outputs_mapping={'F': 'P'},
+        )
+
+    instance2 = copy.copy(instance)
+    instance_to_replace_with2 = copy.copy(instance_to_replace_with)
+    instance2.replace_subcircuit(
+        subcircuit=instance_to_replace_with2,
+        inputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
+        outputs_mapping={'F': 'P', 'E': 'O'},
+    )
+    assert instance2 == result
 
 
 def test_evaluate_circuit():

@@ -9,6 +9,7 @@ import logging
 import pathlib
 import textwrap
 import typing as tp
+import uuid
 
 import graphviz
 import typing_extensions as tp_ext
@@ -930,10 +931,16 @@ class Circuit(Function):
         }
 
         block_for_deleting = self.make_block_from_slice(
-            'block_for_deleting',
+            'block_for_deleting' + uuid.uuid4().hex,
             list(inputs_mapping.values()),
             list(outputs_mapping.values()),
         )
+        check_block_has_not_users(
+            block=block_for_deleting,
+            circuit=self,
+            exclusion_gates=set(outputs_mapping.values()),
+        )
+
         self._remove_block(block_for_deleting.name)
 
         for new_gate_label in subcircuit.top_sort(inverse=True):
@@ -1937,7 +1944,7 @@ class Circuit(Function):
         blocks = list(self.blocks.values())
         for block in blocks:
             if gate_label in block.gates or gate_label in block.inputs:
-                logger.info(
+                logger.debug(
                     f"Block {block.name} was removed because gate {gate_label} "
                     "was removed from circuit"
                 )
@@ -1956,10 +1963,10 @@ class Circuit(Function):
         """
         block: Block = self.get_block(block_label)
 
-        # since when deleting the first gate from our block, the block itself will be
-        # deleted, let's remember everything we need to delete in advance
-        remove_gates = block.gates
-        for _gate in remove_gates:
+        # since when removing the first gate from our block, the block itself will be
+        # deleted, let's remember everything we need to remove in advance
+        gates_to_remove = block.gates
+        for _gate in gates_to_remove:
             self._remove_gate(self.get_gate(_gate).label)
 
         return self
