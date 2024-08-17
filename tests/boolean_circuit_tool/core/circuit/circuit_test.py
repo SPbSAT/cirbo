@@ -953,13 +953,13 @@ def test_replace_subcircuit():
     edges_out = 0
     for gate in new_instance.gates.values():
         edges_in += len(gate.operands)
-        edges_out += len(new_instance._gate_to_users[gate.label])
+        edges_out += len(new_instance.get_gate_users(gate.label))
     assert edges_in == edges_out
 
     for gate in new_instance.gates.values():
         label = gate.label
         for operand in gate.operands:
-            assert label in new_instance._gate_to_users[operand]
+            assert label in new_instance.get_gate_users(operand)
 
     # Check assignments
     for assignment in itertools.product([False, True], repeat=3):
@@ -1037,13 +1037,13 @@ def test_replace_subcircuit2():
     edges_out = 0
     for gate in new_instance.gates.values():
         edges_in += len(gate.operands)
-        edges_out += len(new_instance._gate_to_users[gate.label])
+        edges_out += len(new_instance.get_gate_users(gate.label))
     assert edges_in == edges_out
 
     for gate in new_instance.gates.values():
         label = gate.label
         for operand in gate.operands:
-            assert label in new_instance._gate_to_users[operand]
+            assert label in new_instance.get_gate_users(operand)
 
     # Check assignments
     for assignment in itertools.product([False, True], repeat=4):

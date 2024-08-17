@@ -246,9 +246,7 @@ class Circuit(Function):
         self._inputs: list[gate.Label] = list()
         self._outputs: list[gate.Label] = list()
         self._gates: dict[gate.Label, gate.Gate] = {}
-        self._gate_to_users: tp.DefaultDict[gate.Label, list[gate.Label]] = (
-            collections.defaultdict(list)
-        )
+        self._gate_to_users: dict[gate.Label, list[gate.Label]] = {}
         self._blocks: dict[gate.Label, Block] = {}
 
     @property
@@ -396,6 +394,8 @@ class Circuit(Function):
         """
         if label not in self._gates:
             raise GateDoesntExistError()
+        if label not in self._gate_to_users:
+            return []
         return self._gate_to_users[label]
 
     def get_block(self, block_label: gate.Label) -> Block:
@@ -2024,7 +2024,10 @@ class Circuit(Function):
 
     def _add_user(self, gate_label: gate.Label, user: gate.Label):
         """Add user for `gate`."""
-        self._gate_to_users[gate_label].append(user)
+        if gate_label not in self._gate_to_users:
+            self._gate_to_users[gate_label] = [user]
+        else:
+            self._gate_to_users[gate_label].append(user)
 
     def _traverse_circuit(
         self,
