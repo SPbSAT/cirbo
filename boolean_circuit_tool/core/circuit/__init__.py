@@ -24,6 +24,7 @@ from boolean_circuit_tool.core.circuit.gate import (
     XOR,
 )
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
+from boolean_circuit_tool.core.circuit.transformer import Transformer
 
 __all__ = [
     'Circuit',
@@ -51,4 +52,5 @@ __all__ = [
     'RIFF',
     'RNOT',
     'XOR',
+    'Transformer',
 ]

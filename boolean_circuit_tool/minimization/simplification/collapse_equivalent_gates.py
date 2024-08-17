@@ -7,30 +7,42 @@ import more_itertools
 
 from boolean_circuit_tool.core.circuit import Circuit, GateState
 from boolean_circuit_tool.core.circuit.gate import Gate, Label
+from boolean_circuit_tool.core.circuit.transformer import Transformer
+from boolean_circuit_tool.minimization.simplification.remove_redundant_gates import (
+    RemoveRedundantGates,
+)
 
 
 __all__ = [
-    'collapse_equivalent_gates',
+    'CollapseEquivalentGates',
 ]
+
 
 logger = logging.getLogger(__name__)
 
 
-def collapse_equivalent_gates(circuit: Circuit) -> Circuit:
+class CollapseEquivalentGates(Transformer):
     """
     Finds groups of equivalent gates using the full truth table comparison and replaces
     them with a single gate, updating all the references to the old ones.
 
     Warning: the execution time grows exponentially as the number of inputs increases.
     For circuits with more than 20 inputs it is recommended to use alternative
-    `collapse_duplicate_gates` methods.
-
-    :param circuit: the original circuit to be simplified
-    :return: new simplified version of the circuit
+    `CollapseDuplicateGates` methods.
 
     """
-    equivalent_gate_groups = _find_equivalent_gates_groups(circuit)
-    return _replace_equivalent_gates(circuit, equivalent_gate_groups)
+
+    def __init__(self):
+        super().__init__(post_transformers=(RemoveRedundantGates(),))
+
+    def _transform(self, circuit: Circuit) -> Circuit:
+        """
+        :param circuit: the original circuit to be simplified
+        :return: new simplified version of the circuit
+
+        """
+        equivalent_gate_groups = _find_equivalent_gates_groups(circuit)
+        return _replace_equivalent_gates(circuit, equivalent_gate_groups)
 
 
 def _find_equivalent_gates_groups(circuit: Circuit) -> list[list[Label]]:
