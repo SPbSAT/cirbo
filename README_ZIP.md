@@ -74,13 +74,6 @@ given (partially defined) truth table or for an optimization of existing circuit
 > Note: most of a public methods provide docstrings, which can be useful when
 > exploring `cirbo`.
 
-## Design notes
-
-### Exceptions
-
-To allow user to catch any `cirbo`-specific exception all exceptions which are
-raised manually within a `cirbo` are successors of `BooleanCircuitToolError`.
-
 ## Technical info
 
 ### C/C++ extensions
@@ -125,27 +118,6 @@ execute all tests run `poetry run pytest -m 'not manual'`.
 `black`, `docformatter` and `usort` are used both to check if code is properly
 formatted (e.g. in CI checks) and to format code locally.
 
-Those checks are available in poetry environment and can be invoked at once
-locally using tool script:
-
-`python ./tools/check.py`
-
-If everything is good, output is expected to be like the following:
-
-```
-(cirbo-py3.9) cirbo$ python ./tools/check.py
-1. MYPY CHECK SUCCEED
-2. FLAKE8 CHECK SUCCEED
-3. PYTEST CHECK SUCCEED
-4. USORT CHECK SUCCEED
-5. DOCFORMATTER CHECK SUCCEED
-6. BLACK CHECK SUCCEED
-```
-
-shorten outputs mode can also be activated using flag `-s`:
-
-`python ./tools/check.py -s`
-
 #### Tools
 
 All formatters can be run at once in poetry environment using following tool script:
@@ -167,7 +139,3 @@ If everything is good, output is expected to be like the following:
 5. DOCFORMATTER CHECK SUCCEED
 6. BLACK CHECK SUCCEED
 ```
-
-Shorten outputs mode can also be activated using flag `-s`:
-
-`python ./tools/check.py -s`
