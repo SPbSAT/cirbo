@@ -6,10 +6,16 @@ from boolean_circuit_tool.core.circuit.circuit import Circuit
 from boolean_circuit_tool.core.circuit.gate import (
     AND,
     Gate,
+    GEQ,
+    GT,
     INPUT,
     LEQ,
     LIFF,
+    LT,
+    NAND,
+    NOR,
     NOT,
+    NXOR,
     OR,
     XOR,
 )
@@ -174,8 +180,61 @@ def test_minimize_subcircuits2():
     )
     assert minimized_circuit.size == 11
 
+    instance.add_gate(Gate('G', NOT, ('Z',)))
+    instance.mark_as_output('G')
+    minimized_circuit = minimize_subcircuits(
+        instance, basis=Basis.XAIG, enable_validation=True
+    )
+    print(minimized_circuit.format_circuit())
+    assert minimized_circuit.size == 12
+
 
 def test_minimize_subcircuits3():
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('AB', NAND, ('A', 'B')))
+    instance.add_gate(Gate('BC', GEQ, ('B', 'C')))
+    instance.add_gate(Gate('AD', GT, ('A', 'D')))
+    instance.add_gate(Gate('CD', LT, ('C', 'D')))
+    instance.add_gate(Gate('X', NOR, ('AB', 'CD')))
+    instance.add_gate(Gate('Y', NXOR, ('BC', 'AD')))
+    instance.add_gate(Gate('Z', GEQ, ('X', 'Y')))
+    instance.mark_as_output('Z')
+
+    minimized_circuit = minimize_subcircuits(
+        instance, basis=Basis.XAIG, enable_validation=True
+    )
+
+    assert minimized_circuit.size == 10
+
+
+def test_minimize_subcircuits4():
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('AB', OR, ('A', 'B')))
+    instance.add_gate(Gate('C', OR, ('AB', 'A')))
+    instance.add_gate(Gate('D', NOT, ('C',)))
+    instance.mark_as_output('C')
+    instance.mark_as_output('D')
+
+    minimized_circuit = minimize_subcircuits(
+        instance, basis=Basis.XAIG, enable_validation=True
+    )
+
+    print(minimized_circuit.format_circuit())
+
+    assert minimized_circuit.size == 4
+
+
+def test_minimize_subcircuits5():
     # sum5 XAIG (size: 17 -> 16)
     instance = Circuit()
 
@@ -206,7 +265,7 @@ def test_minimize_subcircuits3():
     assert minimized_circuit.size == 16
 
 
-def test_minimize_subcircuits4():
+def test_minimize_subcircuits6():
     # sum7 XAIG (size: 27 -> 26)
     instance = Circuit()
 

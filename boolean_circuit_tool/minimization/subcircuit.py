@@ -20,6 +20,8 @@ from boolean_circuit_tool.minimization.exception import (
     FailedValidationError,
     UnsupportedOperationError,
 )
+from boolean_circuit_tool.sat.miter import build_miter
+from boolean_circuit_tool.sat.sat import is_circuit_satisfiable
 from boolean_circuit_tool.synthesis.circuit_search import (
     Basis,
     CircuitFinderSat,
@@ -38,6 +40,37 @@ class _NodeState(enum.Enum):
     UNCHANGED = 'UNCHANGED'
     MODIFIED = 'MODIFIED'
     REMOVED = 'REMOVED'
+
+
+class _PatternOperations:
+    def __init__(self, number_of_inputs: int):
+        self.max_pattern: int = (1 << (1 << number_of_inputs)) - 1
+
+    def eval_pattern(self, operands: list[int], oper_type: str) -> int:
+        if oper_type == 'NOT':
+            return self.max_pattern - operands[0]
+        elif oper_type == 'AND':
+            return operands[0] & operands[1]
+        elif oper_type == 'NAND':
+            return self.max_pattern - (operands[0] & operands[1])
+        elif oper_type == 'OR':
+            return operands[0] | operands[1]
+        elif oper_type == 'NOR':
+            return self.max_pattern - (operands[0] | operands[1])
+        elif oper_type == 'XOR':
+            return operands[0] ^ operands[1]
+        elif oper_type == 'NXOR':
+            return self.max_pattern - (operands[0] ^ operands[1])
+        elif oper_type == 'GEQ':
+            return operands[0] | (self.max_pattern - operands[1])
+        elif oper_type == 'LT':
+            return self.max_pattern - (operands[0] | (self.max_pattern - operands[1]))
+        elif oper_type == 'LEQ':
+            return (self.max_pattern - operands[0]) | operands[1]
+        elif oper_type == 'GT':
+            return self.max_pattern - ((self.max_pattern - operands[0]) | operands[1])
+        else:
+            raise UnsupportedOperationError()
 
 
 class _Subcircuit:
@@ -197,7 +230,7 @@ def _get_subcircuits(
 
         circuit_tt: tp.DefaultDict[Label, int] = collections.defaultdict(int)
         circuit_size: int = 0
-        MAX_PATTERN: int = (1 << (1 << n)) - 1
+        pattern_operations: _PatternOperations = _PatternOperations(n)
         for i, node in enumerate(inputs_lst):
             circuit_tt[node] = inputs_tt[n][i]
         for node in nodes:
@@ -207,45 +240,9 @@ def _get_subcircuits(
             operands: tuple[Label, ...] = circuit.get_gate(node).operands
             users: list[Label] = circuit.get_gate_users(node)
             oper_type: str = circuit.get_gate(node).gate_type.name
-
-            if oper_type == 'NOT':
-                circuit_tt[node] = MAX_PATTERN - circuit_tt[operands[0]]
-            elif oper_type == 'AND':
-                circuit_tt[node] = circuit_tt[operands[0]] & circuit_tt[operands[1]]
-            elif oper_type == 'NAND':
-                circuit_tt[node] = MAX_PATTERN - (
-                    circuit_tt[operands[0]] & circuit_tt[operands[1]]
-                )
-            elif oper_type == 'OR':
-                circuit_tt[node] = circuit_tt[operands[0]] | circuit_tt[operands[1]]
-            elif oper_type == 'NOR':
-                circuit_tt[node] = MAX_PATTERN - (
-                    circuit_tt[operands[0]] | circuit_tt[operands[1]]
-                )
-            elif oper_type == 'XOR':
-                circuit_tt[node] = circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
-            elif oper_type == 'NXOR':
-                circuit_tt[node] = MAX_PATTERN - (
-                    circuit_tt[operands[0]] ^ circuit_tt[operands[1]]
-                )
-            elif oper_type == 'GEQ':
-                circuit_tt[node] = circuit_tt[operands[0]] | (
-                    MAX_PATTERN - circuit_tt[operands[1]]
-                )
-            elif oper_type == 'LT':
-                circuit_tt[node] = MAX_PATTERN - (
-                    circuit_tt[operands[0]] | (MAX_PATTERN - circuit_tt[operands[1]])
-                )
-            elif oper_type == 'LEQ':
-                circuit_tt[node] = (MAX_PATTERN - circuit_tt[operands[0]]) | circuit_tt[
-                    operands[1]
-                ]
-            elif oper_type == 'GT':
-                circuit_tt[node] = MAX_PATTERN - (
-                    (MAX_PATTERN - circuit_tt[operands[0]]) | circuit_tt[operands[1]]
-                )
-            else:
-                raise UnsupportedOperationError()
+            circuit_tt[node] = pattern_operations.eval_pattern(
+                [circuit_tt[operand] for operand in operands], oper_type
+            )
 
             if oper_type != 'NOT':
                 circuit_size += 1
@@ -257,7 +254,6 @@ def _get_subcircuits(
                         break
             if is_output:
                 outputs.append(node)
-        outputs.sort(key=lambda x: circuit_tt[x])
         subcircuits.append(
             _Subcircuit(
                 inputs=inputs_lst[::-1],
@@ -405,7 +401,7 @@ def minimize_subcircuits(
             if pattern in found_patterns:
                 outputs_mapping[output] = found_patterns[pattern]
             elif MAX_PATTERN - pattern in found_patterns:
-                outputs_negation_mapping[output] = found_patterns[pattern]
+                outputs_negation_mapping[output] = found_patterns[MAX_PATTERN - pattern]
             else:
                 filtered_outputs.add(output)
                 filtered_outputs_lst.append(output)
@@ -476,22 +472,9 @@ def minimize_subcircuits(
             node_states[gate] = _NodeState.REMOVED
 
     if enable_validation:
-        assignment: dict[Label, GateState] = {
-            input: False for input in initial_circuit.inputs
-        }
-        inputs = initial_circuit.inputs
-        for i in range(1 << len(inputs)):
-            if i:  # update assignment for new iteration
-                idx: int = len(inputs) - 1
-                while assignment[inputs[idx]]:
-                    assignment[inputs[idx]] = False
-                    idx -= 1
-                assignment[inputs[idx]] = True
-            if circuit.evaluate_circuit_outputs(
-                assignment
-            ) != initial_circuit.evaluate_circuit_outputs(assignment):
-                raise FailedValidationError()
-
+        miter_circuit = build_miter(circuit, initial_circuit)
+        if is_circuit_satisfiable(miter_circuit).answer:
+            raise FailedValidationError()
         logger.debug("Validation passed")
 
     return circuit
