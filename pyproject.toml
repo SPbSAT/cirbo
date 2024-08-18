@@ -1,8 +1,7 @@
 [tool.poetry]
-name = "boolean-circuit-tool"
+name = "cirbo"
 version = "0.1.0"
-description = "Tools and utilities for boolean circuit manipulations."
-# TODO: list all authors.
+description = "A New Tool for Boolean Circuit Analysis and Synthesis."
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 license = "LICENCE"
@@ -39,10 +38,6 @@ usort = "^1.0.8.post1"
 docformatter = "^1.7.5"
 coverage = "^7.6.1"
 pre-commit = "^3.8.0"
-
-[tool.poetry.group.docs.dependencies]
-sphinx = "^7.4.7"
-sphinx-autoapi = "^3.2.1"
 
 [tool.poetry.build]
 script = "build.py"
