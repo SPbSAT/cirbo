@@ -1195,7 +1195,8 @@ class Circuit(Function):
         on_discover_hook: TraverseHookT = lambda _, __: None,
         on_exit_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
-        on_dfs_end_hook: TraverseStateHookT = lambda __: None,
+        on_traversal_end_hook: TraverseStateHookT = lambda __: None,
+        topsort_unvisited: bool = False,
     ) -> tp.Iterable[gate.Gate]:
         """
         Performs a depth-first traversal the circuit (DFS) from a list of given starting
@@ -1212,7 +1213,10 @@ class Circuit(Function):
         :param on_exit_hook: callable function which applies after visiting the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
-        :param on_dfs_end_hook: callable that will be evaluated right before dfs ends.
+        :param on_traversal_end_hook: callable that will be evaluated right before
+            traversal ends.
+        :param topsort_unvisited: if True, unvisited hook will be called on gates in
+            topological order starting from inputs.
         :return: Iterator of gates, which traverse the circuit in bfs order.
 
         """
@@ -1224,7 +1228,8 @@ class Circuit(Function):
             on_discover_hook=on_discover_hook,
             on_exit_hook=on_exit_hook,
             unvisited_hook=unvisited_hook,
-            on_dfs_end_hook=on_dfs_end_hook,
+            on_traversal_end_hook=on_traversal_end_hook,
+            topsort_unvisited=topsort_unvisited,
         )
 
     def bfs(
@@ -1235,7 +1240,8 @@ class Circuit(Function):
         on_enter_hook: TraverseHookT = lambda _, __: None,
         on_discover_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
-        on_dfs_end_hook: TraverseStateHookT = lambda __: None,
+        on_traversal_end_hook: TraverseStateHookT = lambda __: None,
+        topsort_unvisited: bool = False,
     ) -> tp.Iterable[gate.Gate]:
         """
         Performs a breadth-first traversal the circuit (BFS) from a list of given
@@ -1251,7 +1257,10 @@ class Circuit(Function):
             add it in queue
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
-        :param on_dfs_end_hook: callable that will be evaluated right before dfs ends.
+        :param on_traversal_end_hook: callable that will be evaluated right before
+            traversal ends.
+        :param topsort_unvisited: if True, unvisited hook will be called on gates in
+            topological order starting from inputs.
         :return: Iterator of gates, which traverse the circuit in dfs order.
 
         """
@@ -1262,7 +1271,8 @@ class Circuit(Function):
             on_enter_hook=on_enter_hook,
             on_discover_hook=on_discover_hook,
             unvisited_hook=unvisited_hook,
-            on_dfs_end_hook=on_dfs_end_hook,
+            on_traversal_end_hook=on_traversal_end_hook,
+            topsort_unvisited=topsort_unvisited,
         )
 
     def evaluate_full_circuit(
@@ -1651,6 +1661,25 @@ class Circuit(Function):
                 )
             )
         ]
+
+    def get_gates_truth_table(self) -> tp.Dict[gate.Label, list[GateState]]:
+        """
+        Generates truth tables for each gate of a circuit.
+
+        :return: mapping of gate labels to their truth tables.
+
+        """
+        _gate_to_tt = collections.defaultdict(list)
+        for _input_values in itertools.product((False, True), repeat=self.input_size):
+            _input_assignment: dict[str, GateState] = {
+                input_label: value
+                for input_label, value in zip(self.inputs, _input_values)
+            }
+            _full_assignment = self.evaluate_full_circuit(_input_assignment)
+            for gate_label, value in _full_assignment.items():
+                _gate_to_tt[gate_label].append(value)
+
+        return _gate_to_tt
 
     def into_bench(self) -> tp_ext.Self:
         """
@@ -2055,7 +2084,8 @@ class Circuit(Function):
         on_discover_hook: TraverseHookT = lambda _, __: None,
         on_exit_hook: TraverseHookT = lambda _, __: None,
         unvisited_hook: TraverseHookT = lambda _, __: None,
-        on_dfs_end_hook: TraverseStateHookT = lambda __: None,
+        on_traversal_end_hook: TraverseStateHookT = lambda __: None,
+        topsort_unvisited: bool = False,
     ) -> tp.Iterable[gate.Gate]:
         """
         Performs a traversal the circuit from a list of given starting nodes or, if
@@ -2074,7 +2104,10 @@ class Circuit(Function):
             of the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
-        :param on_dfs_end_hook: callable that will be evaluated right before dfs ends.
+        :param on_traversal_end_hook: callable that will be evaluated right before
+            traversal ends.
+        :param topsort_unvisited: if True, unvisited hook will be called on gates in
+            topological order starting from inputs.
         :return: Iterator of gates, which traverse the circuit in dfs/bfs order.
 
         """
@@ -2149,11 +2182,16 @@ class Circuit(Function):
             else:
                 raise GateStateError()
 
-        for label in self._gates:
-            if gate_states[label] == TraverseState.UNVISITED:
-                unvisited_hook(self.get_gate(label), gate_states)
+        if topsort_unvisited:
+            for _gate in self.top_sort(inverse=True):
+                if gate_states[_gate.label] == TraverseState.UNVISITED:
+                    unvisited_hook(_gate, gate_states)
+        else:
+            for label in self._gates:
+                if gate_states[label] == TraverseState.UNVISITED:
+                    unvisited_hook(self.get_gate(label), gate_states)
 
-        on_dfs_end_hook(gate_states)
+        on_traversal_end_hook(gate_states)
 
     def __eq__(self, other: tp.Any):
         """

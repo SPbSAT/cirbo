@@ -67,7 +67,7 @@ jobs:
         run: poetry run mypy -p boolean_circuit_tool
       - name: flake8
         if: always()
-        run: poetry run flake8 boolean_circuit_tool tests tools docs
+        run: poetry run flake8 boolean_circuit_tool tests tools
       - name: pytest
         if: always()
         run: poetry run pytest tests -v -m 'not (manual or slow or ABC)'

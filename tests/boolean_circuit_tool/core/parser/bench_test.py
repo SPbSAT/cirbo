@@ -254,7 +254,7 @@ def test_traverse_circuit_circuit():
     dfs_mock_on_exit_hook = unittest.mock.Mock(return_value=None)
     dfs_mock_unvisited_hook = unittest.mock.Mock(return_value=None)
     dfs_mock_on_discover_hook = unittest.mock.Mock(return_value=None)
-    dfs_mock_on_dfs_end_hook = unittest.mock.Mock(return_value=None)
+    dfs_mock_on_traversal_end_hook = unittest.mock.Mock(return_value=None)
     assert [
         elem.label
         for elem in instance.dfs(
@@ -263,7 +263,7 @@ def test_traverse_circuit_circuit():
             on_exit_hook=dfs_mock_on_exit_hook,
             unvisited_hook=dfs_mock_unvisited_hook,
             on_discover_hook=dfs_mock_on_discover_hook,
-            on_dfs_end_hook=dfs_mock_on_dfs_end_hook,
+            on_traversal_end_hook=dfs_mock_on_traversal_end_hook,
         )
     ] == [
         '4',
@@ -276,12 +276,12 @@ def test_traverse_circuit_circuit():
     assert dfs_mock_on_exit_hook.call_count == 5
     assert dfs_mock_unvisited_hook.call_count == 1
     assert dfs_mock_on_discover_hook.call_count == 5
-    assert dfs_mock_on_dfs_end_hook.call_count == 1
+    assert dfs_mock_on_traversal_end_hook.call_count == 1
 
     bfs_mock_on_enter_hook = unittest.mock.Mock(return_value=None)
     bfs_mock_unvisited_hook = unittest.mock.Mock(return_value=None)
     bfs_mock_on_discover_hook = unittest.mock.Mock(return_value=None)
-    bfs_mock_on_dfs_end_hook = unittest.mock.Mock(return_value=None)
+    bfs_mock_on_traversal_end_hook = unittest.mock.Mock(return_value=None)
     assert [
         elem.label
         for elem in instance.bfs(
@@ -289,7 +289,7 @@ def test_traverse_circuit_circuit():
             on_enter_hook=bfs_mock_on_enter_hook,
             unvisited_hook=bfs_mock_unvisited_hook,
             on_discover_hook=bfs_mock_on_discover_hook,
-            on_dfs_end_hook=bfs_mock_on_dfs_end_hook,
+            on_traversal_end_hook=bfs_mock_on_traversal_end_hook,
         )
     ] == [
         '6',
@@ -301,7 +301,7 @@ def test_traverse_circuit_circuit():
     assert bfs_mock_on_enter_hook.call_count == 5
     assert bfs_mock_unvisited_hook.call_count == 1
     assert bfs_mock_on_discover_hook.call_count == 5
-    assert bfs_mock_on_dfs_end_hook.call_count == 1
+    assert bfs_mock_on_traversal_end_hook.call_count == 1
 
 
 def test_all_types_of_gate():
