@@ -278,6 +278,23 @@ def test_minimize_subcircuits4():
 
 
 def test_minimize_subcircuits5():
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('AB', OR, ('A', 'B')))
+    instance.add_gate(Gate('C', AND, ('AB', 'A')))
+    instance.mark_as_output('C')
+
+    minimized_circuit = minimize_subcircuits(
+        instance, basis=Basis.XAIG, enable_validation=True
+    )
+
+    assert minimized_circuit.size == 3
+
+
+def test_minimize_subcircuits6():
     # sum5 XAIG (size: 17 -> 16)
     instance = Circuit()
 
@@ -308,7 +325,7 @@ def test_minimize_subcircuits5():
     assert minimized_circuit.size == 16
 
 
-def test_minimize_subcircuits6():
+def test_minimize_subcircuits7():
     # sum7 XAIG (size: 27 -> 26)
     instance = Circuit()
 

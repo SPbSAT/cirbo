@@ -415,6 +415,9 @@ def minimize_subcircuits(
     3. Evaluate truth tables for subcircuits with don't cares.
     4. Try to improve found subcircuits using SAT-Solver for finding lower size circuit.
 
+    Note: this method prefers not to have equivalent gates in the circuit.
+    It's better to detect and simplify them before applying this function.
+
     :param circuit: given circuit.
     :param basis: basis in which we want to simplify.
     :param enable_validation: if True checks that minimized circuit is equivalent to
@@ -499,6 +502,29 @@ def minimize_subcircuits(
                 filtered_outputs.add(output)
                 filtered_outputs_lst.append(output)
                 found_patterns[pattern] = output
+
+        if not filtered_outputs:
+            logger.debug("All outputs have trivial input patterns")
+            for output in subcircuit.outputs:
+                new_output = (
+                    outputs_mapping[output]
+                    if output in outputs_mapping
+                    else outputs_negation_mapping[output]
+                )
+                for user in circuit.get_gate_users(output):
+                    new_operands = tuple(
+                        new_output if operand == output else operand
+                        for operand in circuit.get_gate(user).operands
+                    )
+                    circuit.get_gate(user)._operands = new_operands
+                    circuit._gate_to_users[new_output].append(user)
+                circuit._outputs = [
+                    new_output if x == output else x for x in circuit._outputs
+                ]
+                circuit.remove_gate(output)
+                node_states[output] = _NodeState.REMOVED
+                node_states[new_output] = _NodeState.REMOVED  # todo: process carefully
+            continue
 
         outputs_tt: RawTruthTableModel = [
             row
