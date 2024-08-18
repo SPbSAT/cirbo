@@ -37,12 +37,9 @@ are built and installed to refresh its index and stubs.
 
 Some features of a package are demonstrated in the special modules located in
 the `tutorial/` directory. The same code snippets are used in the paper's listings.
-This is probably a first place to explore after environment is set up.
+This is probably a first place that should be explored after environment is set up.
 
-Directory `data/` contains database of small (nearly) optimal circuits, and
-exemplar of circuit encoded in BENCH format needed for `tutorial/`.
-
-Main `cirbo/` package provides the following subpackages:
+Main `cirbo/` directory is a Python package root. It provides following subpackages:
 
 - `core` &mdash; provides core classes and structures:
   - main boolean function abstractions: `Function` protocol to represent any
@@ -51,11 +48,6 @@ Main `cirbo/` package provides the following subpackages:
   - structures to carry representations of a boolean function (`TruthTable`,
   `PyFunction` and `Circuit`)
   - a `Circuit` class alongside with circuit manipulation operations.
-- `minimization` &mdash; provides methods to minimize circuits:
-  - low-effort circuit minimization algorithms (e.g. cleaning redundant gates,
-  merging unary operators, merging duplicates, brute forcing equivalent gates).
-  - high-effort circuit minimization trying to simplify small subcircuits within
-  original circuit.
 - `synthesis` &mdash; provides tools for circuit synthesis:
   - methods to synthesize new circuit either by providing model of a function
   (e.g. truth table with don't care values) and then formulating and solving
@@ -63,6 +55,11 @@ Main `cirbo/` package provides the following subpackages:
   - methods to generate circuits describing arithmetical and logical operations
   (e.g. `generate_sum_n_bits` and `generate_if_then_else`) or add such gadget to
   an existing circuit.
+- `minimization` &mdash; provides methods to minimize circuits:
+  - low-effort circuit minimization algorithms (e.g. cleaning redundant gates,
+  merging unary operators, merging duplicates, brute forcing equivalent gates).
+  - high-effort circuit minimization trying to simplify small subcircuits within
+  original circuit.
 - `sat` &mdash; provides tools related to `SAT` solving:
   - method to build a miter from two given circuits.
   - method to reduce of `Circuit SAT` to `SAT` using Tseytin transformation.
@@ -73,6 +70,21 @@ given (partially defined) truth table or for an optimization of existing circuit
 
 > Note: most of a public methods provide docstrings, which can be useful when
 > exploring `cirbo`.
+
+Directory `data/` contains databases of small (nearly) optimal circuits, and
+an exemplar of circuit encoded in BENCH format needed for `tutorial/`.
+
+Directory `extensions/` contains C/C++ extensions written using `pybind11`.
+Those extensions allow usage of `ABC` and `mockturtle` within python env.
+
+Directory `third_party/` contains all third party libraries (excluding ones
+installed form `pypi`) distributed alongside current zip archive (whilts
+originally those dependencies are managed using `git submodule`). Those
+include: `ABC`, `mockturtle` and `pybind11`.
+
+Directory `tools/` contains utilities helpful for running linting checks or formatters.
+
+Directory `tests/` contains all tests that cover both `cirbo/` and `extensions/`.
 
 ## Technical info
 
@@ -92,13 +104,6 @@ used locally. To build dependencies run `poetry build` and to install them  use
 > (parenthesis should be included). It can be helpful for fast testing because,
 > but yet it may cause some `cirbo` functionality to not work property.
 
-#### Third party
-
-All third party libraries (excluding ones installed form `pypi`) are distributed
-alongside current zip archive (when originally are managed using `git submodule`).
-Those libraries are located in `third_party` subdirectory, and include: `abc`,
-`mockturtle` and `pybind11`.
-
 ### Code quality
 
 Code quality is sustained through both test-driven development and mandatory
@@ -108,8 +113,8 @@ linter checks.
 
 Tests are written and executed using `pytest`. To execute unit tests run
 `poetry run pytest`. Some tests have markers that disable their execution
-by default due to their long execution times of extra dependencies. To
-execute all tests run `poetry run pytest -m 'not manual'`.
+by default due to their long execution times or extra dependencies requirements.
+To  execute all tests run `poetry run pytest -m 'not manual'`.
 
 #### Linters
 
