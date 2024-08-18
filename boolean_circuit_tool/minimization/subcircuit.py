@@ -4,6 +4,7 @@ import enum
 import itertools
 import logging
 import typing as tp
+import uuid
 
 import mockturtle_wrapper as mw
 import more_itertools
@@ -311,6 +312,90 @@ def _eval_dont_cares(
     return subcircuits
 
 
+def _get_internal_gates(
+    circuit: "Circuit",
+    inputs: list[Label],
+    outputs: list[Label],
+) -> list[Label]:
+    """
+    Get gates between given inputs and outputs in the circuit.
+
+    :param circuit: circuit.
+    :param inputs: list with inputs.
+    :param outputs: list with outputs.
+    :return: list with gates from the circuit
+
+    """
+    internal_gates: list[Label] = []
+    label_is_visited: dict[Label, bool] = collections.defaultdict(bool)
+    for output_label in outputs:
+        queue: tp.Deque[Label] = collections.deque()
+        if not label_is_visited[output_label]:
+            label_is_visited[output_label] = True
+            queue.append(output_label)
+        while queue:
+            label = queue.popleft()
+            if label not in inputs and label not in outputs:
+                internal_gates.append(label)
+            if label not in inputs:
+                for operand in circuit.get_gate(label).operands:
+                    if not label_is_visited[operand]:
+                        label_is_visited[operand] = True
+                        queue.append(operand)
+    return internal_gates
+
+
+def _rename_subcircuit_gates(
+    circuit: "Circuit",
+    subcircuit: "Circuit",
+    inputs_mapping: dict[Label, Label],
+    outputs_mapping: dict[Label, Label],
+):
+    """
+    Rename subcircuit gates.
+
+    :param circuit: circuit for finding new labels.
+    :param subcircuit: subcircuit in which we will change the names.
+    :param inputs_mapping: label to label mapping between circuit nodes and subcitcuit
+        inputs. The nodes of the circuit will participate in the search for new labels,
+        and this mapping will also be used in the future replacement of the subcircuit.
+    :param outputs_mapping: label to label mapping between circuit nodes and subcitcuit
+        outputs. The nodes of the circuit will participate in the search for new labels,
+        and this mapping will also be used in the future replacement of the subcircuit.
+    :return: modified subcircuit.
+
+    """
+    labels_to_remove: list[Label] = _get_internal_gates(
+        circuit,
+        list(inputs_mapping.keys()),
+        list(outputs_mapping.keys()),
+    )
+
+    tmp_mapping: dict[Label, Label] = {}  # used to avoid duplicating labels for nodes
+    subcircuit_gates: list[Label] = list(subcircuit.gates.keys())
+    for i, label in enumerate(subcircuit_gates):
+        new_label: Label = f"tmp_{i}" + uuid.uuid4().hex
+        tmp_mapping[label] = new_label
+        subcircuit.rename_gate(label, new_label)
+
+    for label1, label2 in inputs_mapping.items():
+        subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
+        inputs_mapping[label1] = label1
+
+    for label1, label2 in outputs_mapping.items():
+        if label1 not in inputs_mapping:
+            subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
+            outputs_mapping[label1] = label1
+
+    i = 0
+    for node in subcircuit.top_sort(inverse=True):
+        if node.label not in inputs_mapping and node.label not in outputs_mapping:
+            subcircuit.rename_gate(node.label, labels_to_remove[i])
+            i += 1
+
+    return subcircuit
+
+
 def minimize_subcircuits(
     circuit: Circuit,
     basis: tp.Union[str, Basis],
@@ -457,6 +542,9 @@ def minimize_subcircuits(
 
         # Changing initial circuit
         new_circuit: Circuit = copy.deepcopy(circuit)
+        _rename_subcircuit_gates(
+            new_circuit, new_subcircuit, input_labels_mapping, output_labels_mapping
+        )
         new_circuit.replace_subcircuit(
             new_subcircuit, input_labels_mapping, output_labels_mapping
         )
@@ -474,8 +562,10 @@ def minimize_subcircuits(
         for output in output_labels_mapping:
             node_states[output] = _NodeState.REMOVED  # todo: process carefully
 
-        for gate in circuit.get_internal_gates(
-            list(input_labels_mapping.keys()), list(output_labels_mapping.keys())
+        for gate in _get_internal_gates(
+            circuit,
+            list(input_labels_mapping.keys()),
+            list(output_labels_mapping.keys()),
         ):
             node_states[gate] = _NodeState.REMOVED
 

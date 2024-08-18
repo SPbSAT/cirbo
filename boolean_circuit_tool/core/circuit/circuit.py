@@ -9,6 +9,7 @@ import logging
 import pathlib
 import textwrap
 import typing as tp
+import uuid
 
 import graphviz
 import typing_extensions as tp_ext
@@ -26,6 +27,7 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     GateNotInputError,
     GateStateError,
     OverlappingBlocksError,
+    ReplaceSubcircuitError,
     TraverseMethodError,
 )
 from boolean_circuit_tool.core.circuit.operators import GateState, Undefined
@@ -35,7 +37,7 @@ from boolean_circuit_tool.core.circuit.utils import (
 )
 from boolean_circuit_tool.core.circuit.validation import (
     check_block_doesnt_exist,
-    check_block_has_not_users,
+    check_block_has_no_users,
     check_gate_has_not_users,
     check_gates_exist,
     check_label_doesnt_exist,
@@ -124,34 +126,6 @@ class Block:
         for i, output_label in enumerate(self.outputs):
             if output_label == old_label:
                 self.outputs[i] = new_label
-
-        return self
-
-    def _delete_gate(self, label_for_deleting: gate.Label) -> tp_ext.Self:
-        """
-        Delete gate from block.
-
-        :param label_for_deleting: gate's label to delete.
-        :return: modified block.
-
-        """
-
-        if label_for_deleting in self.inputs:
-            self._inputs = [
-                _input for _input in self._inputs if _input != label_for_deleting
-            ]
-
-        if label_for_deleting in self.gates:
-            self._gates = [
-                gate_label
-                for gate_label in self._gates
-                if gate_label != label_for_deleting
-            ]
-
-        if label_for_deleting in self.outputs:
-            self._outputs = [
-                output for output in self._outputs if output != label_for_deleting
-            ]
 
         return self
 
@@ -272,9 +246,7 @@ class Circuit(Function):
         self._inputs: list[gate.Label] = list()
         self._outputs: list[gate.Label] = list()
         self._gates: dict[gate.Label, gate.Gate] = {}
-        self._gate_to_users: tp.DefaultDict[gate.Label, list[gate.Label]] = (
-            collections.defaultdict(list)
-        )
+        self._gate_to_users: dict[gate.Label, list[gate.Label]] = {}
         self._blocks: dict[gate.Label, Block] = {}
 
     @property
@@ -411,6 +383,8 @@ class Circuit(Function):
         :return: a specific gate from the circuit by `label`.
 
         """
+        if label not in self._gates:
+            raise GateDoesntExistError()
         return self._gates[label]
 
     def get_gate_users(self, label: gate.Label) -> list[gate.Label]:
@@ -420,6 +394,8 @@ class Circuit(Function):
         """
         if label not in self._gates:
             raise GateDoesntExistError()
+        if label not in self._gate_to_users:
+            return []
         return self._gate_to_users[label]
 
     def get_block(self, block_label: gate.Label) -> Block:
@@ -482,99 +458,6 @@ class Circuit(Function):
         check_gates_exist(operands, self)
 
         return self._emplace_gate(label, gate_type, operands, **kwargs)
-
-    def get_internal_gates(
-        self, inputs: list[gate.Label], outputs: list[gate.Label]
-    ) -> list[gate.Label]:
-        """
-        Get gates between given inputs and outputs in the circuit.
-
-        :param inputs: list with inputs.
-        :param outputs: list with outputs.
-        :return: list with gates from the circuit
-
-        """
-        internal_gates: list[gate.Label] = []
-        label_is_visited: dict[gate.Label, bool] = collections.defaultdict(bool)
-        for output_label in outputs:
-            queue: tp.Deque[gate.Label] = collections.deque()
-            if not label_is_visited[output_label]:
-                label_is_visited[output_label]
-                queue.append(output_label)
-            while queue:
-                label = queue.popleft()
-                if label not in inputs and label not in outputs:
-                    internal_gates.append(label)
-                if label not in inputs:
-                    for operand in self.get_gate(label).operands:
-                        if not label_is_visited[operand]:
-                            label_is_visited[operand] = True
-                            queue.append(operand)
-        return internal_gates
-
-    def replace_subcircuit(
-        self,
-        subcircuit: "Circuit",
-        inputs_mapping: dict[gate.Label, gate.Label],
-        outputs_mapping: dict[gate.Label, gate.Label],
-    ) -> tp_ext.Self:
-        """
-        Replace subcircuit with a new one.
-
-        :param subcircuit: new subcircuit.
-        :param inputs_mapping: label to label mapping between subcitcuit inputs and
-            circuit nodes.
-        :param outputs_mapping: label to label mapping between subcitcuit outputs and
-            circuit nodes.
-        :return: modified circuit.
-
-        """
-        labels_to_remove: list[gate.Label] = self.get_internal_gates(
-            list(inputs_mapping.keys()), list(outputs_mapping.keys())
-        )
-        for label in outputs_mapping:
-            if label in inputs_mapping:
-                continue
-            for operand in self.get_gate(label).operands:
-                if operand in inputs_mapping or operand in outputs_mapping:
-                    self._remove_user(operand, label)
-        for label in labels_to_remove:
-            self._remove_gate(label)
-
-        tmp_mapping: dict[gate.Label, gate.Label] = (
-            {}
-        )  # used to avoid duplicating labels for nodes
-        subcircuit_gates: list[gate.Label] = list(subcircuit.gates.keys())
-        for i, label in enumerate(subcircuit_gates):
-            new_label: gate.Label = (
-                f"tmp_{i}"  # assume subcircuit will not have nodes with such labels
-            )
-            tmp_mapping[label] = new_label
-            subcircuit.rename_gate(label, new_label)
-
-        for label1, label2 in inputs_mapping.items():
-            subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
-        for label1, label2 in outputs_mapping.items():
-            if label1 not in inputs_mapping:
-                subcircuit.rename_gate(old_label=tmp_mapping[label2], new_label=label1)
-        labels_to_rename: list[gate.Label] = list()
-        for node in subcircuit.top_sort(inverse=True):
-            label = node.label
-            if label not in inputs_mapping and label not in outputs_mapping:
-                self.add_gate(subcircuit.get_gate(label))
-                labels_to_rename.append(label)
-        for label in outputs_mapping:
-            if label in inputs_mapping:
-                continue
-            self.get_gate(label)._operands = subcircuit.get_gate(label)._operands
-            self.get_gate(label)._gate_type = subcircuit.get_gate(label)._gate_type
-            for operand in self.get_gate(label)._operands:
-                self._add_user(operand, label)
-        for i, label in enumerate(labels_to_rename):
-            new_label = labels_to_remove[i]
-            self.rename_gate(label, new_label)
-
-        return self
 
     def make_block_from_slice(
         self,
@@ -680,19 +563,9 @@ class Circuit(Function):
         :return: this circuit after modification
 
         """
-        block: Block = self.get_block(block_label)
-        check_block_has_not_users(block, self)
+        check_block_has_no_users(self.get_block(block_label), self)
 
-        for _gate in block.gates:
-            self._remove_gate(self.get_gate(_gate).label)
-
-        self._blocks = {
-            block_label: block
-            for block_label, block in self.blocks.items()
-            if len(block.gates) != 0
-        }
-
-        return self
+        return self._remove_block(block_label)
 
     def connect_circuit(
         self,
@@ -734,8 +607,17 @@ class Circuit(Function):
         check_block_doesnt_exist(name, self)
         check_gates_exist(this_connectors, self)
         check_gates_exist(other_connectors, other)
+
+        if right_connect:
+            if len(this_connectors) != len(set(this_connectors)):
+                raise CreateBlockError()
+        else:
+            if len(other_connectors) != len(set(other_connectors)):
+                raise CreateBlockError()
+
         if len(this_connectors) != len(other_connectors):
             raise CreateBlockError()
+
         if right_connect:
             for gate_label in this_connectors:
                 if self.get_gate(gate_label).gate_type != gate.INPUT:
@@ -1003,6 +885,81 @@ class Circuit(Function):
             add_prefix=add_prefix,
         )
 
+    def replace_subcircuit(
+        self,
+        subcircuit: "Circuit",
+        inputs_mapping: dict[gate.Label, gate.Label],
+        outputs_mapping: dict[gate.Label, gate.Label],
+    ) -> tp_ext.Self:
+        """
+        Replace the subcircuit with a new one. The subcircuit is found by the keys of
+        the inputs_mapping and the outputs_mapping; all gates, except for the gate from
+        inputs_mapping, are borrowed by the gates from the subcircuit. Gates with the
+        deleted gates as their operands will use the gates from the new circuit;
+        accordingly, they must be specified in the outputs_mapping. Moreover, the new
+        subcircuit is added completely (the subcircuit of the subcircuit is not
+        allocated by `inputs_mapping` and `outputs_mapping` as it happens in the
+        original circuit). Therefore, all inputs from the new subcircuit must be in
+        `inputs_mapping.`
+
+        :param subcircuit: new subcircuit.
+        :param inputs_mapping: label to label mapping between circuit nodes and
+            subcitcuit inputs.
+        :param outputs_mapping: label to label mapping between circuit nodes and
+            subcitcuit outputs.
+        :return: modified circuit.
+
+        """
+        if len(inputs_mapping) + len(outputs_mapping) != len(
+            inputs_mapping | outputs_mapping
+        ):
+            raise ReplaceSubcircuitError()
+        check_gates_exist(list(inputs_mapping.keys()), self)
+        check_gates_exist(list(outputs_mapping.keys()), self)
+        check_gates_exist(list(outputs_mapping.values()), subcircuit)
+        for _input in inputs_mapping.values():
+            if subcircuit.get_gate(_input).gate_type != gate.INPUT:
+                raise ReplaceSubcircuitError()
+        for _input in subcircuit.inputs:
+            if _input not in inputs_mapping.values():
+                raise ReplaceSubcircuitError()
+
+        for old_label, new_label in inputs_mapping.items():
+            if old_label != new_label:
+                self.rename_gate(old_label, new_label)
+
+        for old_label, new_label in outputs_mapping.items():
+            if old_label != new_label:
+                self.rename_gate(old_label, new_label)
+
+        copy_outputs = copy.copy(self.outputs)
+        copy_outputs_users = {
+            output_label: self.get_gate_users(output_label)
+            for output_label in outputs_mapping.values()
+            if output_label in self._gate_to_users
+        }
+
+        block_for_deleting = self.make_block_from_slice(
+            'block_for_deleting' + uuid.uuid4().hex,
+            list(inputs_mapping.values()),
+            list(outputs_mapping.values()),
+        )
+        check_block_has_no_users(
+            block=block_for_deleting,
+            circuit=self,
+            exclusion_gates=set(outputs_mapping.values()),
+        )
+        self._remove_block(block_for_deleting.name)
+
+        for new_gate in subcircuit.top_sort(inverse=True):
+            if new_gate.label not in inputs_mapping.values():
+                self.add_gate(new_gate)
+
+        self._outputs = copy_outputs
+        self._gate_to_users = self._gate_to_users | copy_outputs_users
+
+        return self
+
     def rename_gate(self, old_label: gate.Label, new_label: gate.Label) -> tp_ext.Self:
         """
         Rename gate.
@@ -1025,31 +982,30 @@ class Circuit(Function):
             for idx in self.all_indexes_of_output(old_label):
                 self._outputs[idx] = new_label
 
-        self._gates[new_label] = gate.Gate(
-            new_label,
-            self._gates[old_label].gate_type,
-            self._gates[old_label].operands,
-        )
-
-        self._gate_to_users[new_label] = self._gate_to_users[old_label]
-
-        for user_label in self._gate_to_users[old_label]:
-            self._gates[user_label] = gate.Gate(
-                user_label,
-                self._gates[user_label].gate_type,
-                tuple(
-                    new_label if operand == old_label else operand
-                    for operand in self._gates[user_label].operands
-                ),
-            )
+        if old_label in self._gate_to_users:
+            for user_label in self._gate_to_users[old_label]:
+                self._gates[user_label] = gate.Gate(
+                    user_label,
+                    self._gates[user_label].gate_type,
+                    tuple(
+                        new_label if operand == old_label else operand
+                        for operand in self._gates[user_label].operands
+                    ),
+                )
+            self._gate_to_users[new_label] = self._gate_to_users[old_label]
+            del self._gate_to_users[old_label]
 
         for operand_label in self._gates[old_label].operands:
             operand_users = self._gate_to_users[operand_label]
             assert old_label in operand_users
             operand_users[operand_users.index(old_label)] = new_label
 
+        self._gates[new_label] = gate.Gate(
+            new_label,
+            self._gates[old_label].gate_type,
+            self._gates[old_label].operands,
+        )
         del self._gates[old_label]
-        del self._gate_to_users[old_label]
 
         for block in self.blocks.values():
             block._rename_gate(old_label, new_label)
@@ -1323,7 +1279,8 @@ class Circuit(Function):
         `assignment` can be on any gate of the circuit.
 
         """
-        assignment_dict: dict[str, GateState] = dict(assignment)
+
+        assignment_dict: dict[gate.Label, GateState] = dict(assignment)
         for _input in self._inputs:
             assignment_dict.setdefault(_input, Undefined)
 
@@ -2010,6 +1967,9 @@ class Circuit(Function):
         for operand in cur_gate.operands:
             self._remove_user(operand, gate_label)
 
+        if gate_label in self._gate_to_users:
+            del self._gate_to_users[gate_label]
+
         del self._gates[gate_label]
 
         if cur_gate.gate_type == gate.INPUT:
@@ -2018,8 +1978,33 @@ class Circuit(Function):
         if gate_label in self.outputs:
             self._outputs = [output for output in self.outputs if output != gate_label]
 
-        for block in self.blocks.values():
-            block._delete_gate(gate_label)
+        blocks = list(self.blocks.values())
+        for block in blocks:
+            if gate_label in block.gates or gate_label in block.inputs:
+                logger.debug(
+                    f"Block {block.name} was removed because gate {gate_label} "
+                    "was removed from circuit"
+                )
+                self.delete_block(block.name)
+
+        return self
+
+    def _remove_block(self, block_label: gate.Label) -> tp_ext.Self:
+        """
+        Delete all gates from block from the circuit and block from list of block
+        without any checks (!!!).
+
+        :param block_label: block's label for deleting
+        :return: this circuit after modification
+
+        """
+        block: Block = self.get_block(block_label)
+
+        # since when removing the first gate from our block, the block itself will be
+        # deleted, let's remember everything we need to remove in advance
+        gates_to_remove = block.gates
+        for _gate in gates_to_remove:
+            self._remove_gate(self.get_gate(_gate).label)
 
         return self
 
@@ -2068,11 +2053,18 @@ class Circuit(Function):
 
     def _remove_user(self, gate_label: gate.Label, user: gate.Label):
         """Remove user from `gate`."""
-        self._gate_to_users[gate_label].remove(user)
+        if (
+            gate_label in self._gate_to_users
+            and user in self._gate_to_users[gate_label]
+        ):
+            self._gate_to_users[gate_label].remove(user)
 
     def _add_user(self, gate_label: gate.Label, user: gate.Label):
         """Add user for `gate`."""
-        self._gate_to_users[gate_label].append(user)
+        if gate_label not in self._gate_to_users:
+            self._gate_to_users[gate_label] = [user]
+        else:
+            self._gate_to_users[gate_label].append(user)
 
     def _traverse_circuit(
         self,

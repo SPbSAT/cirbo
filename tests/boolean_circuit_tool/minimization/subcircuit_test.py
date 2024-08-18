@@ -22,6 +22,7 @@ from boolean_circuit_tool.core.circuit.gate import (
 from boolean_circuit_tool.minimization.exception import UnsupportedOperationError
 from boolean_circuit_tool.minimization.subcircuit import (
     _generate_inputs_tt,
+    _get_internal_gates,
     _get_subcircuits,
     minimize_subcircuits,
 )
@@ -118,6 +119,51 @@ def test_get_subcircuits():
     )
 
 
+def test_get_internal_gates():
+
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', NOT, ('A',)))
+    instance.add_gate(Gate('F', AND, ('E', 'B')))
+    instance.add_gate(Gate('G', OR, ('B', 'C')))
+    instance.add_gate(Gate('H', XOR, ('F', 'G')))
+    instance.add_gate(Gate('I', AND, ('D', 'A')))
+    instance.add_gate(Gate('J', OR, ('I', 'E')))
+
+    assert sorted(_get_internal_gates(instance, inputs=['A'], outputs=['E'])) == []
+    assert sorted(
+        _get_internal_gates(instance, inputs=['A', 'B', 'C', 'D'], outputs=['H'])
+    ) == ['E', 'F', 'G']
+    assert sorted(_get_internal_gates(instance, inputs=['A', 'B'], outputs=['F'])) == [
+        'E'
+    ]
+    assert sorted(
+        _get_internal_gates(instance, inputs=['A', 'B', 'C'], outputs=['H'])
+    ) == ['E', 'F', 'G']
+    assert sorted(
+        _get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+    ) == ['F', 'G']
+    assert sorted(
+        _get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+    ) == ['F', 'G']
+    assert sorted(
+        _get_internal_gates(instance, inputs=['B', 'E', 'C'], outputs=['H'])
+    ) == ['F', 'G']
+    assert sorted(
+        _get_internal_gates(instance, inputs=['A', 'B', 'C', 'D'], outputs=['H', 'J'])
+    ) == ['E', 'F', 'G', 'I']
+    assert sorted(_get_internal_gates(instance, inputs=[], outputs=['J'])) == [
+        'A',
+        'D',
+        'E',
+        'I',
+    ]  # strange but valid query
+
+
 def test_minimize_subcircuits():
     # Simple case with intersecting AND's
     instance = Circuit()
@@ -125,9 +171,9 @@ def test_minimize_subcircuits():
     instance.add_gate(Gate('A', INPUT))
     instance.add_gate(Gate('B', INPUT))
     instance.add_gate(Gate('C', INPUT))
-    instance.add_gate(Gate('D', AND, ('A', 'B')))
+    instance.add_gate(Gate('s3', AND, ('A', 'B')))
     instance.add_gate(Gate('E', AND, ('B', 'C')))
-    instance.add_gate(Gate('F', AND, ('D', 'E')))
+    instance.add_gate(Gate('F', AND, ('s3', 'E')))
     instance.mark_as_output('F')
 
     minimized_circuit = minimize_subcircuits(
@@ -139,7 +185,7 @@ def test_minimize_subcircuits():
     )
     assert minimized_circuit.size == 5
 
-    instance.mark_as_output('D')
+    instance.mark_as_output('s3')
     minimized_circuit = minimize_subcircuits(
         instance, basis=Basis.AIG, enable_validation=True
     )

@@ -11,9 +11,11 @@ from boolean_circuit_tool.core.circuit.exceptions import (
     CircuitGateIsAbsentError,
     CircuitValidationError,
     CreateBlockError,
+    DeleteBlockError,
     GateDoesntExistError,
     GateHasUsersError,
     GateNotInputError,
+    ReplaceSubcircuitError,
 )
 from boolean_circuit_tool.core.circuit.gate import (
     ALWAYS_FALSE,
@@ -535,6 +537,52 @@ def test_block():
     assert manipulateC8.inputs == ['1@A', '1@B']
     assert manipulateC8.outputs == ['C', 'C1@C', '2@C', '2@C1@C']
 
+    manipulateC9 = copy.copy(manipulateC6)
+    with pytest.raises(CreateBlockError):
+        manipulateC9.extend_circuit(
+            manipulateC6,
+            this_connectors=['C1@C', 'C'],
+            other_connectors=['B', 'B'],
+            right_connect=False,
+            name='1',
+        )
+
+    with pytest.raises(CreateBlockError):
+        manipulateC9.extend_circuit(
+            manipulateC6,
+            this_connectors=['C', 'C'],
+            other_connectors=['B', 'A'],
+            right_connect=True,
+            name='1',
+        )
+
+    manipulateC6.set_outputs(['C', 'C'])
+    with pytest.raises(CreateBlockError):
+        manipulateC9.extend_circuit(
+            manipulateC6,
+            other_connectors=manipulateC6.outputs,
+            right_connect=False,
+            name='1',
+        )
+
+    manipulateC9.extend_circuit(
+        manipulateC6,
+        this_connectors=['C', 'C'],
+        other_connectors=['A', 'B'],
+        right_connect=False,
+        name='1',
+    )
+    assert manipulateC9.gates == {
+        'A': Gate('A', INPUT),
+        'B': Gate('B', INPUT),
+        'C': Gate('C', OR, ('A', 'B')),
+        'C1@C': Gate('C1@C', AND, ('A', 'B')),
+        '1@C': Gate('1@C', OR, ('C', 'C')),
+        '1@C1@C': Gate('1@C1@C', AND, ('C', 'C')),
+    }
+    assert manipulateC9.inputs == ['A', 'B']
+    assert manipulateC9.outputs == ['C1@C', '1@C', '1@C']
+
 
 def test_block2():
     C0 = Circuit()
@@ -853,51 +901,6 @@ def test_block3():
     }
 
 
-def test_get_internal_gates():
-
-    instance = Circuit()
-
-    instance.add_gate(Gate('A', INPUT))
-    instance.add_gate(Gate('B', INPUT))
-    instance.add_gate(Gate('C', INPUT))
-    instance.add_gate(Gate('D', INPUT))
-    instance.add_gate(Gate('E', NOT, ('A',)))
-    instance.add_gate(Gate('F', AND, ('E', 'B')))
-    instance.add_gate(Gate('G', OR, ('B', 'C')))
-    instance.add_gate(Gate('H', XOR, ('F', 'G')))
-    instance.add_gate(Gate('I', AND, ('D', 'A')))
-    instance.add_gate(Gate('J', OR, ('I', 'E')))
-
-    assert sorted(instance.get_internal_gates(inputs=['A'], outputs=['E'])) == []
-    assert sorted(
-        instance.get_internal_gates(inputs=['A', 'B', 'C', 'D'], outputs=['H'])
-    ) == ['E', 'F', 'G']
-    assert sorted(instance.get_internal_gates(inputs=['A', 'B'], outputs=['F'])) == [
-        'E'
-    ]
-    assert sorted(
-        instance.get_internal_gates(inputs=['A', 'B', 'C'], outputs=['H'])
-    ) == ['E', 'F', 'G']
-    assert sorted(
-        instance.get_internal_gates(inputs=['B', 'E', 'C'], outputs=['H'])
-    ) == ['F', 'G']
-    assert sorted(
-        instance.get_internal_gates(inputs=['B', 'E', 'C'], outputs=['H'])
-    ) == ['F', 'G']
-    assert sorted(
-        instance.get_internal_gates(inputs=['B', 'E', 'C'], outputs=['H'])
-    ) == ['F', 'G']
-    assert sorted(
-        instance.get_internal_gates(inputs=['A', 'B', 'C', 'D'], outputs=['H', 'J'])
-    ) == ['E', 'F', 'G', 'I']
-    assert sorted(instance.get_internal_gates(inputs=[], outputs=['J'])) == [
-        'A',
-        'D',
-        'E',
-        'I',
-    ]  # strange but valid query
-
-
 def test_replace_subcircuit():
     # Full checks on simple case
     instance = Circuit()
@@ -950,25 +953,25 @@ def test_replace_subcircuit():
     edges_out = 0
     for gate in new_instance.gates.values():
         edges_in += len(gate.operands)
-        edges_out += len(new_instance._gate_to_users[gate.label])
+        edges_out += len(new_instance.get_gate_users(gate.label))
     assert edges_in == edges_out
 
     for gate in new_instance.gates.values():
         label = gate.label
         for operand in gate.operands:
-            assert label in new_instance._gate_to_users[operand]
+            assert label in new_instance.get_gate_users(operand)
 
     # Check assignments
     for assignment in itertools.product([False, True], repeat=3):
         assert (
             new_instance.evaluate_circuit(
                 {
-                    'A': assignment[0],
-                    'B': assignment[1],
-                    'C': assignment[2],
+                    'K': assignment[0],
+                    'L': assignment[1],
+                    'M': assignment[2],
                     'D': False,
                 }
-            )['G']
+            )['P']
             == instance_to_replace_with.evaluate(assignment)[0]
         )
 
@@ -1034,13 +1037,13 @@ def test_replace_subcircuit2():
     edges_out = 0
     for gate in new_instance.gates.values():
         edges_in += len(gate.operands)
-        edges_out += len(new_instance._gate_to_users[gate.label])
+        edges_out += len(new_instance.get_gate_users(gate.label))
     assert edges_in == edges_out
 
     for gate in new_instance.gates.values():
         label = gate.label
         for operand in gate.operands:
-            assert label in new_instance._gate_to_users[operand]
+            assert label in new_instance.get_gate_users(operand)
 
     # Check assignments
     for assignment in itertools.product([False, True], repeat=4):
@@ -1048,11 +1051,11 @@ def test_replace_subcircuit2():
             new_instance.evaluate_circuit(
                 {
                     'A': not assignment[0],
-                    'B': assignment[1],
+                    'L': assignment[1],
                     'C': not assignment[2],
-                    'D': assignment[3],
+                    'N': assignment[3],
                 }
-            )['I']
+            )['P']
             == instance_to_replace_with.evaluate(assignment)[0]
         )
 
@@ -1060,13 +1063,135 @@ def test_replace_subcircuit2():
             new_instance.evaluate_circuit(
                 {
                     'A': not assignment[0],
-                    'B': assignment[1],
+                    'L': assignment[1],
                     'C': not assignment[2],
-                    'D': assignment[3],
+                    'N': assignment[3],
                 }
-            )['J']
+            )['R']
             == instance_to_replace_with.evaluate(assignment)[1]
         )
+
+
+def test_replace_subcircuit3():
+    instance = Circuit()
+
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('A', 'B')))
+    instance.add_gate(Gate('F', OR, ('B', 'C')))
+    instance.add_gate(Gate('G', XOR, ('E', 'F')))
+    instance.add_gate(Gate('H', AND, ('D', 'G')))
+    instance.mark_as_output('H')
+
+    instance_to_replace_with = Circuit()
+
+    instance_to_replace_with.add_gate(Gate('K', INPUT))
+    instance_to_replace_with.add_gate(Gate('L', INPUT))
+    instance_to_replace_with.add_gate(Gate('M', INPUT))
+    instance_to_replace_with.add_gate(Gate('N', NOT, ('K',)))
+    instance_to_replace_with.add_gate(Gate('O', OR, ('L', 'N')))
+    instance_to_replace_with.add_gate(Gate('P', AND, ('O', 'M')))
+    instance_to_replace_with.mark_as_output('P')
+
+    instance1 = copy.copy(instance)
+    instance_to_replace_with1 = copy.copy(instance_to_replace_with)
+    with pytest.raises(CreateBlockError):
+        instance1.replace_subcircuit(
+            subcircuit=instance_to_replace_with1,
+            inputs_mapping={'A': 'K', 'C': 'L', 'D': 'M'},
+            outputs_mapping={'G': 'P'},
+        )
+
+    instance2 = copy.copy(instance)
+    instance_to_replace_with2 = copy.copy(instance_to_replace_with)
+    with pytest.raises(ReplaceSubcircuitError):
+        instance2.replace_subcircuit(
+            subcircuit=instance_to_replace_with2,
+            inputs_mapping={'A': 'K', 'B': 'L', 'C': 'M', 'D': 'N'},
+            outputs_mapping={'G': 'P'},
+        )
+
+    instance3 = copy.copy(instance)
+    instance_to_replace_with3 = copy.copy(instance_to_replace_with)
+    with pytest.raises(ReplaceSubcircuitError):
+        instance3.replace_subcircuit(
+            subcircuit=instance_to_replace_with3,
+            inputs_mapping={'A': 'K', 'B': 'L'},
+            outputs_mapping={'E': 'P'},
+        )
+
+    instance4 = copy.copy(instance)
+    instance_to_replace_with4 = copy.copy(instance_to_replace_with)
+    with pytest.raises(ReplaceSubcircuitError):
+        instance4.replace_subcircuit(
+            subcircuit=instance_to_replace_with4,
+            inputs_mapping={'A': 'K', 'B': 'L'},
+            outputs_mapping={'E': 'N'},
+        )
+
+    instance5 = copy.copy(instance)
+    instance_to_replace_with5 = copy.copy(instance_to_replace_with)
+    with pytest.raises(ReplaceSubcircuitError):
+        instance5.replace_subcircuit(
+            subcircuit=instance_to_replace_with5,
+            inputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
+            outputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
+        )
+
+
+def test_replace_subcircuit4():
+
+    instance = Circuit()
+    instance.add_gate(Gate('A', INPUT))
+    instance.add_gate(Gate('B', INPUT))
+    instance.add_gate(Gate('C', INPUT))
+    instance.add_gate(Gate('D', INPUT))
+    instance.add_gate(Gate('E', AND, ('A', 'B')))
+    instance.add_gate(Gate('F', OR, ('B', 'E')))
+    instance.add_gate(Gate('G', XOR, ('E', 'F')))
+    instance.add_gate(Gate('H', AND, ('D', 'G')))
+    instance.mark_as_output('H')
+
+    instance_to_replace_with = Circuit()
+    instance_to_replace_with.add_gate(Gate('K', INPUT))
+    instance_to_replace_with.add_gate(Gate('L', INPUT))
+    instance_to_replace_with.add_gate(Gate('M', INPUT))
+    instance_to_replace_with.add_gate(Gate('N', NOT, ('K',)))
+    instance_to_replace_with.add_gate(Gate('O', OR, ('L', 'N')))
+    instance_to_replace_with.add_gate(Gate('P', AND, ('O', 'M')))
+    instance_to_replace_with.mark_as_output('P')
+
+    result = Circuit()
+    result.add_gate(Gate('K', INPUT))
+    result.add_gate(Gate('L', INPUT))
+    result.add_gate(Gate('M', INPUT))
+    result.add_gate(Gate('D', INPUT))
+    result.add_gate(Gate('N', NOT, ('K',)))
+    result.add_gate(Gate('O', OR, ('L', 'N')))
+    result.add_gate(Gate('P', AND, ('O', 'M')))
+    result.add_gate(Gate('G', XOR, ('O', 'P')))
+    result.add_gate(Gate('H', AND, ('D', 'G')))
+    result.mark_as_output('H')
+
+    instance1 = copy.copy(instance)
+    instance_to_replace_with1 = copy.copy(instance_to_replace_with)
+    with pytest.raises(DeleteBlockError):
+        instance1.replace_subcircuit(
+            subcircuit=instance_to_replace_with1,
+            inputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
+            outputs_mapping={'F': 'P'},
+        )
+
+    instance2 = copy.copy(instance)
+    instance_to_replace_with2 = copy.copy(instance_to_replace_with)
+    instance2.replace_subcircuit(
+        subcircuit=instance_to_replace_with2,
+        inputs_mapping={'A': 'K', 'B': 'L', 'C': 'M'},
+        outputs_mapping={'F': 'P', 'E': 'O'},
+    )
+    assert instance2 == result
 
 
 def test_evaluate_circuit():
