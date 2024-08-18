@@ -43,6 +43,14 @@ class _NodeState(enum.Enum):
 
 
 class _PatternOperations:
+    """
+    Structure to evaluate patterns for small subcircuits. Pattern is an integer
+    representation of truth table row for a gate.
+
+    Method `eval_pattern` is used to get gate's pattern by patterns of its operands.
+
+    """
+
     def __init__(self, number_of_inputs: int):
         self.max_pattern: int = (1 << (1 << number_of_inputs)) - 1
 

@@ -185,7 +185,6 @@ def test_minimize_subcircuits2():
     minimized_circuit = minimize_subcircuits(
         instance, basis=Basis.XAIG, enable_validation=True
     )
-    print(minimized_circuit.format_circuit())
     assert minimized_circuit.size == 12
 
 
@@ -228,8 +227,6 @@ def test_minimize_subcircuits4():
     minimized_circuit = minimize_subcircuits(
         instance, basis=Basis.XAIG, enable_validation=True
     )
-
-    print(minimized_circuit.format_circuit())
 
     assert minimized_circuit.size == 4
 
