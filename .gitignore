@@ -171,3 +171,6 @@ abc.history
 # graphviz artifacts
 *.gv.pdf
 *.gv
+
+# makefile zip archive
+cirbo_zip/
