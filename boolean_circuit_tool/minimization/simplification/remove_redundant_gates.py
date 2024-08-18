@@ -30,6 +30,8 @@ class RemoveRedundantGates(Transformer):
 
     """
 
+    __idempotent__: bool = True
+
     def __init__(
         self,
         *,
@@ -90,3 +92,12 @@ class RemoveRedundantGates(Transformer):
         _new_circuit.set_outputs(circuit.outputs)
 
         return _new_circuit
+
+    def __eq__(self, other: tp.Any):
+        if not isinstance(other, RemoveRedundantGates):
+            return NotImplemented
+
+        return (
+            super().__eq__(other)
+            and self._allow_inputs_removal == other._allow_inputs_removal
+        )
