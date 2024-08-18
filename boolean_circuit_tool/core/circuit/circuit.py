@@ -607,13 +607,6 @@ class Circuit(Function):
         check_block_doesnt_exist(name, self)
         check_gates_exist(this_connectors, self)
         check_gates_exist(other_connectors, other)
-
-        # print('\n\n\nin:', this_connectors)
-        # print('\nout:', other_connectors)
-        # print('\n1:', self.format_circuit())
-        # print('\n2:', other.format_circuit())
-
-        # other.view_graph(draw_labels=True)
         if right_connect:
             if len(this_connectors) != len(set(this_connectors)):
                 raise CreateBlockError()
@@ -646,7 +639,6 @@ class Circuit(Function):
         old_to_new_names = copy.copy(mapping)
         gates_for_block: set[gate.Label] = set()
         for _gate in other.top_sort(inverse=True):
-            # print('\n', _gate)
             cur_gate: gate.Gate = _gate
             if cur_gate.label not in mapping:
                 new_label: gate.Label = prefix + cur_gate.label
