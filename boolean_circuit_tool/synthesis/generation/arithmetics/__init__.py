@@ -2,7 +2,7 @@
 circuits by several methods."""
 
 from .div_mod import add_div_mod, generate_div_mod
-from .equality import add_equal
+from .equality import add_equal, generate_equal
 from .multiplication import (
     add_mul,
     add_mul_alter,
@@ -10,9 +10,11 @@ from .multiplication import (
     add_mul_karatsuba,
     add_mul_pow2_m1,
     add_mul_wallace,
+    generate_mul,
+    MulMode,
 )
 from .sqrt import add_sqrt, generate_sqrt
-from .square import add_square, add_square_pow2_m1
+from .square import add_square, add_square_pow2_m1, generate_square, SquareMode
 from .subtraction import (
     add_sub2,
     add_sub3,
@@ -37,6 +39,7 @@ __all__ = [
     'add_div_mod',
     # equality.py
     'add_equal',
+    'generate_equal',
     # multiplication.py
     'add_mul',
     'add_mul_karatsuba',
@@ -44,12 +47,16 @@ __all__ = [
     'add_mul_dadda',
     'add_mul_wallace',
     'add_mul_pow2_m1',
+    'generate_mul',
+    'MulMode',
     # sqrt.py
     'generate_sqrt',
     'add_sqrt',
     # square.py
     'add_square',
     'add_square_pow2_m1',
+    'generate_square',
+    'SquareMode',
     # subtraction.py
     'add_sub2',
     'add_sub3',

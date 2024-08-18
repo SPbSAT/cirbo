@@ -1,3 +1,4 @@
+import enum
 import typing as tp
 
 from boolean_circuit_tool.core.circuit import Circuit, gate
@@ -18,7 +19,39 @@ from boolean_circuit_tool.synthesis.generation.arithmetics.summation import (
 __all__ = [
     'add_square',
     'add_square_pow2_m1',
+    'generate_square',
+    'SquareMode',
 ]
+
+
+class SquareMode(enum.Enum):
+    DEFAULT = "DEFAULT"
+    POW2_M1 = "POW2_M1"
+
+
+def generate_square(
+    number_inputs: int,
+    *,
+    type: SquareMode = SquareMode.DEFAULT,
+    big_endian: bool = False,
+) -> Circuit:
+    """
+    Generates a circuit that have square of number in result.
+
+    :param n: number of input bits
+    :param type: what type of algorithm to use
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+
+    """
+    circuit = Circuit.bare_circuit(number_inputs)
+    outputs = _process_square[type](
+        circuit,
+        circuit.inputs,
+        big_endian=big_endian,
+    )
+    circuit.set_outputs(outputs)
+    return circuit
 
 
 def add_square(
@@ -114,3 +147,9 @@ def add_square_pow2_m1(
             d[i] = add_sum_pow2_m1(circuit, inp)
     res = [d[i][0][0] for i in range(2 * n)]
     return reverse_if_big_endian(res, big_endian)
+
+
+_process_square: dict[SquareMode, tp.Callable[..., list[gate.Label]]] = {
+    SquareMode.DEFAULT: add_square,
+    SquareMode.POW2_M1: add_square_pow2_m1,
+}

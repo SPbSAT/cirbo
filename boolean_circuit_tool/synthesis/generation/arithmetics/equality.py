@@ -7,7 +7,28 @@ from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
 
 __all__ = [
     'add_equal',
+    'generate_equal',
 ]
+
+
+def generate_equal(number_inputs: int, num: int):
+    """
+    Generates a circuit that compares the sequence of bits represented by the circuit's
+    inputs to the integer `num`.
+
+    :param number_inputs: number of inputs
+    :param num: The integer value to compare against the bit sequence.
+    :return: circuit that compares the bit sequence with the given integer.
+
+    """
+    circuit = Circuit.bare_circuit(number_inputs)
+    output = add_equal(
+        circuit,
+        circuit.inputs,
+        num,
+    )
+    circuit.set_outputs([output])
+    return circuit
 
 
 def add_equal(
