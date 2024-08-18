@@ -1,4 +1,4 @@
-from boolean_circuit_tool.core import PyFunction, TruthTable
+from cirbo.core import PyFunction, TruthTable
 
 
 f = PyFunction(lambda xs: [sum(xs) % 2], 4)

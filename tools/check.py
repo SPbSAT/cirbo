@@ -48,7 +48,7 @@ def _check_project(*, short: bool):
     Runs:
       1. mypy types checking.
       2. flake8 linting checks.
-      3. pytest all boolean_circuit_tool tests.
+      3. pytest all cirbo tests.
       4. usort in check mode.
       5. docformatter in check mode.
       6. black in check mode.
@@ -57,19 +57,15 @@ def _check_project(*, short: bool):
            otherwise will trim output.
 
     """
-    mypy_ret = _call_command_with_buffer("poetry run mypy -p boolean_circuit_tool")
-    flake8_ret = _call_command_with_buffer(
-        "poetry run flake8 boolean_circuit_tool tests tools"
-    )
+    mypy_ret = _call_command_with_buffer("poetry run mypy -p cirbo")
+    flake8_ret = _call_command_with_buffer("poetry run flake8 cirbo tests tools")
     pytest_ret = _call_command_with_buffer("poetry run pytest tests")
-    usort_ret = _call_command_with_buffer(
-        "poetry run usort check boolean_circuit_tool/ tests/ tools/"
-    )
+    usort_ret = _call_command_with_buffer("poetry run usort check cirbo/ tests/ tools/")
     docformatter_ret = _call_command_with_buffer(
-        "poetry run docformatter --check --diff boolean_circuit_tool/ tests/ tools/"
+        "poetry run docformatter --check --diff cirbo/ tests/ tools/"
     )
     black_ret = _call_command_with_buffer(
-        "poetry run black --check --diff boolean_circuit_tool/ tests/ tools/"
+        "poetry run black --check --diff cirbo/ tests/ tools/"
     )
 
     all_ret = {

@@ -64,19 +64,19 @@ jobs:
       - run: poetry install --no-interaction
       - name: mypy
         if: always()
-        run: poetry run mypy -p boolean_circuit_tool
+        run: poetry run mypy -p cirbo
       - name: flake8
         if: always()
-        run: poetry run flake8 boolean_circuit_tool tests tools
+        run: poetry run flake8 cirbo tests tools
       - name: pytest
         if: always()
         run: poetry run pytest tests -v -m 'not (manual or slow or ABC)'
       - name: usort
         if: always()
-        run: poetry run usort check boolean_circuit_tool tests tools
+        run: poetry run usort check cirbo tests tools
       - name: docformatter
         if: always()
-        run: poetry run docformatter --check --diff boolean_circuit_tool/ tests/ tools/
+        run: poetry run docformatter --check --diff cirbo/ tests/ tools/
       - name: black
         if: always()
-        run: poetry run black --check --diff boolean_circuit_tool/ tests/ tools/
+        run: poetry run black --check --diff cirbo/ tests/ tools/

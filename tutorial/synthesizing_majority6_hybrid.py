@@ -1,6 +1,6 @@
-from boolean_circuit_tool.core import DontCare, PyFunctionModel
-from boolean_circuit_tool.synthesis.circuit_search import CircuitFinderSat
-from boolean_circuit_tool.synthesis.generation.arithmetics import generate_sum_n_bits
+from cirbo.core import DontCare, PyFunctionModel
+from cirbo.synthesis.circuit_search import CircuitFinderSat
+from cirbo.synthesis.generation.arithmetics import generate_sum_n_bits
 
 
 def geq3(x: bool, y: bool, z: bool):

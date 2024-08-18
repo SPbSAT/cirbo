@@ -1,6 +1,6 @@
-from boolean_circuit_tool.core import Circuit
-from boolean_circuit_tool.minimization import minimize_subcircuits
-from boolean_circuit_tool.synthesis.generation.arithmetics import add_sum2, add_sum3
+from cirbo.core import Circuit
+from cirbo.minimization import minimize_subcircuits
+from cirbo.synthesis.generation.arithmetics import add_sum2, add_sum3
 
 
 ckt = Circuit.bare_circuit(input_size=5)
