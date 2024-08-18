@@ -108,8 +108,8 @@ class Transformer(metaclass=abc.ABCMeta):
         pre_transformers: tp.Sequence['Transformer'] = tuple(),
         post_transformers: tp.Sequence['Transformer'] = tuple(),
     ):
-        self._post_transformers = post_transformers
         self._pre_transformers = pre_transformers
+        self._post_transformers = post_transformers
 
     @abc.abstractmethod
     def _transform(self, circuit: Circuit) -> Circuit:
