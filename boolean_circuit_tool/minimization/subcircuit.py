@@ -512,10 +512,10 @@ def minimize_subcircuits(
                     else outputs_negation_mapping[output]
                 )
                 for user in circuit.get_gate_users(output):
-                    new_operands = [
+                    new_operands = tuple(
                         new_output if operand == output else operand
                         for operand in circuit.get_gate(user).operands
-                    ]
+                    )
                     circuit.get_gate(user)._operands = new_operands
                     circuit._gate_to_users[new_output].append(user)
                 circuit._outputs = [
