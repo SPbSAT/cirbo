@@ -39,19 +39,20 @@ class MergeDuplicateGates(Transformer):
         # Hold mapping of gate signature to the first found duplicate.
         _signature_to_duplicate: dict[tuple, Label] = {}
 
-        # build signature based on gate
-        def _to_signature(_gate: Gate) -> tuple:
-            _operands = (
-                tuple(sorted(_gate.operands))
-                if _gate.gate_type.is_symmetric
-                else _gate.operands
-            )
-            return (_gate.gate_type,) + _operands
+        # build signature based on gate and operands
+        def _build_signature(
+            _gate_type: gate.GateType,
+            _operands: tuple[Label, ...],
+        ) -> tuple:
+            if _gate_type.is_symmetric:
+                _operands = tuple(sorted(_operands))
+            return (_gate_type,) + _operands
 
         # build signature based on label of gate in original circuit
         def _label_to_signature(_label: Label) -> tuple:
-            nonlocal circuit
-            return _to_signature(circuit.get_gate(_label))
+            nonlocal _new_circuit
+            _gate = _new_circuit.get_gate(_label)
+            return _build_signature(_gate.gate_type, _gate.operands)
 
         # map gate label to its new name.
         def _get_gate_new_name(_label: Label):
@@ -66,7 +67,10 @@ class MergeDuplicateGates(Transformer):
                 _new_circuit.add_inputs([_gate.label])
                 return
 
-            _sig = _to_signature(_gate)
+            # all operands are already visited and processed.
+            _operands = tuple(map(_get_gate_new_name, _gate.operands))
+
+            _sig = _build_signature(_gate.gate_type, _operands)
             # memorize gate is no gate with same signature were met before.
             # all duplicates will be removed on post-transformation step.
             _signature_to_duplicate.setdefault(_sig, _gate.label)
@@ -74,7 +78,7 @@ class MergeDuplicateGates(Transformer):
             _new_circuit.emplace_gate(
                 label=_gate.label,
                 gate_type=_gate.gate_type,
-                operands=tuple(map(_get_gate_new_name, _gate.operands)),
+                operands=_operands,
             )
 
         # reconstruct circuit

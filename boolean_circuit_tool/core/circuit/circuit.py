@@ -1213,8 +1213,8 @@ class Circuit(Function):
         :param on_exit_hook: callable function which applies after visiting the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
-        :param on_traversal_end_hook: callable that will be evaluated right before dfs
-            ends.
+        :param on_traversal_end_hook: callable that will be evaluated right before
+            traversal ends.
         :param topsort_unvisited: if True, unvisited hook will be called on gates in
             topological order starting from inputs.
         :return: Iterator of gates, which traverse the circuit in bfs order.
@@ -1257,8 +1257,8 @@ class Circuit(Function):
             add it in queue
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
-        :param on_traversal_end_hook: callable that will be evaluated right before dfs
-            ends.
+        :param on_traversal_end_hook: callable that will be evaluated right before
+            traversal ends.
         :param topsort_unvisited: if True, unvisited hook will be called on gates in
             topological order starting from inputs.
         :return: Iterator of gates, which traverse the circuit in dfs order.
@@ -2104,8 +2104,8 @@ class Circuit(Function):
             of the gate
         :param unvisited_hook: callable function which applies for unvisited gates after
             traverse circuit
-        :param on_traversal_end_hook: callable that will be evaluated right before dfs
-            ends.
+        :param on_traversal_end_hook: callable that will be evaluated right before
+            traversal ends.
         :param topsort_unvisited: if True, unvisited hook will be called on gates in
             topological order starting from inputs.
         :return: Iterator of gates, which traverse the circuit in dfs/bfs order.
