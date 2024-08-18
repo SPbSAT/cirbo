@@ -608,6 +608,12 @@ class Circuit(Function):
         check_gates_exist(this_connectors, self)
         check_gates_exist(other_connectors, other)
 
+        # print('\n\n\nin:', this_connectors)
+        # print('\nout:', other_connectors)
+        # print('\n1:', self.format_circuit())
+        # print('\n2:', other.format_circuit())
+
+        # other.view_graph(draw_labels=True)
         if right_connect:
             if len(this_connectors) != len(set(this_connectors)):
                 raise CreateBlockError()
@@ -640,6 +646,7 @@ class Circuit(Function):
         old_to_new_names = copy.copy(mapping)
         gates_for_block: set[gate.Label] = set()
         for _gate in other.top_sort(inverse=True):
+            # print('\n', _gate)
             cur_gate: gate.Gate = _gate
             if cur_gate.label not in mapping:
                 new_label: gate.Label = prefix + cur_gate.label
@@ -932,18 +939,19 @@ class Circuit(Function):
             if old_label != new_label:
                 self.rename_gate(old_label, new_label)
 
-        copy_outputs = copy.copy(self.outputs)
-        copy_outputs_users = {
-            output_label: self.get_gate_users(output_label)
-            for output_label in outputs_mapping.values()
-            if output_label in self._gate_to_users
-        }
-
         block_for_deleting = self.make_block_from_slice(
             'block_for_deleting' + uuid.uuid4().hex,
             list(inputs_mapping.values()),
             list(outputs_mapping.values()),
         )
+
+        copy_outputs = copy.copy(self.outputs)
+        copy_outputs_users = collections.defaultdict(list)
+        for output_label in outputs_mapping.values():
+            for user in self.get_gate_users(output_label):
+                if user not in block_for_deleting.gates:
+                    copy_outputs_users[output_label].append(user)
+
         check_block_has_no_users(
             block=block_for_deleting,
             circuit=self,
@@ -956,7 +964,11 @@ class Circuit(Function):
                 self.add_gate(new_gate)
 
         self._outputs = copy_outputs
-        self._gate_to_users = self._gate_to_users | copy_outputs_users
+        for gate_label, list_users in copy_outputs_users.items():
+            if gate_label not in self._gate_to_users:
+                self._gate_to_users[gate_label] = list_users
+            else:
+                self._gate_to_users[gate_label].extend(list_users)
 
         return self
 
