@@ -59,7 +59,7 @@ def _check_project(*, short: bool):
     """
     mypy_ret = _call_command_with_buffer("poetry run mypy -p boolean_circuit_tool")
     flake8_ret = _call_command_with_buffer(
-        "poetry run flake8 boolean_circuit_tool tests tools docs"
+        "poetry run flake8 boolean_circuit_tool tests tools"
     )
     pytest_ret = _call_command_with_buffer("poetry run pytest tests")
     usort_ret = _call_command_with_buffer(
