@@ -607,7 +607,6 @@ class Circuit(Function):
         check_block_doesnt_exist(name, self)
         check_gates_exist(this_connectors, self)
         check_gates_exist(other_connectors, other)
-
         if right_connect:
             if len(this_connectors) != len(set(this_connectors)):
                 raise CreateBlockError()
@@ -932,18 +931,19 @@ class Circuit(Function):
             if old_label != new_label:
                 self.rename_gate(old_label, new_label)
 
-        copy_outputs = copy.copy(self.outputs)
-        copy_outputs_users = {
-            output_label: self.get_gate_users(output_label)
-            for output_label in outputs_mapping.values()
-            if output_label in self._gate_to_users
-        }
-
         block_for_deleting = self.make_block_from_slice(
             'block_for_deleting' + uuid.uuid4().hex,
             list(inputs_mapping.values()),
             list(outputs_mapping.values()),
         )
+
+        copy_outputs = copy.copy(self.outputs)
+        copy_outputs_users = collections.defaultdict(list)
+        for output_label in outputs_mapping.values():
+            for user in self.get_gate_users(output_label):
+                if user not in block_for_deleting.gates:
+                    copy_outputs_users[output_label].append(user)
+
         check_block_has_no_users(
             block=block_for_deleting,
             circuit=self,
@@ -956,7 +956,11 @@ class Circuit(Function):
                 self.add_gate(new_gate)
 
         self._outputs = copy_outputs
-        self._gate_to_users = self._gate_to_users | copy_outputs_users
+        for gate_label, list_users in copy_outputs_users.items():
+            if gate_label not in self._gate_to_users:
+                self._gate_to_users[gate_label] = list_users
+            else:
+                self._gate_to_users[gate_label].extend(list_users)
 
         return self
 
