@@ -15,7 +15,36 @@ __all__ = [
     "add_sub3",
     "add_sub_two_numbers",
     "add_subtract_with_compare",
+    "generate_sub_two_numbers",
 ]
+
+
+def generate_sub_two_numbers(
+    size_of_input_a: int,
+    size_of_input_b: int,
+    *,
+    big_endian: bool = False,
+) -> Circuit:
+    """
+    Generates a circuit that have subtract two binary numbers in result.
+
+    :param size_of_input_a: the number of inputs representing the first number.
+    :param size_of_input_b: the number of inputs representing the second number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: circuit that difference of the two numbers.
+
+    """
+
+    circuit = Circuit.bare_circuit(size_of_input_a + size_of_input_b)
+    outputs = add_sub_two_numbers(
+        circuit,
+        circuit.inputs[:size_of_input_a],
+        circuit.inputs[size_of_input_a:],
+        big_endian=big_endian,
+    )
+    circuit.set_outputs(outputs)
+    return circuit
 
 
 def add_sub2(
@@ -53,7 +82,7 @@ def add_sub_two_numbers(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    big_endian: bool = False
+    big_endian: bool = False,
 ) -> list[gate.Label]:
     """
     Function to subtract two binary numbers represented by input labels.
@@ -94,7 +123,7 @@ def add_subtract_with_compare(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    big_endian: bool = False
+    big_endian: bool = False,
 ) -> tuple[list[gate.Label], gate.Label]:
     """
     Subtracts given integer b from integer a and return residual bit representing if

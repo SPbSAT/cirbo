@@ -12,14 +12,3 @@ def factorization(number: int) -> Circuit:
     g3 = add_equal(ckt, outs, number)
     ckt.mark_as_output(g3)
     return ckt
-
-
-def factorization2(number: int) -> Circuit:
-    n = number.bit_length()
-    ckt = generate_mul(n - 1, n - 1)
-    ckt.extend_circuit(generate_equal(ckt.output_size, number))
-    return ckt
-
-
-factorization(4).view_graph(name_graph='1')
-factorization2(4).view_graph(name_graph='2')

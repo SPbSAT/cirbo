@@ -43,18 +43,18 @@ class MulMode(enum.Enum):
 
 
 def generate_mul(
-    number_inputs1: int,
-    number_inputs2: int,
+    size_of_input_a: int,
+    size_of_input_b: int,
     *,
     type: MulMode = MulMode.DEFAULT,
     big_endian: bool = False,
 ) -> Circuit:
     """
-    Generates a circuit that have mul two numbers (one number is first n bits, other is
-    second n bits) in result.
+    Generates a circuit that have mul two numbers (one number is first `size_of_input_a`
+    bits, other is second `size_of_input_b` bits) in result.
 
-    :param number_inputs1: the number of inputs representing the first number.
-    :param number_inputs1: the number of inputs representing the second number.
+    :param size_of_input_a: the number of inputs representing the first number.
+    :param size_of_input_b: the number of inputs representing the second number.
     :param type: what type of algorithm to use
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
@@ -62,11 +62,11 @@ def generate_mul(
 
     """
 
-    circuit = Circuit.bare_circuit(number_inputs1 + number_inputs2)
+    circuit = Circuit.bare_circuit(size_of_input_a + size_of_input_b)
     outputs = _process_mul[type](
         circuit,
-        circuit.inputs[:number_inputs1],
-        circuit.inputs[number_inputs1:],
+        circuit.inputs[:size_of_input_a],
+        circuit.inputs[size_of_input_a:],
         big_endian=big_endian,
     )
     circuit.set_outputs(outputs)

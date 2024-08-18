@@ -20,6 +20,7 @@ from .subtraction import (
     add_sub3,
     add_sub_two_numbers,
     add_subtract_with_compare,
+    generate_sub_two_numbers,
 )
 from .summation import (
     add_sum2,
@@ -62,6 +63,7 @@ __all__ = [
     'add_sub3',
     'add_sub_two_numbers',
     'add_subtract_with_compare',
+    'generate_sub_two_numbers',
     # summation.py
     'generate_sum_n_bits',
     'add_sum2',
