@@ -1,8 +1,8 @@
 import collections
+import enum
 import typing as tp
 
 from boolean_circuit_tool.core.circuit import Circuit, gate
-
 from boolean_circuit_tool.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
     PLACEHOLDER_STR,
@@ -28,7 +28,49 @@ __all__ = [
     'add_mul_dadda',
     'add_mul_wallace',
     'add_mul_pow2_m1',
+    'generate_mul',
+    'MulMode',
 ]
+
+
+class MulMode(enum.Enum):
+    DEFAULT = "DEFAULT"
+    KARATSUBA = "KARATSUBA"
+    ALTER = "ALTER"
+    DADDA = "DADDA"
+    WALLACE = "WALLACE"
+    POW2_M1 = "POW2_M1"
+
+
+def generate_mul(
+    size_of_input_a: int,
+    size_of_input_b: int,
+    *,
+    type: MulMode = MulMode.DEFAULT,
+    big_endian: bool = False,
+) -> Circuit:
+    """
+    Generates a circuit that have mul two numbers (one number is first `size_of_input_a`
+    bits, other is second `size_of_input_b` bits) in result.
+
+    :param size_of_input_a: the number of inputs representing the first number.
+    :param size_of_input_b: the number of inputs representing the second number.
+    :param type: what type of algorithm to use
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: circuit that product of the two input numbers.
+
+    """
+
+    circuit = Circuit.bare_circuit(size_of_input_a + size_of_input_b)
+    outputs = _process_mul[type](
+        circuit,
+        circuit.inputs[:size_of_input_a],
+        circuit.inputs[size_of_input_a:],
+        big_endian=big_endian,
+    )
+    circuit.set_outputs(outputs)
+    return circuit
 
 
 def add_mul(
@@ -403,3 +445,13 @@ def add_mul_pow2_m1(
         else:
             out[i] = add_sum_pow2_m1(circuit, inp)
     return reverse_if_big_endian([out[i][0][0] for i in range(n + m)], big_endian)
+
+
+_process_mul: dict[MulMode, tp.Callable[..., list[gate.Label]]] = {
+    MulMode.DEFAULT: add_mul,
+    MulMode.KARATSUBA: add_mul_karatsuba,
+    MulMode.ALTER: add_mul_alter,
+    MulMode.DADDA: add_mul_dadda,
+    MulMode.WALLACE: add_mul_wallace,
+    MulMode.POW2_M1: add_mul_pow2_m1,
+}

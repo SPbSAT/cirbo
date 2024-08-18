@@ -18,7 +18,12 @@ from boolean_circuit_tool.synthesis.generation.arithmetics import (
     add_square,
     add_square_pow2_m1,
     add_sum_n_bits,
+    generate_equal,
+    generate_mul,
+    generate_square,
     generate_sum_n_bits,
+    MulMode,
+    SquareMode,
 )
 
 TEST_SIZE = 100
@@ -127,6 +132,46 @@ def test_mul(func, size, big_endian):
         assert mul_naive(input_labels_a, input_labels_b) == res
 
 
+@pytest.mark.parametrize(
+    "type",
+    [
+        MulMode.DEFAULT,
+        MulMode.ALTER,
+        MulMode.DADDA,
+        MulMode.WALLACE,
+        MulMode.POW2_M1,
+        MulMode.KARATSUBA,
+    ],
+)
+@pytest.mark.parametrize(
+    "size",
+    [
+        [1, 1],
+        [1, 7],
+        [7, 1],
+        [3, 6],
+        pytest.param([8, 2], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([24, 15], marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_gen_mul(type, size, big_endian):
+    x, y = size
+    ckt = generate_mul(x, y, type=type, big_endian=big_endian)
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert mul_naive(input_labels_a, input_labels_b) == res
+
+
 @pytest.mark.parametrize("func", [add_square, add_square_pow2_m1])
 @pytest.mark.parametrize(
     "x",
@@ -159,6 +204,35 @@ def test_square(func, x, big_endian):
         assert square_naive(input_labels) == res
 
 
+@pytest.mark.parametrize("type", [SquareMode.DEFAULT, SquareMode.POW2_M1])
+@pytest.mark.parametrize(
+    "number_inputs",
+    [
+        1,
+        2,
+        5,
+        7,
+        pytest.param(17, marks=pytest.mark.slow),
+        pytest.param(60, marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_gen_square(number_inputs, type, big_endian):
+    ckt: Circuit = generate_square(
+        number_inputs,
+        type=type,
+        big_endian=big_endian,
+    )
+    for test in range(TEST_SIZE):
+        input_labels = [random.choice([0, 1]) for _ in range(number_inputs)]
+        res = ckt.evaluate(input_labels)
+        if big_endian:
+            input_labels.reverse()
+        else:
+            res.reverse()
+        assert square_naive(input_labels) == res
+
+
 @pytest.mark.parametrize("num", list(range(128)))
 def test_add_equal(num):
     r = 7
@@ -168,6 +242,17 @@ def test_add_equal(num):
         ckt.add_gate(Gate(inputs[i], INPUT))
     out_gate = add_equal(ckt, inputs, num)
     ckt.mark_as_output(out_gate)
+    for i, b in enumerate(ckt.get_truth_table()[0]):
+        if bin(i)[2:].zfill(r)[::-1] == bin(num)[2:].zfill(r):
+            assert b
+        else:
+            assert not b
+
+
+@pytest.mark.parametrize("num", list(range(128)))
+def test_gen_add_equal(num):
+    r = 7
+    ckt = generate_equal(r, num)
     for i, b in enumerate(ckt.get_truth_table()[0]):
         if bin(i)[2:].zfill(r)[::-1] == bin(num)[2:].zfill(r):
             assert b

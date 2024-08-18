@@ -1,7 +1,6 @@
 from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import Gate, NOR, AND
-from boolean_circuit_tool.synthesis.generation.arithmetics import add_mul
-from boolean_circuit_tool.synthesis.generation.arithmetics import add_equal
+from boolean_circuit_tool.core.circuit.gate import NOR, AND
+from boolean_circuit_tool.synthesis.generation.arithmetics import generate_mul, add_mul, generate_equal, add_equal
 from math import ceil, log2
 
 
