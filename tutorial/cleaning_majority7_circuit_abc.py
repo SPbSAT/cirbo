@@ -1,5 +1,5 @@
-from boolean_circuit_tool.synthesis.generation.arithmetics import add_sum_n_bits
-from boolean_circuit_tool.core.circuit import Circuit
+from cirbo.synthesis.generation.arithmetics import add_sum_n_bits
+from cirbo.core.circuit import Circuit
 from extensions.abc_wrapper.src.abc import abc_transform
 
 ckt = Circuit.bare_circuit(input_size=7)

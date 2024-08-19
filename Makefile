@@ -1,6 +1,10 @@
 all:
+	# Build documentation
+	cd docs; make html
+	# Copy main files
 	mkdir -p cirbo_zip/cirbo
-	cp -r boolean_circuit_tool cirbo_zip/cirbo/boolean_circuit_tool
+	cp -r docs/_build/html cirbo_zip/cirbo/docs
+	cp -r cirbo cirbo_zip/cirbo/cirbo
 	cp -r data cirbo_zip/cirbo/data
 	cp -r extensions cirbo_zip/cirbo/extensions
 	cp -r third_party cirbo_zip/cirbo/third_party

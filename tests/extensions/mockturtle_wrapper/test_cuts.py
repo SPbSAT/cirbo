@@ -1,6 +1,6 @@
 import mockturtle_wrapper as mw
-from boolean_circuit_tool.core.circuit.circuit import Circuit
-from boolean_circuit_tool.core.circuit.gate import AND, Gate, INPUT, NOT, OR, XOR
+from cirbo.core.circuit.circuit import Circuit
+from cirbo.core.circuit.gate import AND, Gate, INPUT, NOT, OR, XOR
 
 
 def test_enumerate_cuts():

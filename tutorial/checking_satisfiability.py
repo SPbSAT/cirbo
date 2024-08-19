@@ -1,5 +1,5 @@
-from boolean_circuit_tool.core.circuit import Circuit
-from boolean_circuit_tool.sat import is_circuit_satisfiable
+from cirbo.core.circuit import Circuit
+from cirbo.sat import is_circuit_satisfiable
 
 
 path = '../data/circuit.bench'

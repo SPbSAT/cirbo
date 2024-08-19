@@ -1,4 +1,4 @@
-from boolean_circuit_tool.core import Circuit
+from cirbo.core import Circuit
 
 try:
     from abc_wrapper import run_abc_commands_c

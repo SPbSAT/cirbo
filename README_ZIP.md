@@ -7,37 +7,41 @@ Package `Python 3.9` is used to cover all currently [maintained Python versions]
 Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
 
 1. Install following packages using your package manager:
-   - dev version of `python3.9` and `python3.9-distutils`
+   - dev version of `python3.9-dev` and `python3.9-distutils`
+   - `build-essential` package for Ubuntu.
    - `cmake` and suitable C++ compiler, e.g. `gcc`
    - `graphviz` library
 
    Command for Ubuntu:
    ```shell
-   sudo apt install python3.9-dev python3.9-distutils gcc cmake graphviz
+   sudo apt install python3-dev python3.9-dev python3.9-distutils gcc cmake graphviz build-essential
    ```
-
-   Command for Mac OS:
-   ```shell
-   brew install python3.9 clang cmake graphviz
-   ```
+   
+   > Note: python3.9 is unavailable in latest versions of Ubuntu, so `deadsnakes`
+   > ppa may be useful: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
 
 1. Install `poetry` ([official instruction](https://python-poetry.org/docs/)).
 1. Build dist with extensions locally by running `poetry build`
 
    > Note: building `ABC` extension may take long time, one can skip it
-   using `(export DISABLE_ABC_CEXT=1 && poetry build)` command.
+   > using `(export DISABLE_ABC_CEXT=1 && poetry build && poetry install)`
+   > command.
 
 1. Setup virtual environment by running `poetry install`
 1. Enable virtual environment using `poetry shell`
 
 > Note: it may be necessary to restart an IDE after extensions
-are built and installed to refresh its index and stubs.
+> are built and installed to refresh its index and stubs.
 
 ## Package structure
 
 Some features of a package are demonstrated in the special modules located in
 the `tutorial/` directory. The same code snippets are used in the paper's listings.
 This is probably a first place that should be explored after environment is set up.
+
+Directory `docs/` contains pre-rendered auto-api documentation of package `cirbo`.
+Main classes and methods of `cirbo` can be explored it that documentation. To begin
+exploration open `docs/index.html` in a browser.
 
 Main `cirbo/` directory is a Python package root. It provides following subpackages:
 

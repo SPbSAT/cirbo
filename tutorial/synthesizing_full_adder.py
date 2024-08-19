@@ -1,5 +1,5 @@
-from boolean_circuit_tool.synthesis.circuit_search import CircuitFinderSat
-from boolean_circuit_tool.core.python_function import PyFunction
+from cirbo.synthesis.circuit_search import CircuitFinderSat
+from cirbo.core.python_function import PyFunction
 
 
 def sum_3(x1, x2, x3):

@@ -10,7 +10,7 @@ try:
 except ImportError:
     pass
 
-from boolean_circuit_tool.core.circuit import AND, Circuit, Gate, INPUT, NOT, OR
+from cirbo.core.circuit import AND, Circuit, Gate, INPUT, NOT, OR
 
 ckt1 = Circuit()
 ckt1.add_gate(Gate('x', INPUT))
