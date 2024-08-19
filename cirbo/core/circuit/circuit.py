@@ -35,6 +35,7 @@ from cirbo.core.circuit.utils import input_iterator_with_fixed_sum, order_list
 from cirbo.core.circuit.validation import (
     check_block_doesnt_exist,
     check_block_has_no_users,
+    check_circuit_has_no_cycles,
     check_gate_has_not_users,
     check_gates_exist,
     check_label_doesnt_exist,
@@ -934,7 +935,15 @@ class Circuit(Function):
             list(outputs_mapping.values()),
         )
 
-        copy_outputs = copy.copy(self.outputs)
+        copy_outputs = []
+        for output in self.outputs:
+            if (
+                output in block_for_deleting.gates
+                and output not in outputs_mapping.values()
+            ):
+                raise ReplaceSubcircuitError()
+            copy_outputs.append(output)
+
         copy_outputs_users = collections.defaultdict(list)
         for output_label in outputs_mapping.values():
             for user in self.get_gate_users(output_label):
@@ -958,6 +967,8 @@ class Circuit(Function):
                 self._gate_to_users[gate_label] = list_users
             else:
                 self._gate_to_users[gate_label].extend(list_users)
+
+        check_circuit_has_no_cycles(self)
 
         return self
 
