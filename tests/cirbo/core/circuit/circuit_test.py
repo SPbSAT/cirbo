@@ -28,6 +28,7 @@ from cirbo.core.circuit.gate import (
     LEQ,
     LNOT,
     LT,
+    NAND,
     NOT,
     OR,
     RNOT,
@@ -1192,6 +1193,391 @@ def test_replace_subcircuit4():
         outputs_mapping={'F': 'P', 'E': 'O'},
     )
     assert instance2 == result
+
+
+def test_replace_subcircuit5():
+    # check for incomplete mapping (there is an unaccounted
+    # connection between the block and the circuit)
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', XOR, ('003', '002')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+
+    with pytest.raises(DeleteBlockError):
+        new_instance = instance.replace_subcircuit(
+            subcircuit=to_replace,
+            inputs_mapping={'000': '100', '001': '101'},
+            outputs_mapping={'004': '102'},
+        )
+
+    # the gate from the circuit has a connection (of the operand)
+    # with the output of the block for removal
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', XOR, ('003', '002')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+    to_replace.add_gate(Gate('103', AND, ('100', '101')))
+
+    result = Circuit()
+    result.add_gate(Gate('100', INPUT))
+    result.add_gate(Gate('101', INPUT))
+    result.add_gate(Gate('002', INPUT))
+    result.add_gate(Gate('103', AND, ('100', '101')))
+    result.add_gate(Gate('102', NAND, ('100', '101')))
+    result.add_gate(Gate('005', XOR, ('103', '002')))
+    result.mark_as_output('102')
+
+    new_instance = instance.replace_subcircuit(
+        subcircuit=to_replace,
+        inputs_mapping={'000': '100', '001': '101'},
+        outputs_mapping={'004': '102', '003': '103'},
+    )
+    assert new_instance == result
+
+    # the gate from the circuit has a connection (of the operand)
+    # with the input of the block for removal
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', XOR, ('000', '002')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+    to_replace.add_gate(Gate('103', AND, ('100', '101')))
+
+    result = Circuit()
+    result.add_gate(Gate('100', INPUT))
+    result.add_gate(Gate('101', INPUT))
+    result.add_gate(Gate('002', INPUT))
+    result.add_gate(Gate('103', AND, ('100', '101')))
+    result.add_gate(Gate('102', NAND, ('100', '101')))
+    result.add_gate(Gate('005', XOR, ('100', '002')))
+    result.mark_as_output('102')
+
+    new_instance = instance.replace_subcircuit(
+        subcircuit=to_replace,
+        inputs_mapping={'000': '100', '001': '101'},
+        outputs_mapping={'004': '102', '003': '103'},
+    )
+    assert new_instance == result
+
+    # the gate from the circuit has a connection (operand) with the
+    # output of the block for removal (users inside the block itself)
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', XOR, ('004', '002')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+    to_replace.add_gate(Gate('103', AND, ('100', '101')))
+
+    result = Circuit()
+    result.add_gate(Gate('100', INPUT))
+    result.add_gate(Gate('101', INPUT))
+    result.add_gate(Gate('002', INPUT))
+    result.add_gate(Gate('103', AND, ('100', '101')))
+    result.add_gate(Gate('102', NAND, ('100', '101')))
+    result.add_gate(Gate('005', XOR, ('102', '002')))
+    result.mark_as_output('102')
+
+    new_instance = instance.replace_subcircuit(
+        subcircuit=to_replace,
+        inputs_mapping={'000': '100', '001': '101'},
+        outputs_mapping={'004': '102', '003': '103'},
+    )
+    assert new_instance == result
+
+    # exit among internal gates
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', INPUT))
+    instance.add_gate(Gate('004', AND, ('000', '001')))
+    instance.add_gate(Gate('005', NOT, ('004',)))
+    instance.add_gate(Gate('006', XOR, ('003', '002')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+
+    with pytest.raises(ReplaceSubcircuitError):
+        new_instance = instance.replace_subcircuit(
+            subcircuit=to_replace,
+            inputs_mapping={'000': '100', '001': '101'},
+            outputs_mapping={'005': '102'},
+        )
+
+    # the gate from the circuit has no connection (operand)
+    # with the block for removal
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', INPUT))
+    instance.add_gate(Gate('004', AND, ('000', '001')))
+    instance.add_gate(Gate('005', NOT, ('004',)))
+    instance.add_gate(Gate('006', XOR, ('003', '002')))
+    instance.mark_as_output('005')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+
+    result = Circuit()
+    result.add_gate(Gate('100', INPUT))
+    result.add_gate(Gate('101', INPUT))
+    result.add_gate(Gate('002', INPUT))
+    result.add_gate(Gate('003', INPUT))
+    result.add_gate(Gate('102', NAND, ('100', '101')))
+    result.add_gate(Gate('006', XOR, ('003', '002')))
+    result.mark_as_output('102')
+
+    new_instance = instance.replace_subcircuit(
+        subcircuit=to_replace,
+        inputs_mapping={'000': '100', '001': '101'},
+        outputs_mapping={'005': '102'},
+    )
+    assert new_instance == result
+
+    # the gate from the circuit has a connection (operand)
+    # with the input of the block for removal and the output
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', XOR, ('000', '003')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+    to_replace.add_gate(Gate('103', AND, ('100', '101')))
+
+    result = Circuit()
+    result.add_gate(Gate('100', INPUT))
+    result.add_gate(Gate('101', INPUT))
+    result.add_gate(Gate('002', INPUT))
+    result.add_gate(Gate('103', AND, ('100', '101')))
+    result.add_gate(Gate('102', NAND, ('100', '101')))
+    result.add_gate(Gate('005', XOR, ('100', '103')))
+    result.mark_as_output('102')
+
+    new_instance = instance.replace_subcircuit(
+        subcircuit=to_replace,
+        inputs_mapping={'000': '100', '001': '101'},
+        outputs_mapping={'004': '102', '003': '103'},
+    )
+    assert new_instance == result
+
+    # the gate from the circuit has a connection (operand) with
+    # the input of the block for removal and the internal gate (not covered)
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', XOR, ('000', '003')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+
+    with pytest.raises(DeleteBlockError):
+        new_instance = instance.replace_subcircuit(
+            subcircuit=to_replace,
+            inputs_mapping={'000': '100', '001': '101'},
+            outputs_mapping={'004': '102'},
+        )
+
+    # the gate from the circuit has a connection (operand) with one internal
+    # gate (covered) and one internal gate (not covered)
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', XOR, ('004', '003')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+
+    with pytest.raises(DeleteBlockError):
+        new_instance = instance.replace_subcircuit(
+            subcircuit=to_replace,
+            inputs_mapping={'000': '100', '001': '101'},
+            outputs_mapping={'004': '102'},
+        )
+
+    # the gate from the circuit has a connection (of the operand)
+    # with two internal gates in the block for removal
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', XOR, ('004', '003')))
+    instance.mark_as_output('004')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+    to_replace.add_gate(Gate('103', AND, ('100', '101')))
+
+    result = Circuit()
+    result.add_gate(Gate('100', INPUT))
+    result.add_gate(Gate('101', INPUT))
+    result.add_gate(Gate('002', INPUT))
+    result.add_gate(Gate('103', AND, ('100', '101')))
+    result.add_gate(Gate('102', NAND, ('100', '101')))
+    result.add_gate(Gate('005', XOR, ('102', '103')))
+    result.mark_as_output('102')
+
+    new_instance = instance.replace_subcircuit(
+        subcircuit=to_replace,
+        inputs_mapping={'000': '100', '001': '101'},
+        outputs_mapping={'004': '102', '003': '103'},
+    )
+    assert new_instance == result
+
+    # cycle
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', AND, ('000', '001')))
+    instance.add_gate(Gate('004', NOT, ('003',)))
+    instance.add_gate(Gate('005', AND, ('004', '002')))
+    instance.add_gate(Gate('006', NOT, ('005',)))
+    instance.mark_as_output('006')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', INPUT))
+    to_replace.add_gate(Gate('103', NOT, ('102',)))
+    to_replace.add_gate(Gate('104', AND, ('101', '103')))
+
+    with pytest.raises(CircuitValidationError):
+        new_instance = instance.replace_subcircuit(
+            subcircuit=to_replace,
+            inputs_mapping={'000': '100', '001': '101', '005': '102'},
+            outputs_mapping={'003': '104', '006': '103'},
+        )
+
+    # checking connections inside gates (removing connections)
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', OR, ('000', '001')))
+    instance.add_gate(Gate('004', AND, ('000', '003')))
+    instance.add_gate(Gate('005', NOT, ('004',)))
+    instance.add_gate(Gate('006', XOR, ('005', '002')))
+    instance.mark_as_output('006')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NAND, ('100', '101')))
+
+    result = Circuit()
+    result.add_gate(Gate('100', INPUT))
+    result.add_gate(Gate('101', INPUT))
+    result.add_gate(Gate('002', INPUT))
+    result.add_gate(Gate('102', NAND, ('100', '101')))
+    result.add_gate(Gate('006', XOR, ('102', '002')))
+    result.mark_as_output('006')
+
+    new_instance = instance.replace_subcircuit(
+        subcircuit=to_replace,
+        inputs_mapping={'000': '100', '001': '101'},
+        outputs_mapping={'005': '102'},
+    )
+    assert new_instance == result
+
+    # checking connections inside gates (rebalancing output connections)
+    instance = Circuit()
+    instance.add_gate(Gate('000', INPUT))
+    instance.add_gate(Gate('001', INPUT))
+    instance.add_gate(Gate('002', INPUT))
+    instance.add_gate(Gate('003', OR, ('000', '001')))
+    instance.add_gate(Gate('004', AND, ('000', '003')))
+    instance.add_gate(Gate('005', NOT, ('004',)))
+    instance.add_gate(Gate('006', XOR, ('005', '002')))
+    instance.add_gate(Gate('007', XOR, ('004', '002')))
+    instance.mark_as_output('006')
+    instance.mark_as_output('007')
+
+    to_replace = Circuit()
+    to_replace.add_gate(Gate('100', INPUT))
+    to_replace.add_gate(Gate('101', INPUT))
+    to_replace.add_gate(Gate('102', NOT, ('100',)))
+    to_replace.add_gate(Gate('103', AND, ('102', '101')))
+
+    result = Circuit()
+    result.add_gate(Gate('100', INPUT))
+    result.add_gate(Gate('101', INPUT))
+    result.add_gate(Gate('002', INPUT))
+    result.add_gate(Gate('102', NOT, ('100',)))
+    result.add_gate(Gate('103', AND, ('102', '101')))
+    result.add_gate(Gate('006', XOR, ('102', '002')))
+    result.add_gate(Gate('007', XOR, ('103', '002')))
+    result.mark_as_output('006')
+    result.mark_as_output('007')
+
+    new_instance = instance.replace_subcircuit(
+        subcircuit=to_replace,
+        inputs_mapping={'000': '100', '001': '101'},
+        outputs_mapping={'005': '102', '004': '103'},
+    )
+    assert new_instance == result
 
 
 def test_evaluate_circuit():
