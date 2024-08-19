@@ -1196,8 +1196,8 @@ def test_replace_subcircuit4():
 
 
 def test_replace_subcircuit5():
-    # проверим неполное означивание (есть не учтенная связь
-    # блока со схемой)
+    # check for incomplete mapping (there is an unaccounted
+    # connection between the block and the circuit)
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1219,8 +1219,8 @@ def test_replace_subcircuit5():
             outputs_mapping={'004': '102'},
         )
 
-    # гейт из схемы имеет связь (операнда) с выходом блока для
-    # удаления
+    # the gate from the circuit has a connection (of the operand)
+    # with the output of the block for removal
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1252,8 +1252,8 @@ def test_replace_subcircuit5():
     )
     assert new_instance == result
 
-    # гейт из схемы имеет связь (операнда) с инпутом блока для
-    # удаления
+    # the gate from the circuit has a connection (of the operand)
+    # with the input of the block for removal
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1285,8 +1285,8 @@ def test_replace_subcircuit5():
     )
     assert new_instance == result
 
-    # гейт из схемы имеет связь (операнда) с выходом блока для
-    # удаления (юзеры внутри самого блока)
+    # the gate from the circuit has a connection (operand) with the
+    # output of the block for removal (users inside the block itself)
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1318,7 +1318,7 @@ def test_replace_subcircuit5():
     )
     assert new_instance == result
 
-    # выход среди внутренних гейтов
+    # exit among internal gates
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1341,8 +1341,8 @@ def test_replace_subcircuit5():
             outputs_mapping={'005': '102'},
         )
 
-    # гейт из схемы не имеет никакую связь (операнда) с блоком для
-    # удаления
+    # the gate from the circuit has no connection (operand)
+    # with the block for removal
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1374,8 +1374,8 @@ def test_replace_subcircuit5():
     )
     assert new_instance == result
 
-    # гейт из схемы имеет связь (операнда) с инпутом блока для
-    # удаления и аутпотом
+    # the gate from the circuit has a connection (operand)
+    # with the input of the block for removal and the output
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1407,8 +1407,8 @@ def test_replace_subcircuit5():
     )
     assert new_instance == result
 
-    # гейт из схемы имеет связь (операнда) с инпутом блока для
-    # удаления и внутренним гейтом (не покрытым)
+    # the gate from the circuit has a connection (operand) with
+    # the input of the block for removal and the internal gate (not covered)
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1430,8 +1430,8 @@ def test_replace_subcircuit5():
             outputs_mapping={'004': '102'},
         )
 
-    # гейт из схемы имеет связь (операнда) с одним покрытым
-    # внутренним гейтом в блоке для удаления и одним не покрытым
+    # the gate from the circuit has a connection (operand) with one internal
+    # gate (covered) and one internal gate (not covered)
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1453,8 +1453,8 @@ def test_replace_subcircuit5():
             outputs_mapping={'004': '102'},
         )
 
-    # гейт из схемы имеет связь (операнда) с двумя
-    # внутреними гейтами в блоке для удаления
+    # the gate from the circuit has a connection (of the operand)
+    # with two internal gates in the block for removal
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1486,7 +1486,7 @@ def test_replace_subcircuit5():
     )
     assert new_instance == result
 
-    # цикл
+    # cycle
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1511,7 +1511,7 @@ def test_replace_subcircuit5():
             outputs_mapping={'003': '104', '006': '103'},
         )
 
-    # проверка связей внутри гейтов (удаление связей)
+    # checking connections inside gates (removing connections)
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
@@ -1542,7 +1542,7 @@ def test_replace_subcircuit5():
     )
     assert new_instance == result
 
-    # проверка связей внутри гейтов (перевешивание связей выходов)
+    # checking connections inside gates (rebalancing output connections)
     instance = Circuit()
     instance.add_gate(Gate('000', INPUT))
     instance.add_gate(Gate('001', INPUT))
