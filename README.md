@@ -157,9 +157,6 @@ Read more about submodules in
    ```
 5. Add python tests to `tests/<extension name>` package.
 
-Note: there is an `dummy_extension` needed solely to demonstrate a minimal
-configuration extension should have.
-
 ## CI flow
 
 GitHub Actions are used for CI. Following checks are executed automatically for

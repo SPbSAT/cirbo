@@ -135,7 +135,6 @@ class CMakeBuild(build_ext):
  
 
 ext_modules = [
-    CMakeExtension("dummy_extension"),
     CMakeExtension("mockturtle_wrapper"),
 ]
 

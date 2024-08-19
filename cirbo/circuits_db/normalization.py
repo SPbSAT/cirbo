@@ -14,11 +14,6 @@ __all__ = ['NormalizationInfo']
 
 
 class NormalizationInfo:
-    # TODO:
-    #   class has very strange interfaces.
-    #   It normalizes truth_table and denormalizes Circuit. Looks strange.
-    #   I suggest to change interfaces. How?
-
     def __init__(self, truth_table: RawTruthTable):
         self.negations: tp.Optional[tp.List[bool]] = None
         self.permutation: tp.Optional[tp.List[int]] = None
@@ -61,7 +56,7 @@ class NormalizationInfo:
                 new_outputs.append(output_not)
             else:
                 new_outputs.append(output)
-        circuit._outputs = new_outputs  # TODO: native method to update outputs
+        circuit._outputs = new_outputs
 
     def _sort_outputs(self, truth_table: RawTruthTable) -> RawTruthTable:
         enumerated_truth_tables = list(enumerate(truth_table))
@@ -95,12 +90,11 @@ class NormalizationInfo:
         original_outputs = ['' for _ in self.mapping]
         for i, mapped_index in enumerate(self.mapping):
             original_outputs[i] = circuit.outputs[mapped_index]
-        circuit._outputs = original_outputs  # TODO: native method to update outputs
+        circuit._outputs = original_outputs
 
 
 def _negate_gate(circuit: Circuit, gate: Label) -> Label:
     not_gate = f"not_{gate}"
-    # TODO: name collisions?
     if not_gate not in circuit.gates.keys():
         circuit.emplace_gate(not_gate, NOT, (gate,))
     return not_gate

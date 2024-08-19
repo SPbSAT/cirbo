@@ -519,7 +519,7 @@ def minimize_subcircuits(
                 ]
                 circuit.remove_gate(output)
                 node_states[output] = _NodeState.REMOVED
-                node_states[new_output] = _NodeState.REMOVED  # todo: process carefully
+                node_states[new_output] = _NodeState.REMOVED
             continue
 
         outputs_tt: RawTruthTableModel = [
@@ -582,7 +582,7 @@ def minimize_subcircuits(
 
         # Update the states
         for output in output_labels_mapping:
-            node_states[output] = _NodeState.REMOVED  # todo: process carefully
+            node_states[output] = _NodeState.REMOVED
 
         for gate in _get_internal_gates(
             circuit,
