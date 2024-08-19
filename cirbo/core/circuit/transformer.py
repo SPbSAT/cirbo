@@ -13,7 +13,7 @@ import functools
 import logging
 import typing as tp
 
-from cirbo.core.circuit import Circuit
+from .circuit import Circuit
 
 
 __all__ = [

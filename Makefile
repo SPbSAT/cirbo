@@ -1,5 +1,9 @@
 all:
+	# Build documentation
+	cd docs; make html
+	# Copy main files
 	mkdir -p cirbo_zip/cirbo
+	cp -r docs/_build/html cirbo_zip/cirbo/docs
 	cp -r cirbo cirbo_zip/cirbo/cirbo
 	cp -r data cirbo_zip/cirbo/data
 	cp -r extensions cirbo_zip/cirbo/extensions

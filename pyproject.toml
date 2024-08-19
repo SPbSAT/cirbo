@@ -40,6 +40,10 @@ coverage = "^7.6.1"
 pre-commit = "^3.8.0"
 mock = "^5.1.0"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7.4.7"
+sphinx-autoapi = "^3.2.1"
+
 [tool.poetry.build]
 script = "build.py"
 generate-setup-file = true

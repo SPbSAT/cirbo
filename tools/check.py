@@ -58,14 +58,16 @@ def _check_project(*, short: bool):
 
     """
     mypy_ret = _call_command_with_buffer("poetry run mypy -p cirbo")
-    flake8_ret = _call_command_with_buffer("poetry run flake8 cirbo tests tools")
+    flake8_ret = _call_command_with_buffer("poetry run flake8 cirbo tests tools docs")
     pytest_ret = _call_command_with_buffer("poetry run pytest tests")
-    usort_ret = _call_command_with_buffer("poetry run usort check cirbo/ tests/ tools/")
+    usort_ret = _call_command_with_buffer(
+        "poetry run usort check cirbo/ tests/ tools/ docs/"
+    )
     docformatter_ret = _call_command_with_buffer(
-        "poetry run docformatter --check --diff cirbo/ tests/ tools/"
+        "poetry run docformatter --check --diff cirbo/ tests/ tools/ docs/"
     )
     black_ret = _call_command_with_buffer(
-        "poetry run black --check --diff cirbo/ tests/ tools/"
+        "poetry run black --check --diff cirbo/ tests/ tools/ docs/"
     )
 
     all_ret = {
