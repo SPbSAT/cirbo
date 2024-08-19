@@ -3,7 +3,7 @@ all:
 	cd docs; make html
 	# Copy main files
 	mkdir -p cirbo_zip/cirbo
-	rsync -rv --exclude='*.pyc' --exclude='*.pyo' --exclude='*/__pycache__*' docs/_build/html cirbo_zip/cirbo/docs
+	rsync -rv --exclude='*.pyc' --exclude='*.pyo' --exclude='*/__pycache__*' docs/_build/html/ cirbo_zip/cirbo/docs
 	rsync -rv --exclude='*.pyc' --exclude='*.pyo' --exclude='*/__pycache__*' cirbo cirbo_zip/cirbo/cirbo
 	rsync -rv --exclude='*.pyc' --exclude='*.pyo' --exclude='*/__pycache__*' data cirbo_zip/cirbo/data
 	rsync -rv --exclude='*.pyc' --exclude='*.pyo' --exclude='*/__pycache__*' extensions cirbo_zip/cirbo/extensions

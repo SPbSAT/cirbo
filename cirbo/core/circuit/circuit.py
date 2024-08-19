@@ -1556,7 +1556,7 @@ class Circuit(Function):
         Get indexes of all inputs on which output `output_index` depends on.
 
         :param output_index: index of desired output.
-        :return: list of input indices.  TODO make it more efficient when time comes
+        :return: list of input indices.
 
         """
         return [
