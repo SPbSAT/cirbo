@@ -16,7 +16,7 @@ all:
 	cp poetry.lock cirbo_zip/cirbo/poetry.lock
 	cp pyproject.toml cirbo_zip/cirbo/pyproject.toml
 	# Rename README files
-	cp README_ZIP.md cirbo_zip/cirbo/README.md
+	cp README.md cirbo_zip/cirbo/README.md
 
 	cd cirbo_zip; zip -r cirbo.zip cirbo
 

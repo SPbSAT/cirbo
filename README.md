@@ -1,70 +1,139 @@
 # Cirbo: A New Tool for Boolean Circuit Analysis and Synthesis
 
-## Developer's environment
+## Environment setup
 
-Python >=3.9 is used to cover all currently
-[maintained versions](https://devguide.python.org/versions/).
+Package `Python 3.9` is used to cover all currently [maintained Python versions](https://devguide.python.org/versions/).
+
+Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
 
 1. Install following packages using your package manager:
-   - dev version of `python3.9` and `python3.9-distutils` (e.g. `sudo apt install python3.9-dev`)
-   - `cmake` and suitable C++ compiler
-   - `graphviz` library.
-1. Init and update repository submodules `git submodule update --init --recursive`
-1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
-1. Build extensions locally by running `poetry build`
+   - dev version of `python3.9-dev` and `python3.9-distutils`
+   - `build-essential` package for Ubuntu.
+   - `cmake` and suitable C++ compiler, e.g. `gcc`
+   - `graphviz` library
+
+   Command for Ubuntu:
+   ```shell
+   sudo apt install python3-dev python3.9-dev python3.9-distutils gcc cmake graphviz build-essential
+   ```
+   
+   > Note: python3.9 is unavailable in latest versions of Ubuntu, so `deadsnakes`
+   > ppa may be useful: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
+
+1. Install `poetry` ([official instruction](https://python-poetry.org/docs/)).
+1. Build dist with extensions locally by running `poetry build`
+
+   > Note: building `ABC` extension may take long time, one can skip it
+   > using `(export DISABLE_ABC_CEXT=1 && poetry build && poetry install)`
+   > command.
+
 1. Setup virtual environment by running `poetry install`
-1. Set your env to the oldest supported Python version `poetry env use 3.9`
 1. Enable virtual environment using `poetry shell`
-1. Install pre-commit hooks using `pre-commit install`
 
-Note: probably one will need to restart an IDE after extensions are built and
-installed to refresh its index and stubs.
+> Note: it may be necessary to restart an IDE after extensions
+> are built and installed to refresh its index and stubs.
 
-## Building extensions
+## Package structure
 
-This package provides bridges to some external `C/C++` libraries. Extensions
-are written using `pybind11` and should be built before used locally. To build
-dependencies run `poetry build` and to install them after use `poetry install`.
+Some features of a package are demonstrated in the special modules located in
+the `tutorial/` directory. The same code snippets are used in the paper's listings.
+This is probably a first place that should be explored after environment is set up.
 
-Note: to build dependencies one should have all building tools available
-in the system. Currently, dependencies require `C++` compiler and `cmake`
-to be available.
+Directory `docs/` contains pre-rendered auto-api documentation of package `cirbo`.
+Main classes and methods of `cirbo` can be explored it that documentation. To begin
+exploration open `docs/index.html` in a browser.
 
-Some extensions can be disabled using environment variables if one doesn't
-need them. For example `(export DISABLE_ABC_CEXT=1 && poetry build)` (parenthesis
-should be included) will build wheels without `ABC` bridge module. It can be
-helpful for CI or fast testing because `ABC` compilation times are heavy.
+Main `cirbo/` directory is a Python package root. It provides following subpackages:
 
-Tests that use `ABC` extension can be skipped by passing option `-m 'not ABC'`
-to `pytest` run.
+- `core` &mdash; provides core classes and structures:
+  - main boolean function abstractions: `Function` protocol to represent any
+  boolean function and `FunctionModel` protocol to represent any partially
+  defined boolean function
+  - structures to carry representations of a boolean function (`TruthTable`,
+  `PyFunction` and `Circuit`)
+  - a `Circuit` class alongside with circuit manipulation operations.
+- `synthesis` &mdash; provides tools for circuit synthesis:
+  - methods to synthesize new circuit either by providing model of a function
+  (e.g. truth table with don't care values) and then formulating and solving
+  a SAT problem of finding feasible circuit.
+  - methods to generate circuits describing arithmetical and logical operations
+  (e.g. `generate_sum_n_bits` and `generate_if_then_else`) or add such gadget to
+  an existing circuit.
+- `minimization` &mdash; provides methods to minimize circuits:
+  - low-effort circuit minimization algorithms (e.g. cleaning redundant gates,
+  merging unary operators, merging duplicates, brute forcing equivalent gates).
+  - high-effort circuit minimization trying to simplify small subcircuits within
+  original circuit.
+- `sat` &mdash; provides tools related to `SAT` solving:
+  - method to build a miter from two given circuits.
+  - method to reduce of `Circuit SAT` to `SAT` using Tseytin transformation.
+  - method to call `SAT` solvers using [pysat toolkit](https://github.com/pysathq/pysat).
+- `circuits_db` &mdash; provides methods to manage (read and write) database of
+(nearly) optimal small circuits. Can be useful for either search for circuit with
+given (partially defined) truth table or for an optimization of existing circuit.
 
-## Codestyle guidelines
+> Note: most of a public methods provide docstrings, which can be useful when
+> exploring `cirbo`.
 
-One should follow simple rules:
+Directory `data/` contains databases of small (nearly) optimal circuits, and
+an exemplar of circuit encoded in BENCH format needed for `tutorial/`.
 
-1. For each public function unit tests should be written, covering:
-   1. main usage cases.
-   2. corner cases.
-   3. wrong usage behaviour.
-2. Type hints must be specified for all arguments and return values, as well
-as for class attributes. Typehints for local variables are also welcome when
-well-placed, but not obligatory.
-3. All public Python objects (functions, classes, modules) must have docstrings.
-For private and protected objects docstrings are encouraged but not obligatory.
-4. All Python modules should include `__all__` definition, to avoid occasional
-export of unwanted objects (e.g. export of imported objects).
-5. Import of "all" objects (`from x import *`) must not be used.
-6. All standard libraries should be imported as packages
-(e.g. `import itertools`).
-7. For package `typing` shortening `tp` should be used (`import typing as tp`).
+Directory `extensions/` contains C/C++ extensions written using `pybind11`.
+Those extensions allow usage of `ABC` and `mockturtle` within python env.
 
-## Checks
+Directory `third_party/` contains all third party libraries (excluding ones
+installed form `pypi`) distributed alongside current zip archive (whilts
+originally those dependencies are managed using `git submodule`). Those
+include: `ABC`, `mockturtle` and `pybind11`.
 
-`mypy`, `flake8`, `pytest`, `black`, `docformatter` and `usort` are main checks
-used in CI.
+Directory `tools/` contains utilities helpful for running linting checks or formatters.
 
-Those checks are available in poetry environment and can be invoked at once
-locally using tool script:
+Directory `tests/` contains all tests that cover both `cirbo/` and `extensions/`.
+
+## Technical info
+
+### C/C++ extensions
+
+`cirbo` package provides integration with external `C/C++` libraries (`mockturtle`
+and `ABC`). Such extensions are written using `pybind11` and should be built before
+used locally. To build dependencies run `poetry build` and to install them  use
+`poetry install` after.
+
+> Note: to build dependencies one should have all building tools available
+> in the system. Currently, dependencies require `C++` compiler and `cmake`
+> to be available.
+
+> Warning: `ABC` extension takes quite a long time (>10 min) to build. There is
+> an option to avoid its building: `(export DISABLE_ABC_CEXT=1 && poetry build)`
+> (parenthesis should be included). It can be helpful for fast testing because,
+> but yet it may cause some `cirbo` functionality to not work property.
+
+### Code quality
+
+Code quality is sustained through both test-driven development and mandatory
+linter checks.
+
+#### Tests
+
+Tests are written and executed using `pytest`. To execute unit tests run
+`poetry run pytest`. Some tests have markers that disable their execution
+by default due to their long execution times or extra dependencies requirements.
+To  execute all tests run `poetry run pytest -m 'not manual'`.
+
+#### Linters
+
+`mypy` is used for static type checking and `flake8` is used for general linting.
+
+`black`, `docformatter` and `usort` are used both to check if code is properly
+formatted (e.g. in CI checks) and to format code locally.
+
+#### Tools
+
+All formatters can be run at once in poetry environment using following tool script:
+
+`python ./tools/formatter.py`
+
+All checks can be run at once in poetry environment using following tool script:
 
 `python ./tools/check.py`
 
@@ -80,91 +149,6 @@ If everything is good, output is expected to be like the following:
 6. BLACK CHECK SUCCEED
 ```
 
-shorten outputs mode can also be activated using flag `-s`:
+## Development and contribution
 
-`python ./tools/check.py -s`
-
-## Formatters
-
-`black`, `docformatter` and `usort` are available in poetry environment
-and can be used to format code during development.
-
-All of them can be run at once using tool script:
-
-`python ./tools/formatter.py`
-
-## Tests
-
-Tests are written and executed using `pytest`.
-To execute unit tests run `poetry run pytest`.
-To execute all tests run `poetry run pytest -m 'not manual'`.
-
-In addition to the standard tests, there are optional slow tests that interact with circuit databases. 
-These tests require the corresponding database files. To execute these tests, use the following command:
-
-```
-poetry run pytest tests/ -m "db_xaig or db_aig" --db-xaig-path /path/to/xaig_db.bin --db-aig-path /path/to/aig_db.bin
-```
-Replace `/path/to/xaig_db.bin` and `/path/to/aig_db.bin` with the actual paths to your XAIG and AIG database files, respectively.
-
-Tests are located at the `tests` subdirectory, and should be written for all
-functionalities of the package. Also, directory structure of `tests` should
-repeat structure of main `cirbo` package.
-
-## Pre-commit checks
-
-`pre-commit` hooks are currently used to run required CI checks before each
-commit locally, to not spend cloud CI quota.
-
-To force-commit without pre-commit checks use `--no-verify` option, for
-example: `git commit -m "my fixes" --no-verify`.
-
-To update git hooks based on current `.pre-commit-config.yaml` run
-`pre-commit install`.
-
-To run all current `pre-commit` checks against staged files use `pre-commit run`.
-To run it against all files use `pre-commit run --all-files`.
-
-## Updating dependencies
-
-To add or update python dependencies do the following:
-
-1. Use `poetry add <package>` to add new dependency. To add dev-only dependency
-use `poetry add <package> --group dev`. To update package version to the latest
-of available execute `poetry update <package>`.
-2. Commit changed `pyproject.toml` and `poetry.lock`.
-
-If conflict occurred during merge request, one should repeat both steps above
-on a fresh `main` version in order to correctly resolve valid versions for
-all dependencies.
-
-To bring new third-party dependency to the repository (e.g. some `C` library
-sources) use `git submodule add <repository> third_party/<repository name>`.
-Read more about submodules in
-[docs](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
-
-## Writing extensions
-
-`C/C++` extensions are written using `pybind11`. To create new extension one should:
-
-1. Put source files to `extensions/<extension name>/src/`.
-2. Add extension build specification to `CMakeLists.txt`.
-3. Add extension module specification to `build.py`, to `ext_modules` variable.
-4. Locally compile and install extensions
-   ```sh
-   poetry build
-   poetry run
-   ```
-5. Add python tests to `tests/<extension name>` package.
-
-## CI flow
-
-GitHub Actions are used for CI. Following checks are executed automatically for
-each pull request and for each commit to the `main` branch.
-
-Flow currently runs for `ubuntu` and `macos`, for python `3.9`.
-
-CI checks include `pytest`, `mypy`, `flake8` for static code checks and `black`,
-`docformatter` and `usort` are used to check if code is formatted properly.
-
-Configuration of listed tools is located in `pyproject.toml`.
+More detailed developer's README can be found [nearby](README_DEV.md).

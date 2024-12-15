@@ -35,7 +35,7 @@ jobs:
       matrix:
         python-version: ["3.9"]
         poetry-version: ["1.8.3"]
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
 #   checks should not take more than 5 minutes. If it is the
 #   case probably something heavy trespassed to unit tests.
