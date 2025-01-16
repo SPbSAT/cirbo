@@ -2,6 +2,7 @@ import math
 import random
 
 import pytest
+
 from cirbo.core.circuit import Circuit
 from cirbo.core.circuit.gate import Gate, INPUT
 from cirbo.synthesis.generation import GenerationBasis
@@ -22,9 +23,11 @@ from cirbo.synthesis.generation.arithmetics import (
     generate_mul,
     generate_square,
     generate_sum_n_bits,
+    # add_sum_n_power_bits,
     MulMode,
     SquareMode,
 )
+from coverage.debug import simplify
 
 TEST_SIZE = 100
 random.seed(42)
@@ -369,3 +372,36 @@ def test_generate_sum_n_bits(basis, n, big_endian):
         if not big_endian:
             res.reverse()
         assert sum_naive(input_labels) == res
+
+
+def test_add_sum_n_power_bits_on_mul():
+    ckt = generate_sum_n_bits(15)
+    simplify(ckt)
+    print(ckt.into_bench())
+    print(len(ckt.gates) - 15)
+
+    for n in range(1, 70):
+        break
+        ckt = Circuit()
+        a = [f'x{i}' for i in range(n)]
+        b = [f'y{i}' for i in range(n)]
+        for i in range(n):
+            ckt.add_gate(Gate(a[i], INPUT))
+            ckt.add_gate(Gate(b[i], INPUT))
+        out = add_mul(ckt, a, b)
+        ckt.set_outputs(out)
+        # print(len(out), end = ' ')
+        simplify(ckt)
+        number_of_gates = len(ckt.gates) - 2 * n
+        print(n, number_of_gates)
+
+
+def test_gen_sum():
+    n = 10000
+    ckt = generate_sum_n_bits(n, basis=GenerationBasis.XAIG, big_endian=True)
+    print(len(ckt.gates) - n)
+
+
+# n = 10000
+# powers equal 0 for all except one
+# res = 44976

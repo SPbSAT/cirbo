@@ -1,6 +1,8 @@
 import typing as tp
 from itertools import zip_longest
 
+from sortedcontainers import SortedList  # type: ignore
+
 from cirbo.core.circuit import Circuit, gate
 
 from cirbo.synthesis.generation.arithmetics._utils import (
@@ -22,6 +24,7 @@ __all__ = [
     "add_sum_pow2_m1",
     "add_sum_two_numbers",
     "add_sum_two_numbers_with_shift",
+    "add_sum_n_power_bits",
 ]
 
 
@@ -124,6 +127,7 @@ def add_sum_two_numbers_with_shift(
     )
 
 
+# x1, x2 -> x1 & x2, x1 ^ x2
 def add_sum2(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
@@ -135,6 +139,7 @@ def add_sum2(
     return list([g1, g2])
 
 
+# x1, x2, x3 -> (x1 + x2 + x3) in bin
 def add_sum3(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
@@ -164,6 +169,7 @@ def add_stockmeyer_block(
     return list([w0, w1])
 
 
+# 5 -> (2 + 2) + 1
 def add_mdfa(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
@@ -456,6 +462,156 @@ def _add_sum_n_bits(
         now_solo = next_solo
         now_x_xy = next_x_xy
     return res
+
+
+def add_sum_n_power_bits(
+    circuit, input_labels_with_pow
+) -> list[tuple[int, gate.Label]]:
+    """
+    Function to add a variable number of bits with numbers of gate approximately 4.5 *
+    n.
+
+    :param circuit: The general circuit.
+    :param input_labels: List of bits to be added.
+    :return: Tuple containing the sum in binary representation.
+
+    """
+
+    res = []
+
+    single = SortedList(list(input_labels_with_pow))  # sorted list of single
+    pairs = SortedList()  # sorted list of pairs
+    inf = 10000000000
+    inf_label = "inf_label"
+    single.add((inf, inf_label))
+    pairs.add((inf, inf_label, inf_label))
+
+    # print()
+    # print(single)
+    # print(pairs)
+
+    # return res
+    while len(single) > 1 or len(pairs) > 1:
+        lev_single, _ = single[0]
+        lev_pairs, _, _ = pairs[0]
+        now_level = min(lev_single, lev_pairs)
+        if now_level == inf:
+            break
+        now_singles = []
+        now_pairs = []
+        while single[0][0] == now_level:
+            now_singles.append(single[0][1])
+            single.discard(single[0])
+        while pairs[0][0] == now_level:
+            now_pairs.append((pairs[0][1], pairs[0][2]))
+            pairs.discard(pairs[0])
+
+        next_solo = []
+        next_x_xy = []
+        now_x_xy = now_pairs
+        now_solo = now_singles
+
+        while len(now_solo) > 1:
+            xy = add_gate_from_tt(circuit, now_solo[-1], now_solo[-2], "0110")
+            now_x_xy.append((now_solo[-1], xy))
+            for _ in range(2):
+                now_solo.pop()
+
+        while len(now_x_xy) > 1:
+            if len(now_solo) > 0:
+                z, x1, x1y1 = add_mdfa(
+                    circuit,
+                    [
+                        now_solo[-1],
+                        now_x_xy[-1][0],
+                        now_x_xy[-1][1],
+                        now_x_xy[-2][0],
+                        now_x_xy[-2][1],
+                    ],
+                )
+                for _ in range(2):
+                    now_x_xy.pop()
+                now_solo.pop()
+
+                now_solo.append(z)
+                next_x_xy.append((x1, x1y1))
+            else:
+                z, x1, x1y1 = add_simplified_mdfa(
+                    circuit,
+                    [
+                        now_x_xy[-1][0],
+                        now_x_xy[-1][1],
+                        now_x_xy[-2][0],
+                        now_x_xy[-2][1],
+                    ],
+                )
+                for _ in range(2):
+                    now_x_xy.pop()
+
+                now_solo.append(z)
+                next_x_xy.append((x1, x1y1))
+        if len(now_x_xy) == 1:
+            if len(now_solo) > 0:
+                x, y = add_stockmeyer_block(
+                    circuit, [now_solo[-1], now_x_xy[-1][0], now_x_xy[-1][1]]
+                )
+                now_solo.pop()
+                now_x_xy.pop()
+                next_solo.append(y)
+                now_solo.append(x)
+            else:
+                now_solo.append(now_x_xy[-1][1])
+                next_solo.append(
+                    add_gate_from_tt(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010")
+                )
+                now_x_xy.pop()
+
+        while len(now_solo) > 2:
+            x, y = add_sum3(circuit, now_solo[-1:-4:-1])
+            for _ in range(3):
+                now_solo.pop()
+            now_solo.append(x)
+            next_solo.append(y)
+        if len(now_solo) > 1:
+            x, y = add_sum2(circuit, now_solo[-1:-3:-1])
+            for _ in range(2):
+                now_solo.pop()
+            now_solo.append(x)
+            next_solo.append(y)
+
+        res.append((now_level, now_solo[0]))
+
+        for label in next_solo:
+            single.add((now_level + 1, label))
+        for labels in next_x_xy:
+            pairs.add((now_level + 1, labels[0], labels[1]))
+
+        # print(single)
+        # print(pairs)
+        # break
+
+    """ previous version
+    now = list(input_labels_with_pow)
+    now.sort()
+    while len(now) > 0:
+        min_level_num = now[0][0]
+        min_level = []
+        new_now = []
+        for el in now:
+            if el[0] == min_level_num:
+                min_level.append(el[1])
+            else:
+                new_now.append(el)
+        res_for_level = _add_sum_n_bits(circuit, min_level)
+        res.append((min_level_num, res_for_level[0]))
+        for i in range(1, len(res_for_level)):
+            new_now.append((min_level_num + i, res_for_level[i]))
+        now = new_now
+        now.sort()
+    """
+
+    return res
+    # list(pow, label)
 
 
 # divides the sum into blocks of size 2^n-1

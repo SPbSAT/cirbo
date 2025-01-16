@@ -13,6 +13,7 @@ from cirbo.synthesis.generation.arithmetics.summation import (
     add_sum2,
     add_sum3,
     add_sum_n_bits,
+    add_sum_n_power_bits,
     add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_with_shift,
@@ -100,12 +101,19 @@ def add_mul(
         input_labels_b.reverse()
 
     # in my mind a[0] is the smallest bit in a
+    ls = []
     c = [[PLACEHOLDER_STR] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
                 circuit, input_labels_a[j], input_labels_b[i], '0001'
             )
+            ls.append((i + j, c[i][j]))
+
+    if n > 10 and m > 10:
+        out = add_sum_n_power_bits(circuit, ls)
+        # out.sort()
+        return [i[1] for i in out]
 
     if n == 1:
         return reverse_if_big_endian([c[i][0] for i in range(m)], big_endian)

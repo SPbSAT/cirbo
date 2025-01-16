@@ -27,6 +27,7 @@ from .summation import (
     add_sum3,
     add_sum_n_bits,
     add_sum_n_bits_easy,
+    add_sum_n_power_bits,
     add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_with_shift,
@@ -73,4 +74,5 @@ __all__ = [
     'add_sum_pow2_m1',
     'add_sum_two_numbers',
     'add_sum_two_numbers_with_shift',
+    'add_sum_n_power_bits',
 ]
