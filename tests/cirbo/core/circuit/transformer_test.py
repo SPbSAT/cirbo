@@ -249,19 +249,23 @@ def test_pre_post_are_called():
         i += 1
         return i
 
-    with mock.patch.object(
-        DummyIdTransformer,
-        '_transform',
-        side_effect=_order,
-    ) as id_patch, mock.patch.object(
-        DummySetNoOutputsTransformer,
-        '_transform',
-        side_effect=_order,
-    ) as sno_patch, mock.patch.object(
-        DummyWithPrePostTransformer,
-        '_transform',
-        side_effect=_order,
-    ) as prepost_patch:
+    with (
+        mock.patch.object(
+            DummyIdTransformer,
+            '_transform',
+            side_effect=_order,
+        ) as id_patch,
+        mock.patch.object(
+            DummySetNoOutputsTransformer,
+            '_transform',
+            side_effect=_order,
+        ) as sno_patch,
+        mock.patch.object(
+            DummyWithPrePostTransformer,
+            '_transform',
+            side_effect=_order,
+        ) as prepost_patch,
+    ):
         _ = DummyWithPrePostTransformer().transform(1)
 
         id_patch.assert_has_calls([mock.call(1), mock.call(4)], any_order=False)
@@ -278,23 +282,28 @@ def test_pre_post_are_called_composite(simple_circuit_1):
         i += 1
         return i
 
-    with mock.patch.object(
-        DummyIdTransformer,
-        '_transform',
-        side_effect=_order,
-    ) as id_patch, mock.patch.object(
-        DummySetNoOutputsTransformer,
-        '_transform',
-        side_effect=_order,
-    ) as sno_patch, mock.patch.object(
-        DummyWithPrePostTransformer,
-        '_transform',
-        side_effect=_order,
-    ) as prepost_patch, mock.patch.object(
-        DummyWithCompositePrePostTransformer,
-        '_transform',
-        side_effect=_order,
-    ) as comp_patch:
+    with (
+        mock.patch.object(
+            DummyIdTransformer,
+            '_transform',
+            side_effect=_order,
+        ) as id_patch,
+        mock.patch.object(
+            DummySetNoOutputsTransformer,
+            '_transform',
+            side_effect=_order,
+        ) as sno_patch,
+        mock.patch.object(
+            DummyWithPrePostTransformer,
+            '_transform',
+            side_effect=_order,
+        ) as prepost_patch,
+        mock.patch.object(
+            DummyWithCompositePrePostTransformer,
+            '_transform',
+            side_effect=_order,
+        ) as comp_patch,
+    ):
         _ = DummyWithCompositePrePostTransformer().transform(1)
 
         id_patch.assert_has_calls(

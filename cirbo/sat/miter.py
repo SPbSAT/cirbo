@@ -16,7 +16,7 @@ def build_miter(
     right: Circuit,
     *,
     left_name: gate.Label = FIRST_CIRCUIT_NAME,
-    right_name: gate.Label = SECOND_CIRCUIT_NAME
+    right_name: gate.Label = SECOND_CIRCUIT_NAME,
 ) -> Circuit:
     """
     Given two circuit, returns a miter circuit (that checks whether the two circuits are
