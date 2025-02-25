@@ -20,8 +20,7 @@ maintainers = [
     {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"}
 ]
 readme = "README.md"
-licence = "MIT"
-license-files = ["LICEN[CS]E.*"]
+license = {file = "LICENCE"}
 # Temporary guard against occasional publishing.
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -56,6 +55,11 @@ requires = [
     "wheel",
 ]
 build-backend = "poetry.core.masonry.api"
+
+[tool.cibuildwheel]
+test-command = [
+  "pytest {package}/tests -v",
+]
 
 [tool.poetry.build]
 script = "build.py"
