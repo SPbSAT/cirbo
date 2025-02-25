@@ -1,31 +1,68 @@
-[tool.poetry]
+[project]
 name = "cirbo"
 version = "0.1.0"
+requires-python = ">= 3.9"
 description = "A New Tool for Boolean Circuit Analysis and Synthesis."
-authors = ["Your Name <you@example.com>"]
+authors = [
+    {name = "Daniil Averkov"},
+    {name = "Tatiana Belova"},
+    {name = "Gregory Emdin"},
+    {name = "Mikhail Goncharov"},
+    {name = "Viktoriia Krivogornitsyna"},
+    {name = "Alexander S. Kulikov"},
+    {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"},
+    {name = "Daniil Levtsov"},
+    {name = "Georgie Levtsov"},
+    {name = "Vsevolod Vaskin"},
+    {name = "Aleksey Vorobiev"}
+]
+maintainers = [
+    {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"}
+]
 readme = "README.md"
-license = "LICENCE"
+licence = "MIT"
+license-files = ["LICEN[CS]E.*"]
 # Temporary guard against occasional publishing.
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
-    # Temporary guard against occasional publishing.
-    "Private :: Do not Upload",
 ]
+keywords = ["circuit", "synthesis", "analysis"]
+dependencies = [
+    "more-itertools >= 10.4.0",
+    "typing-extensions >= 4.12.2",
+    "python-sat >= 1.8.dev13",
+    "pebble >= 5.0.7",
+    "graphviz >= 0.20.3",
+]
+
+[project.urls]
+Repository = "https://github.com/SPbSAT/cirbo"
+
+[build-system]
+requires = [
+    "poetry-core>=1.0.0",
+    "setuptools>=45",
+    "wheel",
+]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = true
 
 [tool.poetry.dependencies]
 python = "^3.9"
-more-itertools = "^10.4.0"
-typing-extensions = "^4.12.2"
-python-sat="^1.8.dev13"
-pebble = "^5.0.7"
-graphviz = "^0.20.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
@@ -42,18 +79,6 @@ mock = "^5.1.0"
 [tool.poetry.group.docs.dependencies]
 sphinx = "^7.4.7"
 sphinx-autoapi = "^3.2.1"
-
-[tool.poetry.build]
-script = "build.py"
-generate-setup-file = true
-
-[build-system]
-requires = [
-    "poetry-core>=1.0.0",
-    "setuptools>=45",
-    "wheel",
-]
-build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
