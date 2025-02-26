@@ -10,7 +10,8 @@ jobs:
       fail-fast: false
       matrix:
         # windows-latest is not enabled because is untested yet.
-        os: [ubuntu-latest, macos-latest]
+        # macos-latest is not enabled because ABC refures to compile.
+        os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +29,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
         env:
+          CIBW_TEST_REQUIRES: pytest mock
           CIBW_TEST_COMMAND: pytest {package}/tests
         with:
           package-dir: .
