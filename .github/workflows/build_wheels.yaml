@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         # windows-latest is not enabled because is untested yet.
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v4
