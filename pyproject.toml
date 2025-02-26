@@ -19,7 +19,7 @@ authors = [
 maintainers = [
     {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"}
 ]
-readme = "README.md"
+readme = "README_PYPI.md"
 license = {file = "LICENCE"}
 # Temporary guard against occasional publishing.
 classifiers = [
