@@ -43,7 +43,7 @@ def add_div_mod(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    big_endian: bool = False
+    big_endian: bool = False,
 ) -> tuple[list[gate.Label], list[gate.Label]]:
     """
     Function make div two integers with equal size.
