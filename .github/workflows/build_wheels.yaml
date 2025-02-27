@@ -4,7 +4,7 @@ on: workflow_dispatch
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build wheels for ${{ matrix.os }}, python ${{ matrix.pyver }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -12,6 +12,7 @@ jobs:
         # windows-latest is not enabled because is untested yet.
         # macos-latest is not enabled because ABC refures to compile.
         os: [ubuntu-latest]
+        pyver: [cp39, cp310, cp311, cp312, cp313]
 
     steps:
       - uses: actions/checkout@v4
@@ -29,8 +30,16 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
         env:
+          CIBW_BUILD: ${{matrix.pyver}}-*
+          CIBW_ARCHS_LINUX: auto
+          CIBW_ARCHS_MACOS: auto
+          CIBW_ARCHS_WINDOWS: auto
           CIBW_TEST_REQUIRES: pytest mock
-          CIBW_TEST_COMMAND: pytest {package}/tests
+          CIBW_TEST_COMMAND: pytest {package}/tests -m 'not manual'
+          CIBW_TEST_SKIP: >-
+            *-musllinux_*
+            *-macosx_universal2:arm64
+            pp*-macosx_*
         with:
           package-dir: .
           output-dir: wheelhouse
@@ -38,5 +47,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: wheel-${{ matrix.pyver }}-${{ matrix.os }}
           path: ./wheelhouse/*.whl
