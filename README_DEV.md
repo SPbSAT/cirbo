@@ -1,23 +1,40 @@
 # Cirbo: A New Tool for Boolean Circuit Analysis and Synthesis
 
-## Developer's environment
+## Environment setup
 
-Python >=3.9 is used to cover all currently
-[maintained versions](https://devguide.python.org/versions/).
+Package `Python 3.9` is used to cover all currently [maintained Python versions](https://devguide.python.org/versions/).
 
+Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
+
+1. Update submodules `git submodule update --init --recursive`
 1. Install following packages using your package manager:
-   - dev version of `python3.9` and `python3.9-distutils` (e.g. `sudo apt install python3.9-dev`)
-   - `cmake` and suitable C++ compiler
-   - `graphviz` library.
-1. Init and update repository submodules `git submodule update --init --recursive`
-1. Install `poetry` ([instruction](https://python-poetry.org/docs/)).
-1. Build extensions locally by running `poetry build`
-1. Setup virtual environment by running `poetry install`
-1. Set your env to the oldest supported Python version `poetry env use 3.9`
-1. Enable virtual environment using `poetry shell`
+   - dev version of `python3.9-dev` and `python3.9-distutils`
+   - `build-essential` package for Ubuntu.
+   - `cmake` and suitable C++ compiler, e.g. `gcc`
+   - `graphviz` library
 
-Note: probably one will need to restart an IDE after extensions are built and
-installed to refresh its index and stubs.
+   Command for Ubuntu:
+   ```shell
+   sudo apt install python3-dev python3.9-dev python3.9-distutils gcc cmake graphviz build-essential
+   ```
+   
+   > Note: python3.9 is unavailable in latest versions of Ubuntu, so `deadsnakes`
+   > ppa may be useful: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
+
+1. Install `poetry` ([official instruction](https://python-poetry.org/docs/)) (`cirbo` requires `poetry` version to be `>= 2.0.0`)
+1. Build dist with extensions locally by running `poetry build`
+
+   > Note: building `ABC` extension may take long time, one can skip it
+   > using `(export DISABLE_ABC_CEXT=1 && poetry build && poetry install)`
+   > command.
+
+1. Setup virtual environment by running `poetry install`
+1. Execute `poetry env activate`
+1. Enable virtual environment using command, which was printed by previous command. 
+
+> Note: it may be necessary to restart an IDE after extensions
+> are built and installed to refresh its index and stubs.
+nstalled to refresh its index and stubs.
 
 ## Building extensions
 
