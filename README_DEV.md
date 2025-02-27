@@ -2,7 +2,7 @@
 
 ## Environment setup
 
-Package `Python 3.9` is used to cover all currently [maintained Python versions](https://devguide.python.org/versions/).
+`Python 3.9` is used to cover all currently [maintained Python versions](https://devguide.python.org/versions/).
 
 Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
 
