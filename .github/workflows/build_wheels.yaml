@@ -35,7 +35,7 @@ jobs:
           CIBW_ARCHS_MACOS: auto
           CIBW_ARCHS_WINDOWS: auto
           CIBW_TEST_REQUIRES: pytest mock
-          CIBW_TEST_COMMAND: pytest {package}/tests -m 'not manual'
+          CIBW_TEST_COMMAND: pytest {package}/tests
           CIBW_TEST_SKIP: >-
             *-musllinux_*
             *-macosx_universal2:arm64
