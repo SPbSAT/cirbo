@@ -19,11 +19,12 @@ from cirbo.synthesis.generation.arithmetics import (
     add_square,
     add_square_pow2_m1,
     add_sum_n_bits,
+    add_sum_n_power_bits,
     generate_equal,
     generate_mul,
     generate_square,
     generate_sum_n_bits,
-    # add_sum_n_power_bits,
+    generate_sum_weighted_bits_from_list,
     MulMode,
     SquareMode,
 )
@@ -398,10 +399,84 @@ def test_add_sum_n_power_bits_on_mul():
 
 def test_gen_sum():
     n = 10000
+    print(math.log2(n))
     ckt = generate_sum_n_bits(n, basis=GenerationBasis.XAIG, big_endian=True)
     print(len(ckt.gates) - n)
+
+
+def test_sum_powers():
+    for m in [100, 1000]:
+        n = 100
+        ckt = Circuit()
+        inp = [[] for _ in range(m)]
+        for ind_m in range(m):
+            inp[ind_m] = [f'x{ind_m}_{i}' for i in range(n)]
+        # a = [f'x{i}' for i in range(n)]
+        # b = [f'y{i}' for i in range(n)]
+        # c = [f'z{i}' for i in range(n)]
+        # d = [f'd{i}' for i in range(n)]
+        # e = [f'e{i}' for i in range(n)]
+        # f = [f'f{i}' for i in range(n)]
+        lis = []
+        for i in range(n):
+            for j in range(m):
+                ckt.add_gate(Gate(inp[j][i], INPUT))
+                lis.append((i, inp[j][i]))
+            # ckt.add_gate(Gate(a[i], INPUT))
+            # ckt.add_gate(Gate(b[i], INPUT))
+            # ckt.add_gate(Gate(c[i], INPUT))
+            # ckt.add_gate(Gate(d[i], INPUT))
+            # ckt.add_gate(Gate(e[i], INPUT))
+            # ckt.add_gate(Gate(f[i], INPUT))
+            # lis.append((i, a[i]))
+            # lis.append((i, e[i]))
+            # lis.append((i, b[i]))
+            # lis.append((i, c[i]))
+            # lis.append((i, d[i]))
+            # lis.append((i, f[i]))
+        res = add_sum_n_power_bits(ckt, lis)
+        for i, j in res:
+            ckt.set_outputs([j])
+        #     4.5 * n * m - a * len(res) = len(ckt.gates) - m * n
+        print(
+            "for m =",
+            m,
+            "result will: a = ",
+            (4.5 * n * m + n * m - len(ckt.gates)) / len(res),
+        )
+        print(len(ckt.gates), len(res), 5.5 * n * m)
 
 
 # n = 10000
 # powers equal 0 for all except one
 # res = 44976
+
+# n = 100 a, b, c -> 896
+
+
+def test_sum_weighted_bits_in_xaig():
+    size = 1000
+    for mx_weight in range(1, 20):
+        weights = [random.randint(0, mx_weight) for _ in range(size)]
+        circuit = generate_sum_weighted_bits_from_list(weights)
+        print(
+            "maximum weight:",
+            mx_weight,
+            "=> total size:",
+            len(circuit.gates) - len(circuit.inputs),
+        )
+
+
+def test_sum_weighted_bits_in_aig():
+    size = 1000
+    for mx_weight in range(1, 20):
+        weights = [random.randint(0, mx_weight) for _ in range(size)]
+        circuit = generate_sum_weighted_bits_from_list(
+            weights, basis=GenerationBasis.AIG
+        )
+        print(
+            "maximum weight:",
+            mx_weight,
+            "=> total size:",
+            len(circuit.gates) - len(circuit.inputs),
+        )

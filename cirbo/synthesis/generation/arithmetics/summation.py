@@ -25,6 +25,7 @@ __all__ = [
     "add_sum_two_numbers",
     "add_sum_two_numbers_with_shift",
     "add_sum_n_power_bits",
+    "generate_sum_weighted_bits_from_list",
 ]
 
 
@@ -293,6 +294,22 @@ def generate_sum_n_bits(
     return circuit
 
 
+def generate_sum_weighted_bits_from_list(
+    weights: tp.Iterable[int],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> Circuit:
+    weights = list(weights)
+    n = len(weights)
+    circuit = Circuit.bare_circuit(n)
+    powers_with_labels = [(weights[i], circuit.inputs[i]) for i in range(n)]
+    res = add_sum_n_power_bits(circuit, powers_with_labels, basis=basis)
+    res_labels = [i[1] for i in res]
+    circuit.set_outputs(res_labels)
+    print(res)
+    return circuit
+
+
 def add_sum_n_bits(
     circuit: Circuit,
     input_labels: tp.Iterable[gate.Label],
@@ -465,11 +482,14 @@ def _add_sum_n_bits(
 
 
 def add_sum_n_power_bits(
-    circuit, input_labels_with_pow
+    circuit,
+    input_labels_with_pow,
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[tuple[int, gate.Label]]:
     """
     Function to add a variable number of bits with numbers of gate approximately 4.5 *
-    n.
+    n - 2.5 * m in xaig and 7 * n in aig.
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
@@ -510,6 +530,26 @@ def add_sum_n_power_bits(
         next_x_xy = []
         now_x_xy = now_pairs
         now_solo = now_singles
+
+        if basis == GenerationBasis.AIG:
+            while len(now_solo) > 2:
+                x, y, z = now_solo[-1], now_solo[-2], now_solo[-3]
+                now_level_gate, next_level_gate = add_sum3_aig(circuit, [x, y, z])
+                for _ in range(3):
+                    now_solo.pop()
+                now_solo.append(now_level_gate)
+                single.add((now_level + 1, next_level_gate))
+
+            if len(now_solo) == 2:
+                x, y = now_solo[-1], now_solo[-2]
+                now_level_gate, next_level_gate = add_sum2_aig(circuit, [x, y])
+                for _ in range(2):
+                    now_solo.pop()
+                now_solo.append(now_level_gate)
+                single.add((now_level + 1, next_level_gate))
+
+            res.append((now_level, now_solo[0]))
+            continue
 
         while len(now_solo) > 1:
             xy = add_gate_from_tt(circuit, now_solo[-1], now_solo[-2], "0110")
