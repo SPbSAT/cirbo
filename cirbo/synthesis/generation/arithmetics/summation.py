@@ -25,7 +25,8 @@ __all__ = [
     "add_sum_two_numbers",
     "add_sum_two_numbers_with_shift",
     "add_sum_n_power_bits",
-    "generate_sum_weighted_bits_from_list",
+    "generate_add_weighted_bits_efficient",
+    "generate_add_weighted_bits_naive",
 ]
 
 
@@ -294,7 +295,7 @@ def generate_sum_n_bits(
     return circuit
 
 
-def generate_sum_weighted_bits_from_list(
+def generate_add_weighted_bits_efficient(
     weights: tp.Iterable[int],
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
@@ -306,7 +307,22 @@ def generate_sum_weighted_bits_from_list(
     res = add_sum_n_power_bits(circuit, powers_with_labels, basis=basis)
     res_labels = [i[1] for i in res]
     circuit.set_outputs(res_labels)
-    print(res)
+    # print(res)
+    return circuit
+
+
+def generate_add_weighted_bits_naive(
+    weights: tp.Iterable[int],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> Circuit:
+    weights = list(weights)
+    n = len(weights)
+    circuit = Circuit.bare_circuit(n)
+    powers_with_labels = [(weights[i], circuit.inputs[i]) for i in range(n)]
+    res = add_sum_n_power_bits_naive(circuit, powers_with_labels, basis=basis)
+    res_labels = [i[1] for i in res]
+    circuit.set_outputs(res_labels)
     return circuit
 
 
@@ -481,6 +497,72 @@ def _add_sum_n_bits(
     return res
 
 
+def add_sum_n_power_bits_naive(
+    circuit,
+    input_labels_with_pow,
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[tuple[int, gate.Label]]:
+    """
+    Function to add a variable number of bits with numbers of gate approximately 5 *
+    n - 3 * m in xaig and 7 * n - 3 * m in aig.
+
+    :param circuit: The general circuit.
+    :param input_labels: List of bits to be added.
+    :return: Tuple containing the sum in binary representation.
+
+    """
+
+    res = []
+
+    single = SortedList(list(input_labels_with_pow))  # sorted list of single
+    pairs = SortedList()  # sorted list of pairs
+    inf = 10000000000
+    inf_label = "inf_label"
+    single.add((inf, inf_label))
+    pairs.add((inf, inf_label, inf_label))
+
+    while len(single) > 1 or len(pairs) > 1:
+        lev_single, _ = single[0]
+        lev_pairs, _, _ = pairs[0]
+        now_level = min(lev_single, lev_pairs)
+        if now_level == inf:
+            break
+        now_singles = []
+        now_pairs = []
+        while single[0][0] == now_level:
+            now_singles.append(single[0][1])
+            single.discard(single[0])
+        while pairs[0][0] == now_level:
+            now_pairs.append((pairs[0][1], pairs[0][2]))
+            pairs.discard(pairs[0])
+        now_solo = now_singles
+        while len(now_solo) > 2:
+            x, y, z = now_solo[-1], now_solo[-2], now_solo[-3]
+            if basis == GenerationBasis.AIG:
+                now_level_gate, next_level_gate = add_sum3_aig(circuit, [x, y, z])
+            else:
+                now_level_gate, next_level_gate = add_sum3(circuit, [x, y, z])
+            for _ in range(3):
+                now_solo.pop()
+            now_solo.append(now_level_gate)
+            single.add((now_level + 1, next_level_gate))
+
+        if len(now_solo) == 2:
+            x, y = now_solo[-1], now_solo[-2]
+            if basis == GenerationBasis.AIG:
+                now_level_gate, next_level_gate = add_sum2_aig(circuit, [x, y])
+            else:
+                now_level_gate, next_level_gate = add_sum2(circuit, [x, y])
+            for _ in range(2):
+                now_solo.pop()
+            now_solo.append(now_level_gate)
+            single.add((now_level + 1, next_level_gate))
+
+        res.append((now_level, now_solo[0]))
+    return res
+
+
 def add_sum_n_power_bits(
     circuit,
     input_labels_with_pow,
@@ -489,7 +571,7 @@ def add_sum_n_power_bits(
 ) -> list[tuple[int, gate.Label]]:
     """
     Function to add a variable number of bits with numbers of gate approximately 4.5 *
-    n - 2.5 * m in xaig and 7 * n in aig.
+    n - 2 * m in xaig and 7 * n - 3 * m in aig.
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
@@ -657,7 +739,11 @@ def add_sum_n_power_bits(
 # divides the sum into blocks of size 2^n-1
 # will be replaced with calls of 4.5n sums generator
 def add_sum_pow2_m1(
-    circuit: Circuit, input_labels: tp.Iterable[gate.Label], *, big_endian: bool = False
+    circuit: Circuit,
+    input_labels: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[list[gate.Label]]:
     input_labels = list(input_labels)
     n = len(input_labels)
@@ -671,7 +757,7 @@ def add_sum_pow2_m1(
         for pw in range(5, 1, -1):
             i = 2**pw - 1
             while len(input_labels) >= i:
-                out.append(add_sum_n_bits(circuit, input_labels[0:i]))
+                out.append(add_sum_n_bits(circuit, input_labels[0:i], basis=basis))
                 input_labels = input_labels[i:]
                 input_labels.append(out[it][0])
                 it += 1

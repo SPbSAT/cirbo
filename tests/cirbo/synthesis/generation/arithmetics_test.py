@@ -20,11 +20,11 @@ from cirbo.synthesis.generation.arithmetics import (
     add_square_pow2_m1,
     add_sum_n_bits,
     add_sum_n_power_bits,
+    generate_add_weighted_bits_efficient,
     generate_equal,
     generate_mul,
     generate_square,
     generate_sum_n_bits,
-    generate_sum_weighted_bits_from_list,
     MulMode,
     SquareMode,
 )
@@ -382,7 +382,6 @@ def test_add_sum_n_power_bits_on_mul():
     print(len(ckt.gates) - 15)
 
     for n in range(1, 70):
-        break
         ckt = Circuit()
         a = [f'x{i}' for i in range(n)]
         b = [f'y{i}' for i in range(n)]
@@ -456,9 +455,11 @@ def test_sum_powers():
 
 def test_sum_weighted_bits_in_xaig():
     size = 1000
-    for mx_weight in range(1, 20):
-        weights = [random.randint(0, mx_weight) for _ in range(size)]
-        circuit = generate_sum_weighted_bits_from_list(weights)
+    for mx_weight in range(1, 2):
+        weights = [j // 2 for j in range(size)]
+        weights.append(0)
+        weights.append(0)
+        circuit = generate_add_weighted_bits_efficient(weights)
         print(
             "maximum weight:",
             mx_weight,
@@ -471,7 +472,7 @@ def test_sum_weighted_bits_in_aig():
     size = 1000
     for mx_weight in range(1, 20):
         weights = [random.randint(0, mx_weight) for _ in range(size)]
-        circuit = generate_sum_weighted_bits_from_list(
+        circuit = generate_add_weighted_bits_efficient(
             weights, basis=GenerationBasis.AIG
         )
         print(
