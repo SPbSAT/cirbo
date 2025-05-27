@@ -13,7 +13,23 @@ sys.setrecursionlimit(150000)
 # Misha TODO: rename generate_sum_weighted_bits_from_list to generate_add_weighted_bits_efficient -> DONE
 # Misha TODO: add a method generate_add_weighted_bits_naive (that works via Full Adders and Half Adders) -> DONE (it works in AIG and XAIG also
 
+for k in range(1000, 10001, 1000):
 
+    bad_vector = [i for i in range(k)]
+    for i in range(k):
+        bad_vector.append(i)
+    bad_vector.append(0)
+    bad_vector.append(0)
+
+    n = 2 * k + 2
+    m = k + 2
+    bad_vector.sort()
+    ckt = generate_add_weighted_bits_efficient(bad_vector)
+
+    sz = ckt.gates_number()
+    print(sz)
+    print((4.5 * n - sz) / m)
+# exit(0)
 n = 15
 
 # Misha TODO: rewrite using generate_add_weighted_bits_naive -> DONE

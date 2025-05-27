@@ -140,8 +140,18 @@ def add_subtract_with_compare(
     """
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
-    n = len(input_labels_a)
+
+    always_false = add_gate_from_tt(
+        circuit, input_labels_a[0], input_labels_b[0], "0000"
+    )
+    while len(input_labels_a) < len(input_labels_b):
+        input_labels_a.append(always_false)
+    while len(input_labels_a) > len(input_labels_b):
+        input_labels_b.append(always_false)
+
     validate_equal_sizes(input_labels_a, input_labels_b)
+
+    n = len(input_labels_a)
 
     if big_endian:
         input_labels_a.reverse()
