@@ -31,9 +31,9 @@ from .summation import (
     add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_with_shift,
-    generate_add_weighted_bits_efficient,
-    generate_add_weighted_bits_naive,
     generate_sum_n_bits,
+    generate_sum_weighted_bits_efficient,
+    generate_sum_weighted_bits_naive,
 )
 
 
@@ -77,6 +77,6 @@ __all__ = [
     'add_sum_two_numbers',
     'add_sum_two_numbers_with_shift',
     'add_sum_n_power_bits',
-    'generate_add_weighted_bits_efficient',
-    "generate_add_weighted_bits_naive",
+    'generate_sum_weighted_bits_efficient',
+    "generate_sum_weighted_bits_naive",
 ]

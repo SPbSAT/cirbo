@@ -112,8 +112,7 @@ def add_mul(
 
     if n > 10 and m > 10:
         out = add_sum_n_power_bits(circuit, ls)
-        # out.sort()
-        return [i[1] for i in out]
+        return reverse_if_big_endian([i[1] for i in out], big_endian)
 
     if n == 1:
         return reverse_if_big_endian([c[i][0] for i in range(m)], big_endian)

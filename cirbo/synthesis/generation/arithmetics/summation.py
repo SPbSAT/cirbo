@@ -25,8 +25,8 @@ __all__ = [
     "add_sum_two_numbers",
     "add_sum_two_numbers_with_shift",
     "add_sum_n_power_bits",
-    "generate_add_weighted_bits_efficient",
-    "generate_add_weighted_bits_naive",
+    "generate_sum_weighted_bits_efficient",
+    "generate_sum_weighted_bits_naive",
 ]
 
 
@@ -129,7 +129,6 @@ def add_sum_two_numbers_with_shift(
     )
 
 
-# x1, x2 -> x1 & x2, x1 ^ x2
 def add_sum2(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
@@ -141,7 +140,6 @@ def add_sum2(
     return list([g1, g2])
 
 
-# x1, x2, x3 -> (x1 + x2 + x3) in bin
 def add_sum3(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
@@ -171,7 +169,6 @@ def add_stockmeyer_block(
     return list([w0, w1])
 
 
-# 5 -> (2 + 2) + 1
 def add_mdfa(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
@@ -295,7 +292,7 @@ def generate_sum_n_bits(
     return circuit
 
 
-def generate_add_weighted_bits_efficient(
+def generate_sum_weighted_bits_efficient(
     weights: tp.Iterable[int],
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
@@ -311,7 +308,7 @@ def generate_add_weighted_bits_efficient(
     return circuit
 
 
-def generate_add_weighted_bits_naive(
+def generate_sum_weighted_bits_naive(
     weights: tp.Iterable[int],
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
@@ -517,7 +514,8 @@ def add_sum_n_power_bits_naive(
 
     single = SortedList(list(input_labels_with_pow))  # sorted list of single
     pairs = SortedList()  # sorted list of pairs
-    inf = 10000000000
+
+    inf = max([i[0] for i in input_labels_with_pow]) + len(input_labels_with_pow) + 1
     inf_label = "inf_label"
     single.add((inf, inf_label))
     pairs.add((inf, inf_label, inf_label))
@@ -583,16 +581,11 @@ def add_sum_n_power_bits(
 
     single = SortedList(list(input_labels_with_pow))  # sorted list of single
     pairs = SortedList()  # sorted list of pairs
-    inf = 10000000000
+    inf = max([i[0] for i in input_labels_with_pow]) + len(input_labels_with_pow) + 1
     inf_label = "inf_label"
     single.add((inf, inf_label))
     pairs.add((inf, inf_label, inf_label))
 
-    # print()
-    # print(single)
-    # print(pairs)
-
-    # return res
     while len(single) > 1 or len(pairs) > 1:
         lev_single, _ = single[0]
         lev_pairs, _, _ = pairs[0]
@@ -708,32 +701,7 @@ def add_sum_n_power_bits(
         for labels in next_x_xy:
             pairs.add((now_level + 1, labels[0], labels[1]))
 
-        # print(single)
-        # print(pairs)
-        # break
-
-    """ previous version
-    now = list(input_labels_with_pow)
-    now.sort()
-    while len(now) > 0:
-        min_level_num = now[0][0]
-        min_level = []
-        new_now = []
-        for el in now:
-            if el[0] == min_level_num:
-                min_level.append(el[1])
-            else:
-                new_now.append(el)
-        res_for_level = _add_sum_n_bits(circuit, min_level)
-        res.append((min_level_num, res_for_level[0]))
-        for i in range(1, len(res_for_level)):
-            new_now.append((min_level_num + i, res_for_level[i]))
-        now = new_now
-        now.sort()
-    """
-
     return res
-    # list(pow, label)
 
 
 # divides the sum into blocks of size 2^n-1

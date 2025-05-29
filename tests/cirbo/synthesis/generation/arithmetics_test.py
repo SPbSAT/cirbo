@@ -20,15 +20,15 @@ from cirbo.synthesis.generation.arithmetics import (
     add_square_pow2_m1,
     add_sum_n_bits,
     add_sum_n_power_bits,
-    generate_add_weighted_bits_efficient,
     generate_equal,
     generate_mul,
     generate_square,
     generate_sum_n_bits,
+    generate_sum_weighted_bits_efficient,
+    generate_sum_weighted_bits_naive,
     MulMode,
     SquareMode,
 )
-from coverage.debug import simplify
 
 TEST_SIZE = 100
 random.seed(42)
@@ -375,34 +375,6 @@ def test_generate_sum_n_bits(basis, n, big_endian):
         assert sum_naive(input_labels) == res
 
 
-def test_add_sum_n_power_bits_on_mul():
-    ckt = generate_sum_n_bits(15)
-    simplify(ckt)
-    print(ckt.into_bench())
-    print(len(ckt.gates) - 15)
-
-    for n in range(1, 70):
-        ckt = Circuit()
-        a = [f'x{i}' for i in range(n)]
-        b = [f'y{i}' for i in range(n)]
-        for i in range(n):
-            ckt.add_gate(Gate(a[i], INPUT))
-            ckt.add_gate(Gate(b[i], INPUT))
-        out = add_mul(ckt, a, b)
-        ckt.set_outputs(out)
-        # print(len(out), end = ' ')
-        simplify(ckt)
-        number_of_gates = len(ckt.gates) - 2 * n
-        print(n, number_of_gates)
-
-
-def test_gen_sum():
-    n = 10000
-    print(math.log2(n))
-    ckt = generate_sum_n_bits(n, basis=GenerationBasis.XAIG, big_endian=True)
-    print(len(ckt.gates) - n)
-
-
 def test_sum_powers():
     for m in [100, 1000]:
         n = 100
@@ -410,29 +382,11 @@ def test_sum_powers():
         inp = [[] for _ in range(m)]
         for ind_m in range(m):
             inp[ind_m] = [f'x{ind_m}_{i}' for i in range(n)]
-        # a = [f'x{i}' for i in range(n)]
-        # b = [f'y{i}' for i in range(n)]
-        # c = [f'z{i}' for i in range(n)]
-        # d = [f'd{i}' for i in range(n)]
-        # e = [f'e{i}' for i in range(n)]
-        # f = [f'f{i}' for i in range(n)]
         lis = []
         for i in range(n):
             for j in range(m):
                 ckt.add_gate(Gate(inp[j][i], INPUT))
                 lis.append((i, inp[j][i]))
-            # ckt.add_gate(Gate(a[i], INPUT))
-            # ckt.add_gate(Gate(b[i], INPUT))
-            # ckt.add_gate(Gate(c[i], INPUT))
-            # ckt.add_gate(Gate(d[i], INPUT))
-            # ckt.add_gate(Gate(e[i], INPUT))
-            # ckt.add_gate(Gate(f[i], INPUT))
-            # lis.append((i, a[i]))
-            # lis.append((i, e[i]))
-            # lis.append((i, b[i]))
-            # lis.append((i, c[i]))
-            # lis.append((i, d[i]))
-            # lis.append((i, f[i]))
         res = add_sum_n_power_bits(ckt, lis)
         for i, j in res:
             ckt.set_outputs([j])
@@ -446,20 +400,13 @@ def test_sum_powers():
         print(len(ckt.gates), len(res), 5.5 * n * m)
 
 
-# n = 10000
-# powers equal 0 for all except one
-# res = 44976
-
-# n = 100 a, b, c -> 896
-
-
 def test_sum_weighted_bits_in_xaig():
     size = 1000
     for mx_weight in range(1, 2):
         weights = [j // 2 for j in range(size)]
         weights.append(0)
         weights.append(0)
-        circuit = generate_add_weighted_bits_efficient(weights)
+        circuit = generate_sum_weighted_bits_efficient(weights)
         print(
             "maximum weight:",
             mx_weight,
@@ -472,7 +419,7 @@ def test_sum_weighted_bits_in_aig():
     size = 1000
     for mx_weight in range(1, 20):
         weights = [random.randint(0, mx_weight) for _ in range(size)]
-        circuit = generate_add_weighted_bits_efficient(
+        circuit = generate_sum_weighted_bits_efficient(
             weights, basis=GenerationBasis.AIG
         )
         print(
@@ -481,3 +428,41 @@ def test_sum_weighted_bits_in_aig():
             "=> total size:",
             len(circuit.gates) - len(circuit.inputs),
         )
+
+
+@pytest.mark.parametrize(
+    "n",
+    list(range(1, 18))
+    + [
+        60,
+        128,
+        pytest.param(1000, marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("density_in_percent", list(range(10, 101, 10)))
+def test_sum_weighted_bits_in_xaig(n, density_in_percent):
+    max_level = n * 100 // density_in_percent
+    powers = [random.randint(0, max_level) for _ in range(n)]
+    ckt = generate_sum_weighted_bits_efficient(powers)
+    assert ckt.gates_number() <= n * 4.5 - len(ckt.outputs) * 2
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize(
+    "n",
+    list(range(1, 18))
+    + [
+        60,
+        128,
+        pytest.param(1000, marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("density_in_percent", list(range(10, 101, 10)))
+def test_sum_weighted_bits_naive(basis, n, density_in_percent):
+    max_level = n * 100 // density_in_percent
+    powers = [random.randint(0, max_level) for _ in range(n)]
+    ckt = generate_sum_weighted_bits_naive(powers)
+    if basis == GenerationBasis.XAIG:
+        assert ckt.gates_number() <= n * 5 - len(ckt.outputs) * 3
+    if basis == GenerationBasis.AIG:
+        assert ckt.gates_number() <= n * 7 - len(ckt.outputs) * 3
