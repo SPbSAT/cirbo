@@ -43,6 +43,7 @@ dependencies = [
     "python-sat >= 1.8.dev13",
     "pebble >= 5.0.7",
     "graphviz >= 0.20.3",
+    "sortedcontainers (>=2.4.0,<3.0.0)",
 ]
 
 [project.urls]
