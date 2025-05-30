@@ -7,7 +7,7 @@ from .multiplication import (
     add_mul,
     add_mul_alter,
     add_mul_dadda,
-    add_mul_karatsuba,
+    add_mul_karatsuba_with_efficient_sum,
     add_mul_pow2_m1,
     add_mul_wallace,
     generate_mul,
@@ -46,7 +46,7 @@ __all__ = [
     'generate_equal',
     # multiplication.py
     'add_mul',
-    'add_mul_karatsuba',
+    'add_mul_karatsuba_with_efficient_sum',
     'add_mul_alter',
     'add_mul_dadda',
     'add_mul_wallace',

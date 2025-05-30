@@ -297,6 +297,14 @@ def generate_sum_weighted_bits_efficient(
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> Circuit:
+    """
+    Generates a circuit that have sum of n bits in result with not more than
+    4.5 * n - 2 * m in xaig and 7 * n - 3 * m in aig.
+
+    :param weights: list of weights to be created and summed after. i-th input is
+    correspond to i-th number from the list.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    """
     weights = list(weights)
     n = len(weights)
     circuit = Circuit.bare_circuit(n)
@@ -304,7 +312,6 @@ def generate_sum_weighted_bits_efficient(
     res = add_sum_n_power_bits(circuit, powers_with_labels, basis=basis)
     res_labels = [i[1] for i in res]
     circuit.set_outputs(res_labels)
-    # print(res)
     return circuit
 
 
@@ -313,6 +320,14 @@ def generate_sum_weighted_bits_naive(
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> Circuit:
+    """
+    Generates a circuit that have sum of n bits in result with not more than
+    5 * n - 3 * m in xaig and 7 * n - 3 * m in aig.
+
+    :param weights: list of weights to be created and summed after. i-th input is
+    correspond to i-th number from the list.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    """
     weights = list(weights)
     n = len(weights)
     circuit = Circuit.bare_circuit(n)
@@ -331,7 +346,7 @@ def add_sum_n_bits(
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
-    Function that adds summation gadget to a `circuit`.
+    Function that construct a circuit for summation of n given bits.
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
@@ -495,8 +510,8 @@ def _add_sum_n_bits(
 
 
 def add_sum_n_power_bits_naive(
-    circuit,
-    input_labels_with_pow,
+    circuit: Circuit,
+    input_labels_with_pow: tp.Iterable[tuple[int, gate.Label]],
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[tuple[int, gate.Label]]:
@@ -505,14 +520,15 @@ def add_sum_n_power_bits_naive(
     n - 3 * m in xaig and 7 * n - 3 * m in aig.
 
     :param circuit: The general circuit.
-    :param input_labels: List of bits to be added.
-    :return: Tuple containing the sum in binary representation.
+    :param input_labels_with_pow: List of pairs with format (power, label) to be added.
+    :return: Tuple containing the result of sumation in format list[tuple[int, gate.Label]].
 
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     """
 
     res = []
-
-    single = SortedList(list(input_labels_with_pow))  # sorted list of single
+    input_labels_with_pow = list(input_labels_with_pow)
+    single = SortedList(input_labels_with_pow)  # sorted list of single
     pairs = SortedList()  # sorted list of pairs
 
     inf = max([i[0] for i in input_labels_with_pow]) + len(input_labels_with_pow) + 1
@@ -572,9 +588,10 @@ def add_sum_n_power_bits(
     n - 2 * m in xaig and 7 * n - 3 * m in aig.
 
     :param circuit: The general circuit.
-    :param input_labels: List of bits to be added.
+    :param input_labels_with_pow: List of pairs with format (power, label) to be added.
     :return: Tuple containing the sum in binary representation.
 
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     """
 
     res = []
@@ -729,6 +746,7 @@ def add_sum_pow2_m1(
                 input_labels = input_labels[i:]
                 input_labels.append(out[it][0])
                 it += 1
+
     if len(input_labels) == 2:
         out.append(add_sum2(circuit, input_labels[0:2]))
         input_labels = input_labels[2:]

@@ -23,6 +23,7 @@ from cirbo.synthesis.generation.arithmetics.summation import (
 __all__ = [
     'add_mul',
     'add_mul_karatsuba',
+    'add_mul_karatsuba_with_efficient_sum',
     'add_mul_alter',
     'add_mul_dadda',
     'add_mul_wallace',
@@ -80,8 +81,13 @@ def add_mul(
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
-    Multiplies two numbers represented by the given input labels using a straightforward
-    bitwise multiplication method.
+    Multiplies two numbers represented by the given input labels using a
+    straightforward.
+
+    bitwise multiplication method but with new summation implementation that need
+    only 4.5 * n - 2 * m gates (where n is a number of inputs bits and m is a number
+    of outputs bits). Total number of gates will be not more than
+    5.5 * n * n - 2 * (2 * n).
 
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
@@ -252,7 +258,7 @@ def add_mul_karatsuba(
     return reverse_if_big_endian(final_res[:out_size], big_endian)
 
 
-def add_mul_our_karatsuba(
+def add_mul_karatsuba_with_efficient_sum(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
@@ -260,7 +266,8 @@ def add_mul_our_karatsuba(
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
-    Multiplies two numbers using the Karatsuba multiplication algorithm.
+    Multiplies two numbers using the Karatsuba multiplication algorithm with efficient
+    summation.
 
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
@@ -305,19 +312,19 @@ def add_mul_our_karatsuba(
     ac = (
         last_step_sum_with_new_powers_sum(circuit, a, c)
         if (n - mid < 20 and n - mid != 18)
-        else add_mul_our_karatsuba(circuit, a, c)
+        else add_mul_karatsuba_with_efficient_sum(circuit, a, c)
     )
     bd = (
         last_step_sum_with_new_powers_sum(circuit, b, d)
         if (mid < 20 and mid != 18)
-        else add_mul_our_karatsuba(circuit, b, d)
+        else add_mul_karatsuba_with_efficient_sum(circuit, b, d)
     )
     a_sum_b = add_sum_two_numbers(circuit, a, b)
     c_sum_d = add_sum_two_numbers(circuit, c, d)
     big_mul = (
         last_step_sum_with_new_powers_sum(circuit, a_sum_b, c_sum_d)
         if (len(a_sum_b) < 20 and len(a_sum_b) != 18)
-        else add_mul_our_karatsuba(circuit, a_sum_b, c_sum_d)
+        else add_mul_karatsuba_with_efficient_sum(circuit, a_sum_b, c_sum_d)
     )
     ac_sum_bd = add_sum_two_numbers(circuit, ac, bd)
     res_mid = add_sub_two_numbers(circuit, big_mul, ac_sum_bd)
@@ -657,7 +664,8 @@ def last_step_sum_with_new_powers_sum(
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
-    Multiplies two numbers with lengths 2^k - 1 using a specific squaring method.
+    Multiplies two numbers with lengths 2^k - 1 using a specific squaring method
+    and efficient summation.
 
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
@@ -694,7 +702,7 @@ def last_step_sum_with_new_powers_sum(
 
 _process_mul: dict[MulMode, tp.Callable[..., list[gate.Label]]] = {
     MulMode.DEFAULT: add_mul,
-    MulMode.KARATSUBA: add_mul_karatsuba,
+    MulMode.KARATSUBA: add_mul_karatsuba_with_efficient_sum,
     MulMode.ALTER: add_mul_alter,
     MulMode.DADDA: add_mul_dadda,
     MulMode.WALLACE: add_mul_wallace,

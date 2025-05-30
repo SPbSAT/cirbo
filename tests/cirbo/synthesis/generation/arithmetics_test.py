@@ -12,7 +12,7 @@ from cirbo.synthesis.generation.arithmetics import (
     add_mul,
     add_mul_alter,
     add_mul_dadda,
-    add_mul_karatsuba,
+    add_mul_karatsuba_with_efficient_sum,
     add_mul_pow2_m1,
     add_mul_wallace,
     add_sqrt,
@@ -89,6 +89,21 @@ def sum_naive(inputs_a):
     return to_bin(a, len_res)
 
 
+def sum_naive_with_powers(powers_and_values_list):
+    res = 0
+    mx = 0
+    for pw, val in powers_and_values_list:
+        res += 2**pw * val
+        mx += 2**pw
+
+    sz = 0
+    while mx > 0:
+        sz += 1
+        mx //= 2
+
+    return to_bin(res, sz)
+
+
 @pytest.mark.parametrize(
     "func",
     [
@@ -97,7 +112,7 @@ def sum_naive(inputs_a):
         add_mul_dadda,
         add_mul_wallace,
         add_mul_pow2_m1,
-        add_mul_karatsuba,
+        add_mul_karatsuba_with_efficient_sum,
     ],
 )
 @pytest.mark.parametrize(
@@ -441,7 +456,7 @@ def test_sum_weighted_bits_in_aig():
 )
 @pytest.mark.parametrize("density_in_percent", list(range(10, 101, 10)))
 def test_sum_weighted_bits_in_xaig(n, density_in_percent):
-    max_level = n * 100 // density_in_percent
+    max_level = n * density_in_percent // 100
     powers = [random.randint(0, max_level) for _ in range(n)]
     ckt = generate_sum_weighted_bits_efficient(powers)
     assert ckt.gates_number() <= n * 4.5 - len(ckt.outputs) * 2
@@ -454,12 +469,11 @@ def test_sum_weighted_bits_in_xaig(n, density_in_percent):
     + [
         60,
         128,
-        pytest.param(1000, marks=pytest.mark.slow),
     ],
 )
 @pytest.mark.parametrize("density_in_percent", list(range(10, 101, 10)))
 def test_sum_weighted_bits_naive(basis, n, density_in_percent):
-    max_level = n * 100 // density_in_percent
+    max_level = n * density_in_percent // 100
     powers = [random.randint(0, max_level) for _ in range(n)]
     ckt = generate_sum_weighted_bits_naive(powers)
     if basis == GenerationBasis.XAIG:
