@@ -13,7 +13,7 @@ from cirbo.synthesis.generation.arithmetics.summation import (
     add_sum2,
     add_sum3,
     add_sum_n_bits,
-    add_sum_n_power_bits,
+    add_sum_n_weighted_bits,
     add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_with_shift,
@@ -81,13 +81,12 @@ def add_mul(
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
-    Multiplies two numbers represented by the given input labels using a
-    straightforward.
+    Multiplies two numbers represented by the given input labels using a.
 
-    bitwise multiplication method but with new summation implementation that need
-    only 4.5 * n - 2 * m gates (where n is a number of inputs bits and m is a number
-    of outputs bits). Total number of gates will be not more than
-    5.5 * n * n - 2 * (2 * n).
+    straightforward bitwise multiplication method but with new summation
+    implementation that need only 4.5 * n - 2 * m gates (where n is a number
+    of inputs bits and m is a number of outputs bits). Total number of gates
+    will be not more than 5.5 * n * n - 2 * (2 * n).
 
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
@@ -107,36 +106,17 @@ def add_mul(
         input_labels_b.reverse()
 
     # in my mind a[0] is the smallest bit in a
-    ls = []
+    powers_with_labels = []  # all n * m bits multiplication with powers
     c = [[PLACEHOLDER_STR] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
                 circuit, input_labels_a[j], input_labels_b[i], '0001'
             )
-            ls.append((i + j, c[i][j]))
+            powers_with_labels.append((i + j, c[i][j]))
 
-    if n > 10 and m > 10:
-        out = add_sum_n_power_bits(circuit, ls)
-        return reverse_if_big_endian([i[1] for i in out], big_endian)
-
-    if n == 1:
-        return reverse_if_big_endian([c[i][0] for i in range(m)], big_endian)
-    if m == 1:
-        return reverse_if_big_endian(c[0], big_endian)
-
-    d = [[PLACEHOLDER_STR] for _ in range(n + m)]
-    d[0] = [c[0][0]]
-    for i in range(1, n + m):
-        inp = []
-        for j in range(i + 1):
-            if j < m and i - j < n:
-                inp.append(c[j][i - j])
-        for j in range(i):
-            if j + len(d[j]) > i:
-                inp.append(d[j][i - j])
-        d[i] = add_sum_n_bits(circuit, inp)
-    return reverse_if_big_endian([d[i][0] for i in range(n + m)], big_endian)
+    out = add_sum_n_weighted_bits(circuit, powers_with_labels)
+    return reverse_if_big_endian([i[1] for i in out], big_endian)
 
 
 def add_mul_alter(
@@ -696,7 +676,7 @@ def last_step_sum_with_new_powers_sum(
         return reverse_if_big_endian(c[0], big_endian)
 
     vector_with_powers = [(i + j, c[i][j]) for i in range(n) for j in range(m)]
-    res = add_sum_n_power_bits(circuit, vector_with_powers)
+    res = add_sum_n_weighted_bits(circuit, vector_with_powers)
     return reverse_if_big_endian([res[i][1] for i in range(n + m)], big_endian)
 
 

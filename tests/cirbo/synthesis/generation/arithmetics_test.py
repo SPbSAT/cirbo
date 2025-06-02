@@ -19,7 +19,7 @@ from cirbo.synthesis.generation.arithmetics import (
     add_square,
     add_square_pow2_m1,
     add_sum_n_bits,
-    add_sum_n_power_bits,
+    add_sum_n_weighted_bits,
     generate_equal,
     generate_mul,
     generate_square,
@@ -402,32 +402,21 @@ def test_sum_powers():
             for j in range(m):
                 ckt.add_gate(Gate(inp[j][i], INPUT))
                 lis.append((i, inp[j][i]))
-        res = add_sum_n_power_bits(ckt, lis)
+        res = add_sum_n_weighted_bits(ckt, lis)
         for i, j in res:
             ckt.set_outputs([j])
-        #     4.5 * n * m - a * len(res) = len(ckt.gates) - m * n
-        print(
-            "for m =",
-            m,
-            "result will: a = ",
-            (4.5 * n * m + n * m - len(ckt.gates)) / len(res),
-        )
-        print(len(ckt.gates), len(res), 5.5 * n * m)
+        assert ckt.gates_number() <= 4.5 * n * m + n * m - 2 * len(
+            ckt.outputs
+        )  # init and sum
 
 
 def test_sum_weighted_bits_in_xaig():
-    size = 1000
-    for mx_weight in range(1, 2):
-        weights = [j // 2 for j in range(size)]
+    for size in range(2, 50, 2):
+        weights = [j // 2 for j in range(size - 2)]
         weights.append(0)
         weights.append(0)
         circuit = generate_sum_weighted_bits_efficient(weights)
-        print(
-            "maximum weight:",
-            mx_weight,
-            "=> total size:",
-            len(circuit.gates) - len(circuit.inputs),
-        )
+        assert circuit.gates_number() <= 4.5 * size - 2 * len(circuit.outputs)
 
 
 def test_sum_weighted_bits_in_aig():
@@ -437,12 +426,7 @@ def test_sum_weighted_bits_in_aig():
         circuit = generate_sum_weighted_bits_efficient(
             weights, basis=GenerationBasis.AIG
         )
-        print(
-            "maximum weight:",
-            mx_weight,
-            "=> total size:",
-            len(circuit.gates) - len(circuit.inputs),
-        )
+        assert circuit.gates_number() <= 7 * size - 3 * len(circuit.outputs)
 
 
 @pytest.mark.parametrize(

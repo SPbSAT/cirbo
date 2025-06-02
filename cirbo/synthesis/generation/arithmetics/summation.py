@@ -24,7 +24,8 @@ __all__ = [
     "add_sum_pow2_m1",
     "add_sum_two_numbers",
     "add_sum_two_numbers_with_shift",
-    "add_sum_n_power_bits",
+    "add_sum_n_weighted_bits",
+    "add_sum_n_weighted_bits_naive",
     "generate_sum_weighted_bits_efficient",
     "generate_sum_weighted_bits_naive",
 ]
@@ -273,9 +274,10 @@ def generate_sum_n_bits(
     big_endian: bool = False,
 ) -> Circuit:
     """
-    Generates a circuit that have sum of n bits in result.
+    Generates a circuit that have sum of n bits in result. In fact, it is the same as
+    generate_sum_weighted_bits_efficient([0] * n). See this function for more details.
 
-    :param n: number of input bits (must be even)
+    :param n: number of input bits
     :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
@@ -298,8 +300,12 @@ def generate_sum_weighted_bits_efficient(
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> Circuit:
     """
-    Generates a circuit that have sum of n bits in result with not more than
-    4.5 * n - 2 * m in xaig and 7 * n - 3 * m in aig.
+    Global task: for given weights w_0, ..., w_{n - 1}
+    make circuit with input gates inp_0, ... inp_{n - 1} and output gates
+    out_0, ..., out_{m - 1} with the main property inp_0 * 2^{w_0} + ...
+    inp_{n - 1} * 2^{w_{n - 1}} = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum possible m. Number of gates
+    will be not more than 4.5 * n - 2 * m in xaig and 7 * n - 3 * m in aig.
 
     :param weights: list of weights to be created and summed after. i-th input is
     correspond to i-th number from the list.
@@ -309,7 +315,7 @@ def generate_sum_weighted_bits_efficient(
     n = len(weights)
     circuit = Circuit.bare_circuit(n)
     powers_with_labels = [(weights[i], circuit.inputs[i]) for i in range(n)]
-    res = add_sum_n_power_bits(circuit, powers_with_labels, basis=basis)
+    res = add_sum_n_weighted_bits(circuit, powers_with_labels, basis=basis)
     res_labels = [i[1] for i in res]
     circuit.set_outputs(res_labels)
     return circuit
@@ -321,8 +327,14 @@ def generate_sum_weighted_bits_naive(
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> Circuit:
     """
-    Generates a circuit that have sum of n bits in result with not more than
-    5 * n - 3 * m in xaig and 7 * n - 3 * m in aig.
+    Global task: for given weights w_0, ..., w_{n - 1}
+    make circuit with input gates inp_0, ... inp_{n - 1} and output gates
+    out_0, ..., out_{m - 1} with the main property
+    inp_0 * 2^{w_0} + ... + inp_{n - 1} * 2^{w_{n - 1}} =
+    = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum possible m. Number of gates
+    will be not more than 5 * n - 2 * m in xaig and 7 * n - 3 * m in aig.
+    General difference between this and efficient version only in gate count.
 
     :param weights: list of weights to be created and summed after. i-th input is
     correspond to i-th number from the list.
@@ -332,7 +344,7 @@ def generate_sum_weighted_bits_naive(
     n = len(weights)
     circuit = Circuit.bare_circuit(n)
     powers_with_labels = [(weights[i], circuit.inputs[i]) for i in range(n)]
-    res = add_sum_n_power_bits_naive(circuit, powers_with_labels, basis=basis)
+    res = add_sum_n_weighted_bits_naive(circuit, powers_with_labels, basis=basis)
     res_labels = [i[1] for i in res]
     circuit.set_outputs(res_labels)
     return circuit
@@ -346,7 +358,13 @@ def add_sum_n_bits(
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
-    Function that construct a circuit for summation of n given bits.
+    Global task: for given input gates inp_0, ... inp_{n - 1}, build and add
+    sub circuit with output gates out_0, ..., out_{m - 1} with the main property
+    inp_0 * 2^{w_0} + ... + inp_{n - 1} * 2^{w_{n - 1}} =
+    = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum
+    possible m. Number of gates will be not more than 4.5 * n - 2 * m in xaig
+    and 7 * n - 3 * m in aig.
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
@@ -422,7 +440,7 @@ def _add_sum_n_bits(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
     """
-    Function to add a variable number of bits with numbers of gate approximately 4.5 *
+    Function to add a variable number of bits with numbers of gate not more than 4.5 *
     n.
 
     :param circuit: The general circuit.
@@ -509,15 +527,20 @@ def _add_sum_n_bits(
     return res
 
 
-def add_sum_n_power_bits_naive(
+def add_sum_n_weighted_bits_naive(
     circuit: Circuit,
     input_labels_with_pow: tp.Iterable[tuple[int, gate.Label]],
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[tuple[int, gate.Label]]:
     """
-    Function to add a variable number of bits with numbers of gate approximately 5 *
-    n - 3 * m in xaig and 7 * n - 3 * m in aig.
+    Global task: for given weights w_0, ..., w_{n - 1} and input gates
+    inp_0, ... inp_{n - 1}, build and add sub circuit with output gates
+    out_0, ..., out_{m - 1} with the main property inp_0 * w_0 + ...
+    inp_0 * 2^{w_0} + ... + inp_{n - 1} * 2^{w_{n - 1}} =
+    = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum possible m. Number of gates
+    will be not more than 5 * n - 3 * m in xaig and 7 * n - 3 * m in aig.
 
     :param circuit: The general circuit.
     :param input_labels_with_pow: List of pairs with format (power, label) to be added.
@@ -577,15 +600,20 @@ def add_sum_n_power_bits_naive(
     return res
 
 
-def add_sum_n_power_bits(
+def add_sum_n_weighted_bits(
     circuit,
     input_labels_with_pow,
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[tuple[int, gate.Label]]:
     """
-    Function to add a variable number of bits with numbers of gate approximately 4.5 *
-    n - 2 * m in xaig and 7 * n - 3 * m in aig.
+    Global task: for given weights w_0, ..., w_{n - 1} and input gates
+    inp_0, ... inp_{n - 1}, build and add sub circuit with output gates
+    out_0, ..., out_{m - 1} with the main property inp_0 * w_0 + ...
+    inp_0 * 2^{w_0} + ... + inp_{n - 1} * 2^{w_{n - 1}} =
+    = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum possible m. Number of gates
+    will be not more than 4.5 * n - 2 * m in xaig and 7 * n - 3 * m in aig.
 
     :param circuit: The general circuit.
     :param input_labels_with_pow: List of pairs with format (power, label) to be added.
