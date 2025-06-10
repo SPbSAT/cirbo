@@ -8,6 +8,7 @@ from .multiplication import (
     add_mul_alter,
     add_mul_dadda,
     add_mul_karatsuba,
+    add_mul_karatsuba_with_efficient_sum,
     add_mul_pow2_m1,
     add_mul_wallace,
     generate_mul,
@@ -27,10 +28,14 @@ from .summation import (
     add_sum3,
     add_sum_n_bits,
     add_sum_n_bits_easy,
+    add_sum_n_weighted_bits,
+    add_sum_n_weighted_bits_naive,
     add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_with_shift,
     generate_sum_n_bits,
+    generate_sum_weighted_bits_efficient,
+    generate_sum_weighted_bits_naive,
 )
 
 
@@ -43,6 +48,7 @@ __all__ = [
     'generate_equal',
     # multiplication.py
     'add_mul',
+    'add_mul_karatsuba_with_efficient_sum',
     'add_mul_karatsuba',
     'add_mul_alter',
     'add_mul_dadda',
@@ -73,4 +79,8 @@ __all__ = [
     'add_sum_pow2_m1',
     'add_sum_two_numbers',
     'add_sum_two_numbers_with_shift',
+    'add_sum_n_weighted_bits',
+    'add_sum_n_weighted_bits_naive',
+    'generate_sum_weighted_bits_efficient',
+    "generate_sum_weighted_bits_naive",
 ]

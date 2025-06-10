@@ -1,6 +1,8 @@
 import typing as tp
 from itertools import zip_longest
 
+from sortedcontainers import SortedList  # type: ignore
+
 from cirbo.core.circuit import Circuit, gate
 
 from cirbo.synthesis.generation.arithmetics._utils import (
@@ -22,6 +24,10 @@ __all__ = [
     "add_sum_pow2_m1",
     "add_sum_two_numbers",
     "add_sum_two_numbers_with_shift",
+    "add_sum_n_weighted_bits",
+    "add_sum_n_weighted_bits_naive",
+    "generate_sum_weighted_bits_efficient",
+    "generate_sum_weighted_bits_naive",
 ]
 
 
@@ -268,9 +274,10 @@ def generate_sum_n_bits(
     big_endian: bool = False,
 ) -> Circuit:
     """
-    Generates a circuit that have sum of n bits in result.
+    Generates a circuit that have sum of n bits in result. In fact, it is the same as
+    generate_sum_weighted_bits_efficient([0] * n). See this function for more details.
 
-    :param n: number of input bits (must be even)
+    :param n: number of input bits
     :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
@@ -287,6 +294,62 @@ def generate_sum_n_bits(
     return circuit
 
 
+def generate_sum_weighted_bits_efficient(
+    weights: tp.Iterable[int],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> Circuit:
+    """
+    Global task: for given weights w_0, ..., w_{n - 1}
+    make circuit with input gates inp_0, ... inp_{n - 1} and output gates
+    out_0, ..., out_{m - 1} with the main property inp_0 * 2^{w_0} + ...
+    inp_{n - 1} * 2^{w_{n - 1}} = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum possible m. Number of gates
+    will be not more than 4.5 * n - 2 * m in xaig and 7 * n - 3 * m in aig.
+
+    :param weights: list of weights to be created and summed after. i-th input is
+    correspond to i-th number from the list.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    """
+    weights = list(weights)
+    n = len(weights)
+    circuit = Circuit.bare_circuit(n)
+    powers_with_labels = [(weights[i], circuit.inputs[i]) for i in range(n)]
+    res = add_sum_n_weighted_bits(circuit, powers_with_labels, basis=basis)
+    res_labels = [i[1] for i in res]
+    circuit.set_outputs(res_labels)
+    return circuit
+
+
+def generate_sum_weighted_bits_naive(
+    weights: tp.Iterable[int],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> Circuit:
+    """
+    Global task: for given weights w_0, ..., w_{n - 1}
+    make circuit with input gates inp_0, ... inp_{n - 1} and output gates
+    out_0, ..., out_{m - 1} with the main property
+    inp_0 * 2^{w_0} + ... + inp_{n - 1} * 2^{w_{n - 1}} =
+    = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum possible m. Number of gates
+    will be not more than 5 * n - 2 * m in xaig and 7 * n - 3 * m in aig.
+    General difference between this and efficient version only in gate count.
+
+    :param weights: list of weights to be created and summed after. i-th input is
+    correspond to i-th number from the list.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    """
+    weights = list(weights)
+    n = len(weights)
+    circuit = Circuit.bare_circuit(n)
+    powers_with_labels = [(weights[i], circuit.inputs[i]) for i in range(n)]
+    res = add_sum_n_weighted_bits_naive(circuit, powers_with_labels, basis=basis)
+    res_labels = [i[1] for i in res]
+    circuit.set_outputs(res_labels)
+    return circuit
+
+
 def add_sum_n_bits(
     circuit: Circuit,
     input_labels: tp.Iterable[gate.Label],
@@ -295,7 +358,13 @@ def add_sum_n_bits(
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
-    Function that adds summation gadget to a `circuit`.
+    Global task: for given input gates inp_0, ... inp_{n - 1}, build and add
+    sub circuit with output gates out_0, ..., out_{m - 1} with the main property
+    inp_0 * 2^{w_0} + ... + inp_{n - 1} * 2^{w_{n - 1}} =
+    = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum
+    possible m. Number of gates will be not more than 4.5 * n - 2 * m in xaig
+    and 7 * n - 3 * m in aig.
 
     :param circuit: The general circuit.
     :param input_labels: List of bits to be added.
@@ -371,7 +440,7 @@ def _add_sum_n_bits(
     circuit: Circuit, input_labels: tp.Iterable[gate.Label]
 ) -> list[gate.Label]:
     """
-    Function to add a variable number of bits with numbers of gate approximately 4.5 *
+    Function to add a variable number of bits with numbers of gate not more than 4.5 *
     n.
 
     :param circuit: The general circuit.
@@ -458,10 +527,236 @@ def _add_sum_n_bits(
     return res
 
 
+def add_sum_n_weighted_bits_naive(
+    circuit: Circuit,
+    input_labels_with_pow: tp.Iterable[tuple[int, gate.Label]],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[tuple[int, gate.Label]]:
+    """
+    Global task: for given weights w_0, ..., w_{n - 1} and input gates
+    inp_0, ... inp_{n - 1}, build and add sub circuit with output gates
+    out_0, ..., out_{m - 1} with the main property inp_0 * w_0 + ...
+    inp_0 * 2^{w_0} + ... + inp_{n - 1} * 2^{w_{n - 1}} =
+    = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum possible m. Number of gates
+    will be not more than 5 * n - 3 * m in xaig and 7 * n - 3 * m in aig.
+
+    :param circuit: The general circuit.
+    :param input_labels_with_pow: List of pairs with format (power, label) to be added.
+    :return: Tuple containing the result of sumation in format list[tuple[int, gate.Label]].
+
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    """
+
+    res = []
+    input_labels_with_pow = list(input_labels_with_pow)
+    single = SortedList(input_labels_with_pow)  # sorted list of single
+    pairs = SortedList()  # sorted list of pairs
+
+    inf = max([i[0] for i in input_labels_with_pow]) + len(input_labels_with_pow) + 1
+    inf_label = "inf_label"
+    single.add((inf, inf_label))
+    pairs.add((inf, inf_label, inf_label))
+
+    while len(single) > 1 or len(pairs) > 1:
+        lev_single, _ = single[0]
+        lev_pairs, _, _ = pairs[0]
+        now_level = min(lev_single, lev_pairs)
+        if now_level == inf:
+            break
+        now_singles = []
+        now_pairs = []
+        while single[0][0] == now_level:
+            now_singles.append(single[0][1])
+            single.discard(single[0])
+        while pairs[0][0] == now_level:
+            now_pairs.append((pairs[0][1], pairs[0][2]))
+            pairs.discard(pairs[0])
+        now_solo = now_singles
+        while len(now_solo) > 2:
+            x, y, z = now_solo[-1], now_solo[-2], now_solo[-3]
+            if basis == GenerationBasis.AIG:
+                now_level_gate, next_level_gate = add_sum3_aig(circuit, [x, y, z])
+            else:
+                now_level_gate, next_level_gate = add_sum3(circuit, [x, y, z])
+            for _ in range(3):
+                now_solo.pop()
+            now_solo.append(now_level_gate)
+            single.add((now_level + 1, next_level_gate))
+
+        if len(now_solo) == 2:
+            x, y = now_solo[-1], now_solo[-2]
+            if basis == GenerationBasis.AIG:
+                now_level_gate, next_level_gate = add_sum2_aig(circuit, [x, y])
+            else:
+                now_level_gate, next_level_gate = add_sum2(circuit, [x, y])
+            for _ in range(2):
+                now_solo.pop()
+            now_solo.append(now_level_gate)
+            single.add((now_level + 1, next_level_gate))
+
+        res.append((now_level, now_solo[0]))
+    return res
+
+
+def add_sum_n_weighted_bits(
+    circuit,
+    input_labels_with_pow,
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[tuple[int, gate.Label]]:
+    """
+    Global task: for given weights w_0, ..., w_{n - 1} and input gates
+    inp_0, ... inp_{n - 1}, build and add sub circuit with output gates
+    out_0, ..., out_{m - 1} with the main property inp_0 * w_0 + ...
+    inp_0 * 2^{w_0} + ... + inp_{n - 1} * 2^{w_{n - 1}} =
+    = out_0 * 2^{out_w_0} + ... + out_{m - 1} * 2^{out_w{m - 1}}.
+    This function will find circuit with minimum possible m. Number of gates
+    will be not more than 4.5 * n - 2 * m in xaig and 7 * n - 3 * m in aig.
+
+    :param circuit: The general circuit.
+    :param input_labels_with_pow: List of pairs with format (power, label) to be added.
+    :return: Tuple containing the sum in binary representation.
+
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    """
+
+    res = []
+
+    single = SortedList(list(input_labels_with_pow))  # sorted list of single
+    pairs = SortedList()  # sorted list of pairs
+    inf = max([i[0] for i in input_labels_with_pow]) + len(input_labels_with_pow) + 1
+    inf_label = "inf_label"
+    single.add((inf, inf_label))
+    pairs.add((inf, inf_label, inf_label))
+
+    while len(single) > 1 or len(pairs) > 1:
+        lev_single, _ = single[0]
+        lev_pairs, _, _ = pairs[0]
+        now_level = min(lev_single, lev_pairs)
+        if now_level == inf:
+            break
+        now_singles = []
+        now_pairs = []
+        while single[0][0] == now_level:
+            now_singles.append(single[0][1])
+            single.discard(single[0])
+        while pairs[0][0] == now_level:
+            now_pairs.append((pairs[0][1], pairs[0][2]))
+            pairs.discard(pairs[0])
+
+        next_solo = []
+        next_x_xy = []
+        now_x_xy = now_pairs
+        now_solo = now_singles
+
+        if basis == GenerationBasis.AIG:
+            while len(now_solo) > 2:
+                x, y, z = now_solo[-1], now_solo[-2], now_solo[-3]
+                now_level_gate, next_level_gate = add_sum3_aig(circuit, [x, y, z])
+                for _ in range(3):
+                    now_solo.pop()
+                now_solo.append(now_level_gate)
+                single.add((now_level + 1, next_level_gate))
+
+            if len(now_solo) == 2:
+                x, y = now_solo[-1], now_solo[-2]
+                now_level_gate, next_level_gate = add_sum2_aig(circuit, [x, y])
+                for _ in range(2):
+                    now_solo.pop()
+                now_solo.append(now_level_gate)
+                single.add((now_level + 1, next_level_gate))
+
+            res.append((now_level, now_solo[0]))
+            continue
+
+        while len(now_solo) > 1:
+            xy = add_gate_from_tt(circuit, now_solo[-1], now_solo[-2], "0110")
+            now_x_xy.append((now_solo[-1], xy))
+            for _ in range(2):
+                now_solo.pop()
+
+        while len(now_x_xy) > 1:
+            if len(now_solo) > 0:
+                z, x1, x1y1 = add_mdfa(
+                    circuit,
+                    [
+                        now_solo[-1],
+                        now_x_xy[-1][0],
+                        now_x_xy[-1][1],
+                        now_x_xy[-2][0],
+                        now_x_xy[-2][1],
+                    ],
+                )
+                for _ in range(2):
+                    now_x_xy.pop()
+                now_solo.pop()
+
+                now_solo.append(z)
+                next_x_xy.append((x1, x1y1))
+            else:
+                z, x1, x1y1 = add_simplified_mdfa(
+                    circuit,
+                    [
+                        now_x_xy[-1][0],
+                        now_x_xy[-1][1],
+                        now_x_xy[-2][0],
+                        now_x_xy[-2][1],
+                    ],
+                )
+                for _ in range(2):
+                    now_x_xy.pop()
+
+                now_solo.append(z)
+                next_x_xy.append((x1, x1y1))
+        if len(now_x_xy) == 1:
+            if len(now_solo) > 0:
+                x, y = add_stockmeyer_block(
+                    circuit, [now_solo[-1], now_x_xy[-1][0], now_x_xy[-1][1]]
+                )
+                now_solo.pop()
+                now_x_xy.pop()
+                next_solo.append(y)
+                now_solo.append(x)
+            else:
+                now_solo.append(now_x_xy[-1][1])
+                next_solo.append(
+                    add_gate_from_tt(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010")
+                )
+                now_x_xy.pop()
+
+        while len(now_solo) > 2:
+            x, y = add_sum3(circuit, now_solo[-1:-4:-1])
+            for _ in range(3):
+                now_solo.pop()
+            now_solo.append(x)
+            next_solo.append(y)
+        if len(now_solo) > 1:
+            x, y = add_sum2(circuit, now_solo[-1:-3:-1])
+            for _ in range(2):
+                now_solo.pop()
+            now_solo.append(x)
+            next_solo.append(y)
+
+        res.append((now_level, now_solo[0]))
+
+        for label in next_solo:
+            single.add((now_level + 1, label))
+        for labels in next_x_xy:
+            pairs.add((now_level + 1, labels[0], labels[1]))
+
+    return res
+
+
 # divides the sum into blocks of size 2^n-1
 # will be replaced with calls of 4.5n sums generator
 def add_sum_pow2_m1(
-    circuit: Circuit, input_labels: tp.Iterable[gate.Label], *, big_endian: bool = False
+    circuit: Circuit,
+    input_labels: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[list[gate.Label]]:
     input_labels = list(input_labels)
     n = len(input_labels)
@@ -475,10 +770,11 @@ def add_sum_pow2_m1(
         for pw in range(5, 1, -1):
             i = 2**pw - 1
             while len(input_labels) >= i:
-                out.append(add_sum_n_bits(circuit, input_labels[0:i]))
+                out.append(add_sum_n_bits(circuit, input_labels[0:i], basis=basis))
                 input_labels = input_labels[i:]
                 input_labels.append(out[it][0])
                 it += 1
+
     if len(input_labels) == 2:
         out.append(add_sum2(circuit, input_labels[0:2]))
         input_labels = input_labels[2:]

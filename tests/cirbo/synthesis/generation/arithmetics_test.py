@@ -2,6 +2,7 @@ import math
 import random
 
 import pytest
+
 from cirbo.core.circuit import Circuit
 from cirbo.core.circuit.gate import Gate, INPUT
 from cirbo.synthesis.generation import GenerationBasis
@@ -11,17 +12,20 @@ from cirbo.synthesis.generation.arithmetics import (
     add_mul,
     add_mul_alter,
     add_mul_dadda,
-    add_mul_karatsuba,
+    add_mul_karatsuba_with_efficient_sum,
     add_mul_pow2_m1,
     add_mul_wallace,
     add_sqrt,
     add_square,
     add_square_pow2_m1,
     add_sum_n_bits,
+    add_sum_n_weighted_bits,
     generate_equal,
     generate_mul,
     generate_square,
     generate_sum_n_bits,
+    generate_sum_weighted_bits_efficient,
+    generate_sum_weighted_bits_naive,
     MulMode,
     SquareMode,
 )
@@ -85,6 +89,21 @@ def sum_naive(inputs_a):
     return to_bin(a, len_res)
 
 
+def sum_naive_with_powers(powers_and_values_list):
+    res = 0
+    mx = 0
+    for pw, val in powers_and_values_list:
+        res += 2**pw * val
+        mx += 2**pw
+
+    sz = 0
+    while mx > 0:
+        sz += 1
+        mx //= 2
+
+    return to_bin(res, sz)
+
+
 @pytest.mark.parametrize(
     "func",
     [
@@ -93,7 +112,7 @@ def sum_naive(inputs_a):
         add_mul_dadda,
         add_mul_wallace,
         add_mul_pow2_m1,
-        add_mul_karatsuba,
+        add_mul_karatsuba_with_efficient_sum,
     ],
 )
 @pytest.mark.parametrize(
@@ -369,3 +388,79 @@ def test_generate_sum_n_bits(basis, n, big_endian):
         if not big_endian:
             res.reverse()
         assert sum_naive(input_labels) == res
+
+
+def test_sum_powers():
+    for m in [100, 1000]:
+        n = 100
+        ckt = Circuit()
+        inp = [[] for _ in range(m)]
+        for ind_m in range(m):
+            inp[ind_m] = [f'x{ind_m}_{i}' for i in range(n)]
+        lis = []
+        for i in range(n):
+            for j in range(m):
+                ckt.add_gate(Gate(inp[j][i], INPUT))
+                lis.append((i, inp[j][i]))
+        res = add_sum_n_weighted_bits(ckt, lis)
+        for i, j in res:
+            ckt.set_outputs([j])
+        assert ckt.gates_number() <= 4.5 * n * m + n * m - 2 * len(
+            ckt.outputs
+        )  # init and sum
+
+
+def test_sum_weighted_bits_in_xaig():
+    for size in range(2, 50, 2):
+        weights = [j // 2 for j in range(size - 2)]
+        weights.append(0)
+        weights.append(0)
+        circuit = generate_sum_weighted_bits_efficient(weights)
+        assert circuit.gates_number() <= 4.5 * size - 2 * len(circuit.outputs)
+
+
+def test_sum_weighted_bits_in_aig():
+    size = 1000
+    for mx_weight in range(1, 20):
+        weights = [random.randint(0, mx_weight) for _ in range(size)]
+        circuit = generate_sum_weighted_bits_efficient(
+            weights, basis=GenerationBasis.AIG
+        )
+        assert circuit.gates_number() <= 7 * size - 3 * len(circuit.outputs)
+
+
+@pytest.mark.parametrize(
+    "n",
+    list(range(1, 18))
+    + [
+        60,
+        128,
+        pytest.param(1000, marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("density_in_percent", list(range(10, 101, 10)))
+def test_sum_weighted_bits_in_xaig(n, density_in_percent):
+    max_level = n * density_in_percent // 100
+    powers = [random.randint(0, max_level) for _ in range(n)]
+    ckt = generate_sum_weighted_bits_efficient(powers)
+    assert ckt.gates_number() <= n * 4.5 - len(ckt.outputs) * 2
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize(
+    "n",
+    list(range(1, 18))
+    + [
+        60,
+        128,
+    ],
+)
+@pytest.mark.parametrize("density_in_percent", list(range(10, 101, 10)))
+def test_sum_weighted_bits_naive(basis, n, density_in_percent):
+    max_level = n * density_in_percent // 100
+    powers = [random.randint(0, max_level) for _ in range(n)]
+    ckt = generate_sum_weighted_bits_naive(powers)
+    if basis == GenerationBasis.XAIG:
+        assert ckt.gates_number() <= n * 5 - len(ckt.outputs) * 3
+    if basis == GenerationBasis.AIG:
+        assert ckt.gates_number() <= n * 7 - len(ckt.outputs) * 3

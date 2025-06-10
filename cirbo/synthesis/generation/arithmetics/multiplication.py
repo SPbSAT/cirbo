@@ -13,6 +13,7 @@ from cirbo.synthesis.generation.arithmetics.summation import (
     add_sum2,
     add_sum3,
     add_sum_n_bits,
+    add_sum_n_weighted_bits,
     add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_with_shift,
@@ -22,6 +23,7 @@ from cirbo.synthesis.generation.arithmetics.summation import (
 __all__ = [
     'add_mul',
     'add_mul_karatsuba',
+    'add_mul_karatsuba_with_efficient_sum',
     'add_mul_alter',
     'add_mul_dadda',
     'add_mul_wallace',
@@ -79,8 +81,12 @@ def add_mul(
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
-    Multiplies two numbers represented by the given input labels using a straightforward
-    bitwise multiplication method.
+    Multiplies two numbers represented by the given input labels using a.
+
+    straightforward bitwise multiplication method but with new summation
+    implementation that need only 4.5 * n - 2 * m gates (where n is a number
+    of inputs bits and m is a number of outputs bits). Total number of gates
+    will be not more than 5.5 * n * n - 2 * (2 * n).
 
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
@@ -100,30 +106,17 @@ def add_mul(
         input_labels_b.reverse()
 
     # in my mind a[0] is the smallest bit in a
+    powers_with_labels = []  # all n * m bits multiplication with powers
     c = [[PLACEHOLDER_STR] * n for _ in range(m)]
     for i in range(m):
         for j in range(n):
             c[i][j] = add_gate_from_tt(
                 circuit, input_labels_a[j], input_labels_b[i], '0001'
             )
+            powers_with_labels.append((i + j, c[i][j]))
 
-    if n == 1:
-        return reverse_if_big_endian([c[i][0] for i in range(m)], big_endian)
-    if m == 1:
-        return reverse_if_big_endian(c[0], big_endian)
-
-    d = [[PLACEHOLDER_STR] for _ in range(n + m)]
-    d[0] = [c[0][0]]
-    for i in range(1, n + m):
-        inp = []
-        for j in range(i + 1):
-            if j < m and i - j < n:
-                inp.append(c[j][i - j])
-        for j in range(i):
-            if j + len(d[j]) > i:
-                inp.append(d[j][i - j])
-        d[i] = add_sum_n_bits(circuit, inp)
-    return reverse_if_big_endian([d[i][0] for i in range(n + m)], big_endian)
+    out = add_sum_n_weighted_bits(circuit, powers_with_labels)
+    return reverse_if_big_endian([i[1] for i in out], big_endian)
 
 
 def add_mul_alter(
@@ -236,6 +229,204 @@ def add_mul_karatsuba(
         if (len(a_sum_b) < 20 and len(a_sum_b) != 18)
         else add_mul_karatsuba(circuit, a_sum_b, c_sum_d)
     )
+    ac_sum_bd = add_sum_two_numbers(circuit, ac, bd)
+    res_mid = add_sub_two_numbers(circuit, big_mul, ac_sum_bd)
+
+    res = add_sum_two_numbers_with_shift(circuit, mid, bd, res_mid)
+    final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, ac)
+
+    return reverse_if_big_endian(final_res[:out_size], big_endian)
+
+
+def add_mul_karatsuba_with_efficient_sum(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Karatsuba multiplication algorithm with efficient
+    summation.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+    out_size = len(input_labels_a) + len(input_labels_b)
+    if len(input_labels_a) == 1 or len(input_labels_b) == 1:
+        out_size -= 1
+
+    n = len(input_labels_a)
+    if n < len(input_labels_b):
+        input_labels_a, input_labels_b = input_labels_b, input_labels_a
+        n = len(input_labels_a)
+    while n != len(input_labels_b):
+        input_labels_b.append(
+            add_gate_from_tt(circuit, input_labels_a[0], input_labels_a[0], '0110')
+        )
+
+    if n < 20 and n != 18:
+        return reverse_if_big_endian(
+            last_step_sum_with_new_powers_sum(circuit, input_labels_a, input_labels_b)[
+                :out_size
+            ],
+            big_endian,
+        )
+
+    mid = n // 2
+    a = input_labels_a[mid:]
+    b = input_labels_a[:mid]
+    c = input_labels_b[mid:]
+    d = input_labels_b[:mid]
+
+    ac = (
+        last_step_sum_with_new_powers_sum(circuit, a, c)
+        if (n - mid < 20 and n - mid != 18)
+        else add_mul_karatsuba_with_efficient_sum(circuit, a, c)
+    )
+    bd = (
+        last_step_sum_with_new_powers_sum(circuit, b, d)
+        if (mid < 20 and mid != 18)
+        else add_mul_karatsuba_with_efficient_sum(circuit, b, d)
+    )
+    a_sum_b = add_sum_two_numbers(circuit, a, b)
+    c_sum_d = add_sum_two_numbers(circuit, c, d)
+    big_mul = (
+        last_step_sum_with_new_powers_sum(circuit, a_sum_b, c_sum_d)
+        if (len(a_sum_b) < 20 and len(a_sum_b) != 18)
+        else add_mul_karatsuba_with_efficient_sum(circuit, a_sum_b, c_sum_d)
+    )
+    ac_sum_bd = add_sum_two_numbers(circuit, ac, bd)
+    res_mid = add_sub_two_numbers(circuit, big_mul, ac_sum_bd)
+
+    res = add_sum_two_numbers_with_shift(circuit, mid, bd, res_mid)
+    final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, ac)
+
+    return reverse_if_big_endian(final_res[:out_size], big_endian)
+
+
+def add_simple_karatsuba(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Karatsuba multiplication algorithm. Recursion will
+    stop only at size 1.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+    out_size = len(input_labels_a) + len(input_labels_b)
+    n = len(input_labels_a)
+    if n <= 4:
+        return reverse_if_big_endian(
+            add_mul_pow2_m1(circuit, input_labels_a, input_labels_b)[:out_size],
+            big_endian,
+        )
+    if n < len(input_labels_b):
+        input_labels_a, input_labels_b = input_labels_b, input_labels_a
+        n = len(input_labels_a)
+    while n != len(input_labels_b):
+        input_labels_b.append(
+            add_gate_from_tt(circuit, input_labels_a[0], input_labels_a[0], '0110')
+        )
+
+    mid = n // 2
+    a = input_labels_a[mid:]
+    b = input_labels_a[:mid]
+    c = input_labels_b[mid:]
+    d = input_labels_b[:mid]
+
+    ac = add_simple_karatsuba(circuit, a, c)
+    bd = add_simple_karatsuba(circuit, b, d)
+
+    a_sum_b = add_sum_two_numbers(circuit, a, b)
+    c_sum_d = add_sum_two_numbers(circuit, c, d)
+    big_mul = add_simple_karatsuba(circuit, a_sum_b, c_sum_d)
+
+    ac_sum_bd = add_sum_two_numbers(circuit, ac, bd)
+    res_mid = add_sub_two_numbers(circuit, big_mul, ac_sum_bd)
+
+    res = add_sum_two_numbers_with_shift(circuit, mid, bd, res_mid)
+    final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, ac)
+
+    return reverse_if_big_endian(final_res[:out_size], big_endian)
+
+
+def add_dadda_karatsuba(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers using the Karatsuba multiplication algorithm. Recursion will
+    stop only at size 1.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    n = len(input_labels_a)
+    if n < 20 and n != 18:
+        return add_mul_dadda(circuit, input_labels_a, input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+    out_size = len(input_labels_a) + len(input_labels_b)
+
+    if n < len(input_labels_b):
+        input_labels_a, input_labels_b = input_labels_b, input_labels_a
+        n = len(input_labels_a)
+    while n != len(input_labels_b):
+        input_labels_b.append(
+            add_gate_from_tt(circuit, input_labels_a[0], input_labels_a[0], '0110')
+        )
+
+    mid = n // 2
+    a = input_labels_a[mid:]
+    b = input_labels_a[:mid]
+    c = input_labels_b[mid:]
+    d = input_labels_b[:mid]
+
+    ac = add_dadda_karatsuba(circuit, a, c)
+    bd = add_dadda_karatsuba(circuit, b, d)
+
+    a_sum_b = add_sum_two_numbers(circuit, a, b)
+    c_sum_d = add_sum_two_numbers(circuit, c, d)
+    big_mul = add_dadda_karatsuba(circuit, a_sum_b, c_sum_d)
+
     ac_sum_bd = add_sum_two_numbers(circuit, ac, bd)
     res_mid = add_sub_two_numbers(circuit, big_mul, ac_sum_bd)
 
@@ -445,9 +636,53 @@ def add_mul_pow2_m1(
     return reverse_if_big_endian([out[i][0][0] for i in range(n + m)], big_endian)
 
 
+def last_step_sum_with_new_powers_sum(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    big_endian: bool = False,
+) -> list[gate.Label]:
+    """
+    Multiplies two numbers with lengths 2^k - 1 using a specific squaring method
+    and efficient summation.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: A list of gate labels representing the product of the two input numbers.
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    n = len(input_labels_a)
+    m = len(input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+
+    c = [[PLACEHOLDER_STR] * n for _ in range(m)]
+    for i in range(m):
+        for j in range(n):
+            c[i][j] = add_gate_from_tt(
+                circuit, input_labels_a[j], input_labels_b[i], '0001'
+            )
+
+    if n == 1:
+        return reverse_if_big_endian([c[i][0] for i in range(m)], big_endian)
+    if m == 1:
+        return reverse_if_big_endian(c[0], big_endian)
+
+    vector_with_powers = [(i + j, c[i][j]) for i in range(n) for j in range(m)]
+    res = add_sum_n_weighted_bits(circuit, vector_with_powers)
+    return reverse_if_big_endian([res[i][1] for i in range(n + m)], big_endian)
+
+
 _process_mul: dict[MulMode, tp.Callable[..., list[gate.Label]]] = {
     MulMode.DEFAULT: add_mul,
-    MulMode.KARATSUBA: add_mul_karatsuba,
+    MulMode.KARATSUBA: add_mul_karatsuba_with_efficient_sum,
     MulMode.ALTER: add_mul_alter,
     MulMode.DADDA: add_mul_dadda,
     MulMode.WALLACE: add_mul_wallace,
