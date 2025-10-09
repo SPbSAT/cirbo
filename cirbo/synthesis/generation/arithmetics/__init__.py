@@ -29,13 +29,17 @@ from .summation import (
     add_sum_n_bits,
     add_sum_n_bits_easy,
     add_sum_n_weighted_bits,
+    add_sum_n_weighted_bits_log_depth,
     add_sum_n_weighted_bits_naive,
     add_sum_pow2_m1,
     add_sum_two_numbers,
+    add_sum_two_numbers_log_depth,
+    add_sum_two_numbers_log_depth_Brent_Kung,
     add_sum_two_numbers_with_shift,
     generate_sum_n_bits,
     generate_sum_weighted_bits_efficient,
     generate_sum_weighted_bits_naive,
+    mdfa_sum_weighted_bits,
 )
 
 
@@ -78,9 +82,14 @@ __all__ = [
     'add_sum_n_bits_easy',
     'add_sum_pow2_m1',
     'add_sum_two_numbers',
+    'add_sum_two_numbers_log_depth',
+    'add_sum_two_numbers_log_depth_Brent_Kung',
     'add_sum_two_numbers_with_shift',
     'add_sum_n_weighted_bits',
+    'add_sum_n_weighted_bits_log_depth',
     'add_sum_n_weighted_bits_naive',
     'generate_sum_weighted_bits_efficient',
     "generate_sum_weighted_bits_naive",
+    'add_sum_two_numbers_log_depth',
+    'mdfa_sum_weighted_bits',
 ]

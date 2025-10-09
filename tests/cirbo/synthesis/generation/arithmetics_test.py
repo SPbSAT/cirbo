@@ -20,15 +20,20 @@ from cirbo.synthesis.generation.arithmetics import (
     add_square_pow2_m1,
     add_sum_n_bits,
     add_sum_n_weighted_bits,
+    add_sum_two_numbers_log_depth,
+    add_sum_two_numbers_log_depth_Brent_Kung,
+    add_sum_n_weighted_bits_log_depth,
     generate_equal,
     generate_mul,
     generate_square,
     generate_sum_n_bits,
     generate_sum_weighted_bits_efficient,
     generate_sum_weighted_bits_naive,
+    mdfa_sum_weighted_bits,
     MulMode,
     SquareMode,
 )
+from cirbo.synthesis.generation.arithmetics._utils import add_gate_from_tt
 
 TEST_SIZE = 100
 random.seed(42)
@@ -89,6 +94,12 @@ def sum_naive(inputs_a):
     return to_bin(a, len_res)
 
 
+def sum_two_numbers_naive(inputs_a, inputs_b):
+    a = to_num(inputs_a)
+    b = to_num(inputs_b)
+    return to_bin(a+b, max(len(inputs_a), len(inputs_b)) + 1)
+
+
 def sum_naive_with_powers(powers_and_values_list):
     res = 0
     mx = 0
@@ -102,6 +113,10 @@ def sum_naive_with_powers(powers_and_values_list):
         mx //= 2
 
     return to_bin(res, sz)
+
+
+def sum_weighted_bits_naive(weighted_bits, size):
+    return to_bin(sum(2**p[0]*p[1] for p in weighted_bits), size)[::-1]
 
 
 @pytest.mark.parametrize(
@@ -147,7 +162,7 @@ def test_mul(func, size, big_endian):
             input_labels_b.reverse()
         else:
             res.reverse()
-
+        
         assert mul_naive(input_labels_a, input_labels_b) == res
 
 
@@ -250,6 +265,103 @@ def test_gen_square(number_inputs, type, big_endian):
         else:
             res.reverse()
         assert square_naive(input_labels) == res
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        add_sum_two_numbers_log_depth,
+        add_sum_two_numbers_log_depth_Brent_Kung,
+    ],
+)
+@pytest.mark.parametrize(
+    "size",
+    [
+        [1, 1],
+        [1, 7],
+        [7, 1],
+        [3, 6],
+        pytest.param([8, 2], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([24, 15], marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_sum_two_numbers(func, size, big_endian):
+    x, y = size
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x + y)]
+    for i in range(x + y):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = func(ckt, input_labels[:x], input_labels[x:], big_endian=big_endian)
+    ckt.set_outputs(res)
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert sum_two_numbers_naive(input_labels_a, input_labels_b) == res
+
+
+def normalize_weighted_output(circuit, zero, weighted_bits):
+    a = [zero]*(max(p[0] for p in weighted_bits)+1)
+    for p in weighted_bits:
+        a[p[0]] = p[1]
+    return a
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        mdfa_sum_weighted_bits,
+        add_sum_n_weighted_bits_log_depth,
+    ],
+)
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [0, 0, 10], 
+        [1, 0, 1],
+        [1, 2, 3, 4, 3, 2, 1], #Mult4
+        [8], #Add8
+        [2, 2, 2, 2], #Sum4
+        [1, 0, 2, 1, 3, 2, 4, 3, 4, 2, 3, 1, 2], #Square7
+        pytest.param([30], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([2]*20, marks=pytest.mark.slow),
+    ],
+)
+def test_sum_weighted_bits(func, shape):
+    ckt = Circuit()
+    n = sum(k for k in shape)
+    input_labels = [f'x{i}' for i in range(n)]
+    for i in range(n):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+    zero = add_gate_from_tt(
+        ckt, 
+        input_labels[0], 
+        input_labels[0], 
+        '0000',
+    )
+    weighted_bits = []
+    c = 0
+    for i in range(len(shape)):
+        for _ in range(shape[i]):
+            weighted_bits.append([i, input_labels[c]])
+            c += 1
+    res = func(ckt, weighted_bits)
+    res = normalize_weighted_output(ckt, zero, res)
+    ckt.set_outputs(res)
+    for test in range(TEST_SIZE):
+        labels_input = [random.choice([0, 1]) for _ in range(n)]
+        weighted_input = [[weighted_bits[i][0], labels_input[i]] for i in range(n)]
+        res = ckt.evaluate(labels_input)
+        assert sum_weighted_bits_naive(weighted_input, len(res)) == res
 
 
 @pytest.mark.parametrize("num", list(range(128)))

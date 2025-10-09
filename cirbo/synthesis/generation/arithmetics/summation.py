@@ -1,7 +1,8 @@
 import typing as tp
+from collections import deque
 from itertools import zip_longest
+from sortedcontainers import SortedList
 
-from sortedcontainers import SortedList  # type: ignore
 
 from cirbo.core.circuit import Circuit, gate
 
@@ -23,11 +24,15 @@ __all__ = [
     "add_sum_n_bits_easy",
     "add_sum_pow2_m1",
     "add_sum_two_numbers",
+    "add_sum_two_numbers_log_depth",
+    "add_sum_two_numbers_log_depth_Brent_Kung",
     "add_sum_two_numbers_with_shift",
     "add_sum_n_weighted_bits",
+    "add_sum_n_weighted_bits_log_depth", 
     "add_sum_n_weighted_bits_naive",
     "generate_sum_weighted_bits_efficient",
     "generate_sum_weighted_bits_naive",
+    "mdfa_sum_weighted_bits",
 ]
 
 
@@ -36,6 +41,7 @@ def add_sum_two_numbers(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -44,6 +50,7 @@ def add_sum_two_numbers(
     :param circuit: The general circuit.
     :param input_labels_a: List of bits representing the first binary number.
     :param input_labels_b: List of bits representing the second binary number.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
     :return: List of bits representing the sum of the two numbers.
@@ -61,14 +68,34 @@ def add_sum_two_numbers(
         n, m = m, n
         input_labels_a, input_labels_b = input_labels_b, input_labels_a
     d = [[PLACEHOLDER_STR] for _ in range(n + 1)]
-    d[0] = add_sum_n_bits(circuit, [input_labels_a[0], input_labels_b[0]])
+    d[0] = add_sum_n_bits(circuit, [input_labels_a[0], input_labels_b[0]], basis=basis)
     for i in range(1, n):
         inp = [d[i - 1][1], input_labels_a[i]]
         if i < m:
             inp.append(input_labels_b[i])
-        d[i] = list(add_sum_n_bits(circuit, inp))
+        d[i] = list(add_sum_n_bits(circuit, inp, basis=basis))
     d[n] = [d[n - 1][1]]
     return reverse_if_big_endian([d[i][0] for i in range(n + 1)], big_endian)
+
+
+def xor_two_bits(
+    circuit: Circuit,
+    a: gate.Label, 
+    b: gate.Label,
+    *, 
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> gate.Label:
+    if isinstance(basis, str):
+        _basis = GenerationBasis(basis.upper())
+    else:
+        _basis = basis
+
+    if(_basis == GenerationBasis.XAIG):
+        return add_gate_from_tt(circuit, a, b, '0110')
+    if(basis == GenerationBasis.AIG):
+        ab = add_gate_from_tt(circuit, a, b, '0001')
+        nab = add_gate_from_tt(circuit, a, b, '1000')
+        return add_gate_from_tt(circuit, ab, nab, '1000')
 
 
 def add_sum_two_numbers_with_shift(
@@ -130,9 +157,339 @@ def add_sum_two_numbers_with_shift(
     )
 
 
-def add_sum2(
-    circuit: Circuit, input_labels: tp.Iterable[gate.Label]
+def add_sum_two_numbers_log_depth(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+    big_endian: bool = False,
 ) -> list[gate.Label]:
+    """
+    Function to add two binary numbers represented by input labels in O(log(n+m)) depth and O(n*logn) size using Koggle-stone adder.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: List of bits representing the first binary number.
+    :param input_labels_b: List of bits representing the second binary number.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: List of bits representing the sum of the two numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    n = len(input_labels_a)
+    m = len(input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+
+    if n < m:
+        n, m = m, n
+        input_labels_a, input_labels_b = input_labels_b, input_labels_a
+    
+    zero = add_gate_from_tt(circuit, input_labels_a[0], input_labels_a[0], '0000')
+
+    for i in range(n-m):
+        input_labels_b.append(zero)
+
+    p, g = zip(*[add_sum2(circuit, [input_labels_a[i], input_labels_b[i]], basis=basis) for i in range(n)])
+    p, g = list(p), list(g)
+
+    po = p.copy()
+    d = 1
+
+    while(d < n):
+        for i in range(n-1, d-1, -1):
+            t = add_gate_from_tt(circuit, p[i], g[i-d], '0001')
+            g[i] = add_gate_from_tt(circuit, g[i], t, '0111')
+
+        for i in range(n-1, d-1, -1):
+            p[i] = add_gate_from_tt(circuit, p[i], p[i-d], '0001')
+
+        d *= 2
+
+    g = [zero] + g 
+    s = [xor_two_bits(circuit, po[i], g[i], basis=basis) for i in range(n)]
+    s.append(g[n])
+    
+    return reverse_if_big_endian(s, big_endian)
+
+
+def add_sum_two_numbers_log_depth_Brent_Kung(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+    big_endian: bool = False,
+) -> list[gate.Label]:
+    """
+    Add two binary numbers using a Brent–Kung adder.
+    Depth: O(log n), Size: O(n).
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Bits of first binary number.
+    :param input_labels_b: Bits of second binary number.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    :param big_endian: Whether numbers are big-endian.
+    :return: Bits of the sum.
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    n = len(input_labels_a)
+    m = len(input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+
+    if n < m:
+        n, m = m, n
+        input_labels_a, input_labels_b = input_labels_b, input_labels_a
+
+    zero = add_gate_from_tt(
+        circuit, 
+        input_labels_a[0], 
+        input_labels_a[0], 
+        '0000'
+    )
+    for i in range(n - m):
+        input_labels_b.append(zero)
+
+    p, g = zip(*[add_sum2(circuit, [input_labels_a[i], input_labels_b[i]], basis=basis) for i in range(n)])
+    p, g = list(p), list(g)
+
+    prefix_p = p.copy()
+    prefix_g = g.copy()
+    
+    s = 1
+    while s < n:
+        next_s = s * 2
+        for i in range(next_s - 1, n, next_s):
+            j = i - s
+            if j >= 0:
+                tmp = add_gate_from_tt(circuit, prefix_p[i], prefix_g[j], '0001')
+                new_g = add_gate_from_tt(circuit, prefix_g[i], tmp, '0111')
+                new_p = add_gate_from_tt(circuit, prefix_p[i], prefix_p[j], '0001')
+                
+                prefix_g[i] = new_g
+                prefix_p[i] = new_p
+        s = next_s
+
+    s //= 2
+    while s > 1:
+        next_s = s // 2
+        for i in range(s - 1, n, s):
+            if i + next_s < n:
+                j = i + next_s
+                tmp = add_gate_from_tt(circuit, prefix_p[j], prefix_g[i], '0001')
+                new_g = add_gate_from_tt(circuit, prefix_g[j], tmp, '0111')
+                new_p = add_gate_from_tt(circuit, prefix_p[j], prefix_p[i], '0001')
+                
+                prefix_g[j] = new_g
+                prefix_p[j] = new_p
+        s = next_s
+
+    carries = [zero]
+    for i in range(n - 1):
+        carries.append(prefix_g[i])
+    
+    sum_bits = []
+    for i in range(n):
+        sum_bit = xor_two_bits(circuit, p[i], carries[i], basis=basis)
+        sum_bits.append(sum_bit)
+    
+    sum_bits.append(prefix_g[n-1])
+    
+    return reverse_if_big_endian(sum_bits, big_endian)
+
+
+def add_sum_n_weighted_bits_log_depth(
+    circuit: Circuit,
+    input_labels_with_pow: tp.Iterable[tuple[int, gate.Label]],
+    *, 
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[tuple[int, gate.Label]]:
+    """
+    Function to add a variable number of bits using Full and Half adders.
+    Depth: O(log n), Size: O(n).
+
+    :param circuit: The general circuit.
+    :param input_labels: List of bits to be added.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
+    :return: Tuple containing the sum in binary representation.
+    """
+    input_labels_with_pow = list(input_labels_with_pow)
+    c = {}
+    for p in input_labels_with_pow:
+        c.setdefault(p[0], []).append(p[1])
+
+    while(max(len(c[i]) for i in c.keys()) > 2):
+        cn = {}
+        for key in c:
+            for i in range(0, len(c[key]), 3):
+                inp = []
+                for k in range(i, i + 3):
+                    if len(c[key]) > k:
+                        inp.append(c[key][k])
+
+                if len(inp) > 0:
+                    res = add_sum_n_bits(circuit, inp, basis=basis)
+                    for k in range(len(res)):
+                        cn.setdefault(key+k, []).append(res[k])
+        c = cn
+
+    consec = []
+    last = -1
+    zero = add_gate_from_tt(
+        circuit, 
+        input_labels_with_pow[0][1], 
+        input_labels_with_pow[0][1], 
+        '0000'
+    )
+    ans = []
+
+    def sum_block():
+        input_labels_a = []
+        input_labels_b = []
+        for p in consec:
+            input_labels_a.append(p[0])
+            if len(p) == 1:
+                input_labels_b.append(zero)
+            else:
+                input_labels_b.append(p[1])
+
+        sum = add_sum_two_numbers_log_depth_Brent_Kung(circuit, input_labels_a, input_labels_b, basis=basis)
+        for i in range(len(sum)):
+            ans.append([last-len(consec)+1+i, sum[i]])
+
+    for k in sorted(c.keys()):
+        if(last == -1 or last == k-1):
+            consec.append(c[k])
+            last = k
+        else:
+            sum_block()
+            last = k
+            consec =[c[k]]
+    
+    sum_block()
+    return ans     
+
+
+def mdfa_sum_weighted_bits(
+    circuit: Circuit,
+    input_labels_with_pow: tp.Iterable[tuple[int, gate.Label]],
+) -> list[tuple[int, gate.Label]]:
+    """
+    Function to add a variable number of bits with using MDFA. Has better size and worse depth than add_sum_n_weighted_bits_log_depth.
+    Depth: O(log n), Size: O(n).
+    MDFA does not work in AIG basis, so no basis parameter, just use add_sum_n_weighted_bits_log_depth.
+
+    :param circuit: The general circuit.
+    :param input_labels: List of bits to be added.
+    :return: Tuple containing the sum in binary representation.
+    """
+    c = {}
+    d = {}
+    for p in input_labels_with_pow:
+        c.setdefault(p[0], deque()).append(p[1])
+ 
+    while(max(len(c.get(i, deque())) + len(d.get(i, deque())) for i in set(c) | set(d)) > 6):
+        cn = {}
+        dn = {}
+        for key in set(c) | set(d):
+            single = c.get(key, deque()).copy()  
+            pairs = d.get(key, deque()).copy()  
+
+            while(len(single) >= 1 and len(pairs) >= 4):
+                z, x, xy = add_mdfa(circuit, [single.popleft()] + [pairs.popleft() for _ in range(4)])
+                cn.setdefault(key, deque()).append(z)
+                dn.setdefault(key+1, deque()).extend([x, xy])
+
+            while(len(single) >= 3 and len(pairs) >= 2):
+                a1, b1 = single.popleft(), single.popleft()
+                ab1 = add_gate_from_tt(
+                    circuit, 
+                    a1, 
+                    b1, 
+                    "0110",
+                )
+                a2, ab2 = pairs.popleft(), pairs.popleft()
+                z, x, xy = add_mdfa(circuit, [single.popleft(), a1, ab1, a2, ab2])
+                cn.setdefault(key, deque()).append(z)
+                dn.setdefault(key+1, deque()).extend([x, xy])
+
+            while(len(single) >= 5):
+                a1, b1 = single.popleft(), single.popleft()
+                ab1 = add_gate_from_tt(
+                    circuit, 
+                    a1, 
+                    b1, 
+                    "0110",
+                )
+                a2, b2 = single.popleft(), single.popleft()
+                ab2 = add_gate_from_tt(
+                    circuit, 
+                    a2,
+                    b2, 
+                    "0110",
+                )
+                z, x, xy = add_mdfa(circuit, [single.popleft(), a1, ab1, a2, ab2])
+                cn.setdefault(key, deque()).append(z)
+                dn.setdefault(key+1, deque()).extend([x, xy])
+            if(len(single) == 4):
+                res = add_sum_n_bits(circuit, [single.popleft() for _ in range(3)])
+                cn.setdefault(key, deque()).extend([res[0], single.popleft()])
+                cn.setdefault(key+1, deque()).append(res[1])
+
+            while(len(pairs) >= 10):
+                a, ab = pairs.popleft(), pairs.popleft()
+                b = add_gate_from_tt(
+                    circuit, 
+                    a, 
+                    ab, 
+                    "0110",
+                )
+                for e in [a, b]:
+                    z, x, xy = add_mdfa(circuit, [e] + [pairs.popleft() for _ in range(4)])
+                    cn.setdefault(key, deque()).append(z)
+                    dn.setdefault(key+1, deque()).extend([x, xy])
+            while(len(pairs) >= 4):
+                z, x, xy = add_simplified_mdfa(circuit, [pairs.popleft() for _ in range(4)])
+                cn.setdefault(key, deque()).append(z)
+                dn.setdefault(key+1, deque()).extend([x, xy])
+            
+            cn.setdefault(key, deque()).extend(single)
+            dn.setdefault(key, deque()).extend(pairs)
+
+        c = cn
+        d = dn
+
+    weighted_bits = []
+    for key, value in c.items():
+        for i in value:
+            weighted_bits.append([key, i])
+    for key, value in d.items():
+        for i in range(0, len(value), 2):
+            a, ab = value[i], value[i+1]
+            b = add_gate_from_tt(
+                circuit, 
+                a, 
+                ab, 
+                "0110",
+            )
+            weighted_bits.append([key, a])
+            weighted_bits.append([key, b])
+    return add_sum_n_weighted_bits_log_depth(circuit, weighted_bits) 
+
+
+def add_sum2(
+    circuit: Circuit, input_labels: tp.Iterable[gate.Label], *, basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[gate.Label]:
+    if(basis==GenerationBasis.AIG):
+        return add_sum2_aig(circuit, input_labels)
+    
     input_labels = list(input_labels)
     validate_const_size(input_labels, 2)
     [x1, x2] = input_labels
@@ -479,20 +836,11 @@ def _add_sum_n_bits(
                 now_solo.append(z)
                 next_x_xy.append((x1, x1y1))
             else:
-                z, x1, x1y1 = add_simplified_mdfa(
-                    circuit,
-                    [
-                        now_x_xy[-1][0],
-                        now_x_xy[-1][1],
-                        now_x_xy[-2][0],
-                        now_x_xy[-2][1],
-                    ],
+                now_solo.append(now_x_xy[-1][1])
+                next_solo.append(
+                    add_gate_from_tt(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010")
                 )
-                for _ in range(2):
-                    now_x_xy.pop()
-
-                now_solo.append(z)
-                next_x_xy.append((x1, x1y1))
+                now_x_xy.pop()
         if len(now_x_xy) == 1:
             if len(now_solo) > 0:
                 x, y = add_stockmeyer_block(
@@ -696,20 +1044,11 @@ def add_sum_n_weighted_bits(
                 now_solo.append(z)
                 next_x_xy.append((x1, x1y1))
             else:
-                z, x1, x1y1 = add_simplified_mdfa(
-                    circuit,
-                    [
-                        now_x_xy[-1][0],
-                        now_x_xy[-1][1],
-                        now_x_xy[-2][0],
-                        now_x_xy[-2][1],
-                    ],
+                now_solo.append(now_x_xy[-1][1])
+                next_solo.append(
+                    add_gate_from_tt(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010")
                 )
-                for _ in range(2):
-                    now_x_xy.pop()
-
-                now_solo.append(z)
-                next_x_xy.append((x1, x1y1))
+                now_x_xy.pop()
         if len(now_x_xy) == 1:
             if len(now_solo) > 0:
                 x, y = add_stockmeyer_block(
@@ -725,19 +1064,6 @@ def add_sum_n_weighted_bits(
                     add_gate_from_tt(circuit, now_x_xy[-1][0], now_x_xy[-1][1], "0010")
                 )
                 now_x_xy.pop()
-
-        while len(now_solo) > 2:
-            x, y = add_sum3(circuit, now_solo[-1:-4:-1])
-            for _ in range(3):
-                now_solo.pop()
-            now_solo.append(x)
-            next_solo.append(y)
-        if len(now_solo) > 1:
-            x, y = add_sum2(circuit, now_solo[-1:-3:-1])
-            for _ in range(2):
-                now_solo.pop()
-            now_solo.append(x)
-            next_solo.append(y)
 
         res.append((now_level, now_solo[0]))
 

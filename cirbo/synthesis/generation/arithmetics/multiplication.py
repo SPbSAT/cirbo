@@ -17,7 +17,9 @@ from cirbo.synthesis.generation.arithmetics.summation import (
     add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_with_shift,
+    add_sum_n_weighted_bits,
 )
+from cirbo.synthesis.generation.helpers import GenerationBasis
 
 
 __all__ = [
@@ -581,15 +583,39 @@ def add_mul_wallace(
     )
 
 
+def add_mul_constant(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    b: int,
+    *,
+    big_endian: bool = False,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[gate.Label]:
+    input_labels_a = list(input_labels_a)
+    n = len(input_labels_a)
+
+    if big_endian:
+        input_labels_a.reverse()
+
+    labels_with_pow = list()
+    for i in range(b.bit_length()):
+        if b & (1 << i):
+            for j in range(n):
+                labels_with_pow.append((j+i, input_labels_a[j]))
+
+    return add_sum_n_weighted_bits(circuit, labels_with_pow, basis=basis)
+
+
 def add_mul_pow2_m1(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
     big_endian: bool = False,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
     """
-    Multiplies two numbers with lengths 2^k - 1 using a specific squaring method.
+    Multiplies two numbers using summators with lengths 2^k - 1.
 
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
@@ -632,7 +658,7 @@ def add_mul_pow2_m1(
         if len(inp) == 1:
             out[i] = [[inp[0]]]
         else:
-            out[i] = add_sum_pow2_m1(circuit, inp)
+            out[i] = add_sum_pow2_m1(circuit, inp, basis=basis)
     return reverse_if_big_endian([out[i][0][0] for i in range(n + m)], big_endian)
 
 
