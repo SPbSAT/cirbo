@@ -79,12 +79,11 @@ class RemoveConstantGates(Transformer):
             assert False
 
     @staticmethod
-    def _delete_const_gate(circuit: Circuit, const_label: str) -> None:
-        const_gate = circuit.get_gate(const_label)
-        for user_label in copy.copy(circuit.get_gate_users(const_label)):
+    def _delete_const_gate(circuit: Circuit, const_gate: Gate) -> None:
+        for user_label in copy.copy(circuit.get_gate_users(const_gate.label)):
             user_gate = circuit.get_gate(user_label)
             new_user_gate = RemoveConstantGates._simplify_user_gate(circuit, user_gate, const_gate)
-            circuit._remove_user(const_label, user_label)
+            circuit._remove_user(const_gate.label, user_label)
             circuit.gates[user_label] = new_user_gate
 
     def _transform(self, circuit: Circuit) -> Circuit:
@@ -95,15 +94,9 @@ class RemoveConstantGates(Transformer):
         """
         _new_circuit = copy.copy(circuit)
 
-        while True:
-            for gate_label, _gate in _new_circuit.gates.items():
-                if _gate.gate_type in CONST_GATES:
-                    print(f"TRY Delete gate: {gate_label}")
-                    gate_users = _new_circuit.get_gate_users(gate_label)
-                    if gate_users:
-                        RemoveConstantGates._delete_const_gate(_new_circuit, gate_label)
-                        break
-            else:
-                break
+        for _gate in circuit.top_sort(inverse=True):
+            _gate = _new_circuit.get_gate(_gate.label)
+            if _gate.gate_type in CONST_GATES:
+                self._delete_const_gate(_new_circuit, _gate)
 
         return _new_circuit
