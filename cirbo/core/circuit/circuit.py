@@ -200,6 +200,57 @@ class Circuit(Function):
             return _parser.convert_to_circuit(s)
 
     @staticmethod
+    def from_aig_file(file_path: str) -> "Circuit":
+        """
+        Initialize the circuit from an AIG format file.
+
+        Supports both ASCII (.aag) and binary (.aig) AIGER formats. Only combinational
+        circuits (without latches) are supported.
+
+        :param file_path: path to the .aag or .aig file.
+        :return: parsed Circuit object.
+
+        """
+        from cirbo.core.parser.aig import AIGParser
+
+        parser = AIGParser()
+        return parser.parse_file(file_path)
+
+    @staticmethod
+    def from_aig_string(string: str) -> "Circuit":
+        """
+        Initialize the circuit from an AIG format string.
+
+        Only ASCII AIG format (.aag) is supported for string input. Only combinational
+        circuits (without latches) are supported.
+
+        :param string: string containing AIG data in ASCII format.
+        :return: parsed Circuit object.
+
+        """
+        from cirbo.core.parser.aig import AIGParser
+
+        parser = AIGParser()
+        return parser.parse_string(string)
+
+    @staticmethod
+    def from_aig_bytes(data: bytes) -> "Circuit":
+        """
+        Initialize the circuit from AIG format bytes.
+
+        Supports both ASCII (.aag) and binary (.aig) AIGER formats. Only combinational
+        circuits (without latches) are supported.
+
+        :param data: bytes containing AIG data.
+        :return: parsed Circuit object.
+
+        """
+        from cirbo.core.parser.aig import AIGParser
+
+        parser = AIGParser()
+        return parser.parse_bytes(data)
+
+    @staticmethod
     def bare_circuit_with_labels(
         labels: tp.Sequence[gate.Label],
         *,
