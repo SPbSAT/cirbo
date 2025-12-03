@@ -748,7 +748,7 @@ def test_remove_constant_gates_preserves_functionality():
         original_tt = circuit.get_truth_table()
         simplified = RemoveConstantGates().transform(circuit)
         simplified_tt = simplified.get_truth_table()
-        assert original_tt == simplified_tt, f"Truth table mismatch for circuit"
+        assert original_tt == simplified_tt, "Truth table mismatch for circuit"
 
 
 def test_transformer_is_marked_idempotent():

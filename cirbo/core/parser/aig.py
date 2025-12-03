@@ -71,7 +71,7 @@ class AIGParser:
                     return self._parse_binary(f)
                 else:
                     raise AIGParseError(
-                        f"Unknown file format. Header starts with: {header_start}"
+                        f"Unknown file format. Header starts with: {header_start!r}"
                     )
             with path.open('r') as f:
                 return self._parse_ascii(f)
@@ -302,14 +302,14 @@ class AIGParser:
             remaining = stream.read()
             if remaining:
                 text_part = remaining.decode('ascii', errors='ignore')
-                for line in text_part.split('\n'):
-                    line = line.strip()
-                    if not line:
+                for text_line in text_part.split('\n'):
+                    text_line = text_line.strip()
+                    if not text_line:
                         continue
-                    if line.startswith('c'):
+                    if text_line.startswith('c'):
                         break
-                    if line[0] in 'ilo' and len(line) > 1:
-                        self._parse_symbol(line)
+                    if text_line[0] in 'ilo' and len(text_line) > 1:
+                        self._parse_symbol(text_line)
         except Exception:
             # Symbol parsing is optional, ignore errors
             pass
@@ -471,9 +471,6 @@ class AIGParser:
         old_not_label = f"not_{old_label}"
         new_not_label = f"not_{new_label}"
         if old_not_label in self._circuit.gates:
-            # Get users of the old NOT gate before deleting
-            not_users = list(self._circuit._gate_to_users.get(old_not_label, []))
-
             # Remove old NOT gate
             del self._circuit._gates[old_not_label]
             if old_not_label in self._circuit._gate_to_users:

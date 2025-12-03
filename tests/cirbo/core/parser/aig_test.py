@@ -4,7 +4,7 @@ import pathlib
 import pytest
 
 from cirbo.core.circuit.circuit import Circuit
-from cirbo.core.circuit.gate import ALWAYS_FALSE, ALWAYS_TRUE, AND, IFF, INPUT, NOT
+from cirbo.core.circuit.gate import ALWAYS_FALSE, ALWAYS_TRUE, IFF, NOT
 from cirbo.core.parser.aig import AIGParseError, AIGParser
 
 
