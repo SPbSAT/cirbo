@@ -123,7 +123,7 @@ def _replace_equivalent_gates(
         if _label not in _old_to_new_gate:
             return _label
 
-        _keep = _old_to_new_gate.get(_label)
+        _keep = _old_to_new_gate[_label]
         return _keep.set_or_get_existing(_label)
 
     # rebuild circuit from inputs to outputs with remapping.
