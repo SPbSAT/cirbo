@@ -1,4 +1,5 @@
 import collections
+import dataclasses
 import logging
 import typing as tp
 
@@ -66,6 +67,25 @@ def _find_equivalent_gates_groups(circuit: Circuit) -> list[list[Label]]:
     return equivalent_groups
 
 
+@dataclasses.dataclass
+class _Keep:
+    """
+    A representative element for the group.
+    If holds None, then no elements of the
+    group were reconstructed yet. When the
+    first element of the group is rebuild,
+    It will be set as Keep.
+
+    """
+    value: tp.Optional[str] = None
+
+    def set_or_get_existing(self, label: str) -> str:
+        if self.value is None:
+            self.value = label
+
+        return self.value
+
+
 def _replace_equivalent_gates(
     circuit: Circuit,
     equivalent_groups: tp.Iterable[tp.Collection[Label]],
@@ -92,15 +112,19 @@ def _replace_equivalent_gates(
             )
             continue
 
-        _group_iter = iter(group)
-        keep = next(_group_iter)
-        for gate_to_replace in _group_iter:
+        keep = _Keep()
+        for gate_to_replace in group:
             _old_to_new_gate[gate_to_replace] = keep
 
-    # map gate label to its new name.
+    # map gate label to its new name and sets Keep when needed.
     def _get_gate_new_name(_label: Label):
         nonlocal _old_to_new_gate
-        return _old_to_new_gate.get(_label, _label)
+
+        if _label not in _old_to_new_gate:
+            return _label
+
+        _keep = _old_to_new_gate.get(_label)
+        return _keep.set_or_get_existing(_label)
 
     # rebuild circuit from inputs to outputs with remapping.
     def _process_gate(_gate: Gate, _: tp.Mapping):

@@ -76,10 +76,10 @@ expected_circuit_3.add_gate(Gate('input3', gate.INPUT))
 expected_circuit_3.add_gate(Gate('input4', gate.INPUT))
 expected_circuit_3.emplace_gate('AND2', gate.AND, ('input1', 'input2'))
 expected_circuit_3.add_gate(Gate('OR2', gate.OR, ('AND2', 'input3')))
-expected_circuit_3.add_gate(Gate('XOR2', gate.XOR, ('AND2', 'OR2')))
+expected_circuit_3.add_gate(Gate('XOR1', gate.XOR, ('AND2', 'OR2')))
 expected_circuit_3.mark_as_output('AND2')
-expected_circuit_3.mark_as_output('XOR2')
-expected_circuit_3.mark_as_output('XOR2')
+expected_circuit_3.mark_as_output('XOR1')
+expected_circuit_3.mark_as_output('XOR1')
 
 
 @pytest.mark.parametrize(
