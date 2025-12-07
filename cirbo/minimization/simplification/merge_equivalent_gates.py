@@ -71,12 +71,12 @@ def _find_equivalent_gates_groups(circuit: Circuit) -> list[list[Label]]:
 class _Keep:
     """
     A representative element for the group.
-    If holds None, then no elements of the
-    group were reconstructed yet. When the
-    first element of the group is rebuild,
-    It will be set as Keep.
+
+    If holds None, then no elements of the group were reconstructed yet. When the first
+    element of the group is rebuild, It will be set as Keep.
 
     """
+
     value: tp.Optional[str] = None
 
     def set_or_get_existing(self, label: str) -> str:
