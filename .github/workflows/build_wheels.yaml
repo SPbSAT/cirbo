@@ -31,7 +31,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: "2"
           CIBW_ARCHS_MACOS: ${{ matrix.cibw_archs_macos }}
           CIBW_BEFORE_ALL_MACOS: "HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja readline"
-          CIBW_BEFORE_ALL_LINUX: "yum install -y ninja-build"
+          CIBW_BEFORE_ALL_LINUX: "yum install -y ninja-build; python -m pip install ninja"
           CIBW_TEST_REQUIRES: pytest mock
           CIBW_TEST_COMMAND: pytest -m 'not manual' {package}/tests
           CIBW_TEST_SKIP: "*-musllinux_*"
