@@ -39,4 +39,11 @@ IF(NOT DISABLE_ABC_CEXT)
         target_compile_definitions(libabc PRIVATE ABC_USE_STDINT_H)
       endif()
     endif()
+
+    # Fixes failure of pybind11.
+    if (MSVC)
+      target_compile_options(abc_wrapper PRIVATE /EHsc /GR)
+    else()
+      target_compile_options(abc_wrapper PRIVATE -fexceptions -frtti)
+    endif()
 ENDIF(NOT DISABLE_ABC_CEXT)
