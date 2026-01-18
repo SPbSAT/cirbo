@@ -45,6 +45,7 @@ jobs:
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}
             CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}"
           CIBW_BEFORE_ALL_MACOS: "HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja readline"
+          CIBW_BEFORE_ALL_LINUX: "yum install -y ninja-build; python -m pip install ninja"
           CIBW_TEST_REQUIRES: pytest mock
           CIBW_TEST_COMMAND: pytest -m 'not manual' {package}/tests
           CIBW_TEST_SKIP: "*-musllinux_*"
