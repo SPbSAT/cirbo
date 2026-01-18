@@ -20,11 +20,19 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
+def _parse_env_flag(name: str, default: bool = False) -> bool:
+    v = os.environ.get(name)
+    if v is None:
+        return default
+    v = v.strip().lower()
+    return v not in ("", "0", "false", "no", "off")
+
+
 # Disables building extensions and subdirectories related to ABC
-DISABLE_ABC_CEXT = bool(os.environ.get('DISABLE_ABC_CEXT', False))
+DISABLE_ABC_CEXT = _parse_env_flag('DISABLE_ABC_CEXT', False)
 
 
-# A CMakeExtension needs a sourcedir instead of a file list.
+# A CMakeExtension needs a source dir instead of a file list.
 # The name must be the _single_ output extension from the CMake build.
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
@@ -130,7 +138,7 @@ class CMakeBuild(build_ext):
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
         subprocess.run(
-            ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
+            ["cmake", "--build", ".", *build_args, "--target", ext.name], cwd=build_temp, check=True
         )
  
 

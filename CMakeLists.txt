@@ -11,10 +11,6 @@ option(DISABLE_ABC_CEXT "Controls if ABC should be compiled." OFF)
 # Note: must be before mockturtle's CMakeLists is added.
 SET(MOCKTURTLE_EXAMPLES OFF CACHE BOOL "Build examples" FORCE)
 
-# Disabled because it requires gnu readline to be installed on build
-# machine, but not necessary for the ABC compilation as library.
-list(APPEND ABC_READLINE_FLAGS "ABC_USE_NO_READLINE=1")
-
 add_subdirectory(third_party/pybind11)
 add_subdirectory(third_party/mockturtle)
 
@@ -24,11 +20,13 @@ target_include_directories(mockturtle_wrapper PRIVATE third_party)
 
 # ABC related libs can be disabled using environment variable.
 IF(NOT DISABLE_ABC_CEXT)
+    # Disabled because it requires gnu readline to be installed on build
+    # machine, but is not necessary for the ABC compilation as library.
+    set(READLINE_FOUND FALSE CACHE BOOL "" FORCE)
+
     add_subdirectory(third_party/abc)
-    # Needed for correct library compilation.
-    target_compile_options(libabc PRIVATE -fPIC)
 
     pybind11_add_module(abc_wrapper extensions/abc_wrapper/src/module.cpp)
-    target_link_libraries(abc_wrapper PRIVATE libabc)
+    target_link_libraries(abc_wrapper PRIVATE libabc-pic)
     target_include_directories(abc_wrapper PRIVATE third_party)
 ENDIF(NOT DISABLE_ABC_CEXT)
