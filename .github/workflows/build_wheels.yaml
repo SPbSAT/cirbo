@@ -14,8 +14,10 @@ jobs:
             cibw_archs_macos: ""
           - os: macos-15-intel
             cibw_archs_macos: x86_64
+            macos_deploy_target: "10.15"
           - os: macos-14
             cibw_archs_macos: arm64
+            macos_deploy_target: "11.0"
 #          - os: windows-latest
 #            cibw_archs_macos: ""
     steps:
@@ -36,9 +38,12 @@ jobs:
         uses: pypa/cibuildwheel@v3.3.1
         env:
           CIBW_BUILD: "cp3{9,10,11,12,13,14}-*"
-          CIBW_BUILD_FRONTEND: "pip"
+#          CIBW_BUILD_FRONTEND: "pip"
           CIBW_BUILD_VERBOSITY: "2"
           CIBW_ARCHS_MACOS: ${{ matrix.cibw_archs_macos }}
+          CIBW_ENVIRONMENT_MACOS: >-
+            MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}
+            CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}"
           CIBW_BEFORE_ALL_MACOS: "HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja readline"
           CIBW_BEFORE_ALL_LINUX: "yum install -y ninja-build; python -m pip install ninja"
           CIBW_TEST_REQUIRES: pytest mock
