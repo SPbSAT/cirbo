@@ -26,17 +26,17 @@ IF(NOT DISABLE_ABC_CEXT)
 
     add_subdirectory(third_party/abc)
 
+    pybind11_add_module(abc_wrapper extensions/abc_wrapper/src/module.cpp)
+    target_link_libraries(abc_wrapper PRIVATE libabc-pic)
+    target_include_directories(abc_wrapper PRIVATE third_party)
     # Fixes case in CI, when ABC compilation
     # fails with "#error unknown platform" on
     # macos runners (both intel and apple silicon).
     if(NOT WIN32)
+      target_compile_definitions(abc_wrapper PRIVATE ABC_USE_STDINT_H)
       target_compile_definitions(libabc-pic PRIVATE ABC_USE_STDINT_H)
       if(TARGET libabc)
         target_compile_definitions(libabc PRIVATE ABC_USE_STDINT_H)
       endif()
     endif()
-
-    pybind11_add_module(abc_wrapper extensions/abc_wrapper/src/module.cpp)
-    target_link_libraries(abc_wrapper PRIVATE libabc-pic)
-    target_include_directories(abc_wrapper PRIVATE third_party)
 ENDIF(NOT DISABLE_ABC_CEXT)
