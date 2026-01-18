@@ -23,14 +23,6 @@ jobs:
         with:
           submodules: 'true'
 
-      - name: Update CMake
-        uses: jwlawson/actions-setup-cmake@v2.0
-
-      - name: Install brew dependencies
-        run: |
-          HOMEBREW_NO_AUTO_UPDATE=1 brew install readline ninja
-        if: ${{ contains(matrix.os, 'macos') }}
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.3.1
         env:
@@ -49,6 +41,10 @@ jobs:
           config-file: "{package}/pyproject.toml"
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
-          path: ./wheelhouse/*.whl
+          path: |
+            wheelhouse/*.whl
+            **/CMakeFiles/CMakeOutput.log
+            **/CMakeFiles/CMakeError.log
