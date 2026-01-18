@@ -16,8 +16,8 @@ jobs:
             cibw_archs_macos: x86_64
           - os: macos-14
             cibw_archs_macos: arm64
-          - os: windows-latest
-            cibw_archs_macos: ""
+#          - os: windows-latest
+#            cibw_archs_macos: ""
     steps:
       - uses: actions/checkout@v5
         with:
