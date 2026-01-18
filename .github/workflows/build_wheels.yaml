@@ -23,6 +23,14 @@ jobs:
         with:
           submodules: 'true'
 
+      - name: Update CMake
+        uses: jwlawson/actions-setup-cmake@v2.0
+
+      - name: Install brew dependencies
+        run: |
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install readline ninja
+        if: ${{ contains(matrix.os, 'macos') }}
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.3.1
         env:
