@@ -221,7 +221,7 @@ def test_need_normalized():
 
     circuit = CircuitFinderSat(
         TruthTableModel(tt_normalized), 3, basis=Basis.XAIG, need_normalized=True
-    ).find_circuit()
+    ).find_circuit(time_limit=60)
     check_correctness(circuit, tt_normalized)
 
 
