@@ -26,6 +26,14 @@ IF(NOT DISABLE_ABC_CEXT)
 
     add_subdirectory(third_party/abc)
 
+    # Prevent ABC from forcing -fno-exceptions/-fno-rtti onto dependents (pybind11 needs exceptions)
+    get_target_property(_abc_iface_opts libabc-pic INTERFACE_COMPILE_OPTIONS)
+    if(_abc_iface_opts)
+      list(REMOVE_ITEM _abc_iface_opts -fno-exceptions)
+      list(REMOVE_ITEM _abc_iface_opts -fno-rtti)
+      set_property(TARGET libabc-pic PROPERTY INTERFACE_COMPILE_OPTIONS "${_abc_iface_opts}")
+    endif()
+
     pybind11_add_module(abc_wrapper extensions/abc_wrapper/src/module.cpp)
     target_link_libraries(abc_wrapper PRIVATE libabc-pic)
     target_include_directories(abc_wrapper PRIVATE third_party)
@@ -38,12 +46,5 @@ IF(NOT DISABLE_ABC_CEXT)
       if(TARGET libabc)
         target_compile_definitions(libabc PRIVATE ABC_USE_STDINT_H)
       endif()
-    endif()
-
-    # Fixes failure of pybind11.
-    if (MSVC)
-      target_compile_options(abc_wrapper PRIVATE /EHsc /GR)
-    else()
-      target_compile_options(abc_wrapper PRIVATE -fexceptions -frtti)
     endif()
 ENDIF(NOT DISABLE_ABC_CEXT)
