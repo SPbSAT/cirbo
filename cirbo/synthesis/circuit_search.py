@@ -291,7 +291,9 @@ class CircuitFinderSat:
         s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
         if time_limit:
 
-            @concurrent.process(timeout=time_limit, mp_context=mp.get_context('fork'))
+            # `pebble` has strange typing and argument actually is called
+            # `context` and not `mp_contest` as stated in typed signature.
+            @concurrent.process(timeout=time_limit, context=mp.get_context('fork'))  # type: ignore
             def cnf_from_bench_wrapper():
                 s.solve()
                 return s.get_model()
