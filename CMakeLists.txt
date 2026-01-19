@@ -22,14 +22,6 @@ pybind11_add_module(mockturtle_wrapper extensions/mockturtle_wrapper/src/module.
 target_link_libraries(mockturtle_wrapper PRIVATE mockturtle)
 target_include_directories(mockturtle_wrapper PRIVATE third_party)
 
-# Fixes windows builds.
-if (WIN32)
-  target_compile_definitions(mockturtle_wrapper PRIVATE
-    WIN32_LEAN_AND_MEAN NOMINMAX
-    _WIN32_WINNT=0x0601 WINVER=0x0601
-  )
-endif()
-
 # ABC related libs can be disabled using environment variable.
 IF(NOT DISABLE_ABC_CEXT)
     add_subdirectory(third_party/abc)
