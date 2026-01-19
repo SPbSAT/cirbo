@@ -33,7 +33,7 @@ class CircuitsDatabase:
 
     Default (pre-calculated) databases are accessible through:
     ```py
-    from cirbo.circuits_db.data_utils import DEFAULT_AIG_DB, DEFAULT_XAIG_DB
+    from cirbo.circuits_db.data_utils import DEFAULT_AIG_DB_PATH, DEFAULT_XAIG_DB_PATH
     ```
 
     """
