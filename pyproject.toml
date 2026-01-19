@@ -69,17 +69,18 @@ generate-setup-file = true
 [tool.poetry.dependencies]
 python = "^3.9"
 
+# FIXME: update dev packages.
 [tool.poetry.group.dev.dependencies]
-black = "^24.4.2"
-flake8 = "^7.1.0"
-flake8-bugbear = "^24.4.26"
-flake8-pyproject = "^1.2.3"
-mypy = "^1.9.0"
-pytest = "^8.2.2"
-usort = "^1.0.8.post1"
-docformatter = "^1.7.5"
-coverage = "^7.6.1"
-mock = "^5.1.0"
+black = "24.8.0"
+flake8 = "7.1.1"
+flake8-bugbear = "24.4.26"
+flake8-pyproject = "1.2.3"
+mypy = "1.11.1"
+pytest = "8.3.2"
+usort = "1.0.8.post1"
+docformatter = "1.7.5"
+coverage = "7.6.1"
+mock = "5.1.0"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^7.4.7"
