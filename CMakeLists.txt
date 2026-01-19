@@ -57,5 +57,6 @@ IF(NOT DISABLE_ABC_CEXT)
       endif()
     endif()
 
+    # Fixes pybing11 build errors when exceptions are not defined.
     target_compile_options(abc_wrapper PRIVATE -fexceptions -frtti)
 ENDIF(NOT DISABLE_ABC_CEXT)
