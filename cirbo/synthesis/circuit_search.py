@@ -291,7 +291,7 @@ class CircuitFinderSat:
         s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
         if time_limit:
 
-            @concurrent.process(timeout=time_limit, context=mp.get_context('fork'))
+            @concurrent.process(timeout=time_limit, mp_context=mp.get_context('fork'))
             def cnf_from_bench_wrapper():
                 s.solve()
                 return s.get_model()
