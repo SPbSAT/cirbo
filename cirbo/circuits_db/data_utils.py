@@ -2,7 +2,6 @@
 
 import os
 import pathlib
-from importlib.abc import Traversable
 from importlib.resources import files
 
 
