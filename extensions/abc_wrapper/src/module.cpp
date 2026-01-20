@@ -1,3 +1,13 @@
+#ifdef _WIN32
+  #ifndef WIN32_LEAN_AND_MEAN
+  #define WIN32_LEAN_AND_MEAN
+  #endif
+  #ifndef NOMINMAX
+  #define NOMINMAX
+  #endif
+  #include <Windows.h>
+#endif
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "run_abc.h"

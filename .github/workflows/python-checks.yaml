@@ -35,50 +35,72 @@ jobs:
       matrix:
         # >=3.14 is blocked by dependencies (`docformatter` seems blocked by `untokenize`).
         # FIXME: try replace docformatter dependency to unblock version.
-        python-version: [ "3.9", "3.13" ]
+        python-version: ["3.9", "3.13"]
         poetry-version: ["2.1.1"]
-        os: [ubuntu-latest, macos-14, macos-15-intel]
+        os: [ubuntu-latest, macos-14, macos-15-intel, windows-latest]
+
     runs-on: ${{ matrix.os }}
+
+    # To use bash commands syntax on Windows.
+    defaults:
+      run:
+        shell: bash
+
 #   checks should not take more than 20 minutes (including build and setup step).
 #   If it is the case probably something heavy trespassed to unit tests.
     timeout-minutes: 20
+
+    env:
+      DISABLE_ABC_CEXT: "1"
+      CMAKE_BUILD_PARALLEL_LEVEL: "8"
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: 'true'
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Update CMake
         uses: jwlawson/actions-setup-cmake@v2.0
+
       - name: Install poetry
         uses: snok/install-poetry@v1
         with:
           version: ${{ matrix.poetry-version }}
           virtualenvs-create: true
           virtualenvs-in-project: true
-      - run: (export DISABLE_ABC_CEXT=1 && poetry build --no-interaction)
-        env:
-          DISABLE_ABC_CEXT: 1
-          CMAKE_BUILD_PARALLEL_LEVEL: 8
-      - run: (export DISABLE_ABC_CEXT=1 && poetry install --no-interaction)
+
+      - name: Build
+        run: poetry build --no-interaction
+
+      - name: Install deps
+        run: poetry install --no-interaction
+
       - name: mypy
         if: always()
         run: poetry run mypy -p cirbo
+
       - name: flake8
         if: always()
         run: poetry run flake8 cirbo tests tools
+
       - name: pytest
         if: always()
         run: poetry run pytest tests -v -m 'not (manual or slow or ABC)'
+
       - name: usort
         if: always()
         run: poetry run usort check cirbo tests tools
+
       - name: docformatter
         if: always()
         run: poetry run docformatter --check --diff cirbo/ tests/ tools/
+
       - name: black
         if: always()
         run: poetry run black --check --diff cirbo/ tests/ tools/

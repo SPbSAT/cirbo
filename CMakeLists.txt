@@ -19,11 +19,8 @@ add_subdirectory(third_party/pybind11)
 add_subdirectory(third_party/mockturtle)
 
 pybind11_add_module(mockturtle_wrapper extensions/mockturtle_wrapper/src/module.cpp)
-
 target_link_libraries(mockturtle_wrapper PRIVATE mockturtle)
-
 target_include_directories(mockturtle_wrapper PRIVATE third_party)
-
 
 # ABC related libs can be disabled using environment variable.
 IF(NOT DISABLE_ABC_CEXT)
@@ -32,7 +29,6 @@ IF(NOT DISABLE_ABC_CEXT)
     target_compile_options(libabc PRIVATE -fPIC)
 
     pybind11_add_module(abc_wrapper extensions/abc_wrapper/src/module.cpp)
-
     target_link_libraries(abc_wrapper PRIVATE libabc)
     target_include_directories(abc_wrapper PRIVATE third_party)
 ENDIF(NOT DISABLE_ABC_CEXT)
