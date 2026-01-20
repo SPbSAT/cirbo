@@ -39,14 +39,18 @@ jobs:
           CIBW_BUILD: "cp3{9,10,11,12,13}-*"
           CIBW_BUILD_FRONTEND: "pip"
           CIBW_BUILD_VERBOSITY: "2"
+          # win32 conflicts with mockturtle
+          # "...conversion from '_Ty2' to 'size_t' requires a narrowing conversion..."
+          CIBW_SKIP: "*-win32"
           CIBW_ARCHS_MACOS: ${{ matrix.cibw_archs_macos }}
+          CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_ENVIRONMENT_MACOS: >-
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}
             CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}"
           CIBW_BEFORE_ALL_MACOS: "HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja readline"
           CIBW_BEFORE_ALL_LINUX: "yum install -y ninja-build; python -m pip install ninja"
           CIBW_TEST_REQUIRES: pytest mock
-          CIBW_TEST_COMMAND: pytest -m 'not manual' {package}/tests
+          CIBW_TEST_COMMAND: pytest -m "not manual" {package}/tests
           CIBW_TEST_SKIP: "*-musllinux_*"
         with:
           package-dir: .
