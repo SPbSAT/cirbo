@@ -26,14 +26,6 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Debug submodules state
-        run: |
-          git submodule status --recursive
-          git -C third_party/mockturtle rev-parse HEAD
-          python -V
-          cmake --version || true
-          g++ --version || true
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.3.1
         env:
