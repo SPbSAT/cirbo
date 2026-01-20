@@ -31,6 +31,11 @@ class CircuitsDatabase:
     circuits. It supports operations such as opening and closing the database, adding
     circuits, and querying circuits based on labels and truth tables.
 
+    Default (pre-calculated) databases are accessible through:
+    ```py
+    from cirbo.circuits_db.data_utils import DEFAULT_AIG_DB_PATH, DEFAULT_XAIG_DB_PATH
+    ```
+
     """
 
     def __init__(self, db_source: tp.Optional[tp.Union[tp.BinaryIO, Path, str]] = None):

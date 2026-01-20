@@ -1,14 +1,17 @@
+from cirbo.circuits_db.data_utils import DEFAULT_AIG_DB_PATH, DEFAULT_XAIG_DB_PATH
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--db-xaig-path",
         action="store",
-        default="./data/xaig_db.bin.xz",
+        default=DEFAULT_XAIG_DB_PATH,
         help="Path to the xaig database file",
     )
     parser.addoption(
         "--db-aig-path",
         action="store",
-        default="./data/aig_db.bin.xz",
+        default=DEFAULT_AIG_DB_PATH,
         help="Path to the aig database file",
     )
 

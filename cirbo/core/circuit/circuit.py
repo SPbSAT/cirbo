@@ -6,6 +6,7 @@ import enum
 import io
 import itertools
 import logging
+import os
 import pathlib
 import textwrap
 import typing as tp
@@ -169,7 +170,7 @@ class Circuit(Function):
     """
 
     @staticmethod
-    def from_bench_file(file_path: str) -> "Circuit":
+    def from_bench_file(file_path: tp.Union[str, os.PathLike[str]]) -> "Circuit":
         """
         Initialization the circuit with given data from file.
 
