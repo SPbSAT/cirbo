@@ -3,12 +3,12 @@ import enum
 import itertools
 import logging
 import multiprocessing as mp
+import os
 import typing as tp
 
 from concurrent.futures import TimeoutError
 
-from pebble import concurrent
-
+import pebble
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Solver
 
@@ -162,6 +162,20 @@ def _get_GateType_by_tt(gate_tt: tp.List[bool]) -> GateType:
     return _tt_to_gate_type[tuple(gate_tt)]
 
 
+def _mp_ctx():
+    # 'spawn' will be used on windows instead of a 'fork'.
+    return mp.get_context("spawn" if os.name == "nt" else "fork")
+
+
+def _solve_cnf(solver_name: str, clauses: list[list[int]]) -> tp.Optional[tp.List[int]]:
+    s = Solver(name=solver_name, bootstrap_with=clauses)
+    try:
+        sat = s.solve()
+        return s.get_model() if sat else None
+    finally:
+        s.delete()
+
+
 class CircuitFinderSat:
     """
     A class for finding Boolean circuits using SAT-solvers.
@@ -288,27 +302,19 @@ class CircuitFinderSat:
             raise NoSolutionError()
 
         logger.debug(f"Running {solver_name.value}")
-        s = Solver(name=solver_name.value, bootstrap_with=self._cnf.clauses)
         if time_limit:
-
-            # `pebble` has strange typing and argument actually is called
-            # `context` and not `mp_contest` as stated in typed signature.
-            @concurrent.process(timeout=time_limit, context=mp.get_context('fork'))  # type: ignore
-            def cnf_from_bench_wrapper():
-                s.solve()
-                return s.get_model()
-
-            try:
-                future = cnf_from_bench_wrapper()
-                model = future.result()
-            except TimeoutError as te:
-                logger.debug("Solver timed out and is being stopped.")
-                s.delete()
-                raise SolverTimeOutError() from te
+            with pebble.ProcessPool(max_workers=1, context=_mp_ctx()) as pool:
+                future = pool.schedule(
+                    _solve_cnf,
+                    args=[solver_name.value, self._cnf.clauses],
+                    timeout=time_limit,
+                )
+                try:
+                    model = future.result()
+                except TimeoutError as te:
+                    raise SolverTimeOutError() from te
         else:
-            s.solve()
-            model = s.get_model()
-            s.delete()
+            model = _solve_cnf(solver_name.value, self._cnf.clauses)
 
         if model is None:
             raise NoSolutionError()
