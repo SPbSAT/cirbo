@@ -170,7 +170,7 @@ class Circuit(Function):
     """
 
     @staticmethod
-    def from_bench_file(file_path: os.PathLike[str]) -> "Circuit":
+    def from_bench_file(file_path: tp.Union[str, os.PathLike[str]]) -> "Circuit":
         """
         Initialization the circuit with given data from file.
 
