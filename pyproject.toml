@@ -5,6 +5,17 @@ requires-python = ">= 3.9"
 description = "A New Tool for Boolean Circuit Analysis and Synthesis."
 authors = [
     {name = "Cirbo contributors"},
+#    {name = "Alexander S. Kulikov"},
+#    {name = "Daniil Averkov"},
+#    {name = "Tatiana Belova"},
+#    {name = "Gregory Emdin"},
+#    {name = "Mikhail Goncharov"},
+#    {name = "Viktoriia Krivogornitsyna"},
+#    {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"},
+#    {name = "Daniil Levtsov"},
+#    {name = "Georgie Levtsov"},
+#    {name = "Vsevolod Vaskin"},
+#    {name = "Aleksey Vorobiev"}
 ]
 maintainers = [
     {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"}
