@@ -156,4 +156,9 @@ def build(setup_kwargs):
         "ext_modules": ext_modules,
         "cmdclass": {"build_ext": CMakeBuild},
         "zip_safe": False,
+
+        "package_data": {"cirbo": ["data/**/*"]},
+        # Strange option naming, but it actually disables
+        # *automatically* detected package data inclusion.
+        "include_package_data": False,
     })
