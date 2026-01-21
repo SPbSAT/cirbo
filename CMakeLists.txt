@@ -41,6 +41,14 @@ IF(NOT DISABLE_ABC_CEXT)
       endif()
     endif()
 
+    if (MSVC)
+      # Fixes Windows build: `pthreads-win32` tried to redefine `timespec`.
+      target_compile_definitions(libabc-pic PRIVATE HAVE_STRUCT_TIMESPEC=1)
+      if(TARGET libabc)
+        target_compile_definitions(libabc PRIVATE HAVE_STRUCT_TIMESPEC=1)
+      endif()
+    endif()
+
     # Fixes pybing11 build errors when exceptions are not defined.
     target_compile_options(abc_wrapper PRIVATE -fexceptions -frtti)
 ENDIF(NOT DISABLE_ABC_CEXT)
