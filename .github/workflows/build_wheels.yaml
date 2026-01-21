@@ -17,8 +17,9 @@ jobs:
           - os: macos-14
             cibw_archs_macos: arm64
             macos_deploy_target: "11.0"
-          - os: windows-latest
-            cibw_archs_macos: ""
+            # FIXME: troubles with ABC build, need proper investigation.
+#          - os: windows-latest
+#            cibw_archs_macos: ""
 
     runs-on: ${{ matrix.os }}
 
