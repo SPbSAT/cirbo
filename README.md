@@ -84,19 +84,3 @@ The `cirbo/` directory is the root of the Python package and contains the follow
 a given (partially defined) truth table or for optimizing an existing circuit.
 
 > Note: most public methods have docstrings, which are useful when exploring `cirbo`.
-
-## Technical info
-
-### C/C++ extensions
-
-The `cirbo` package provides integration with external C/C++ libraries (`mockturtle` and `ABC`).
-These extensions are written using `pybind11` and should be built before being used locally.
-To build the dependencies, run `poetry build`, and then install the package with `poetry install`.
-
-> Note: to build the dependencies, you need the required build tools installed
-> on your system. Currently, the dependencies require a C++ compiler and CMake.
-
-> Warning: the `ABC` extension takes quite a long time (>10 min) to build. You
-> can skip building it with `(export DISABLE_ABC_CEXT=1 && poetry build)` (parentheses
-> should be included). This can be helpful for faster testing, but it may cause
-> some `cirbo` functionality to not work properly.

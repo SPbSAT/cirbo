@@ -35,23 +35,22 @@ Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
 > Note: it may be necessary to restart an IDE after extensions
 > are built and installed to refresh its index and stubs.
 
-## Building extensions
+## Building C/C++ extensions
 
-This package provides bridges to some external `C/C++` libraries. Extensions
-are written using `pybind11` and should be built before used locally. To build
-dependencies run `poetry build` and to install them after use `poetry install`.
+The `cirbo` package provides integration with external C/C++ libraries (`mockturtle` and `ABC`).
+These extensions are written using `pybind11` and should be built before being used locally.
+To build the dependencies, run `poetry build`, and then install the package with `poetry install`.
 
-Note: to build dependencies one should have all building tools available
-in the system. Currently, dependencies require `C++` compiler and `cmake`
-to be available.
+> Note: to build the dependencies, you need the required build tools installed
+> on your system. Currently, the dependencies require a C++ compiler and CMake.
 
-Some extensions can be disabled using environment variables if one doesn't
-need them. For example `(export DISABLE_ABC_CEXT=1 && poetry build)` (parenthesis
-should be included) will build wheels without `ABC` bridge module. It can be
-helpful for CI or fast testing because `ABC` compilation times are heavy.
-
-Tests that use `ABC` extension can be skipped by passing option `-m 'not ABC'`
-to `pytest` run.
+> Warning: the `ABC` extension takes quite a long time (>10 min) to build. You
+> can skip building it with `(export DISABLE_ABC_CEXT=1 && poetry build)` (parentheses
+> should be included). This can be helpful for faster testing, but it may cause
+> some `cirbo` functionality to not work properly.
+>
+> Tests that use `ABC` extension can be skipped by passing option `-m 'not ABC'`
+> to `pytest` run.
 
 ## Codestyle guidelines
 
