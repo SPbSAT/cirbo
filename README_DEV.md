@@ -34,7 +34,6 @@ Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
 
 > Note: it may be necessary to restart an IDE after extensions
 > are built and installed to refresh its index and stubs.
-nstalled to refresh its index and stubs.
 
 ## Building extensions
 
@@ -159,6 +158,24 @@ Read more about submodules in
    ```
 5. Add python tests to `tests/<extension name>` package.
 
+## Building documentation
+
+Currently, documentation can be generated using `Sphinx` in dev environment.
+To do it simply navigate to `docs/` and execute `make html`.
+
+## Dev Directories
+
+Besides main source directory `cirbo/` this repo contains:
+  - Directory `tutorial/` with several library usage examples.
+  - Directory `extensions/` with C/C++ extensions written using `pybind11`.
+  Those extensions allow usage of `ABC` and `mockturtle` within python env.
+  - Directory `third_party/` with all third party libraries (excluding ones
+  installed form `pypi`) distributed alongside current zip archive (whilts
+  originally those dependencies are managed using `git submodule`). Those
+  include: `ABC`, `mockturtle` and `pybind11`.
+  - Directory `tools/` with utilities helpful for running linting checks or formatters.
+  - Directory `tests/` with all tests that cover both `cirbo/` and `extensions/`.
+  - 
 ## CI flow
 
 GitHub Actions are used for CI. Following checks are executed automatically for
