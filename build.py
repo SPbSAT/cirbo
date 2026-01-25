@@ -20,11 +20,19 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
+def _parse_env_flag(name: str, default: bool = False) -> bool:
+    v = os.environ.get(name)
+    if v is None:
+        return default
+    v = v.strip().lower()
+    return v not in ("", "0", "false", "no", "off")
+
+
 # Disables building extensions and subdirectories related to ABC
-DISABLE_ABC_CEXT = bool(os.environ.get('DISABLE_ABC_CEXT', False))
+DISABLE_ABC_CEXT = _parse_env_flag('DISABLE_ABC_CEXT', False)
 
 
-# A CMakeExtension needs a sourcedir instead of a file list.
+# A CMakeExtension needs a source dir instead of a file list.
 # The name must be the _single_ output extension from the CMake build.
 # If you need multiple extensions, see scikit-build.
 class CMakeExtension(Extension):
@@ -50,7 +58,7 @@ class CMakeBuild(build_ext):
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
 
         # Set Python_EXECUTABLE instead if you use PYBIND11_FINDPYTHON
-        # EXAMPLE_VERSION_INFO shows you how to pass a value into the C++ code
+        # VERSION_INFO shows you how to pass a value into the C++ code
         # from Python.
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}{os.sep}",
@@ -64,7 +72,7 @@ class CMakeBuild(build_ext):
             cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
 
         # In this example, we pass in the version to C++. You might not need to.
-        cmake_args += [f"-DEXAMPLE_VERSION_INFO={self.distribution.get_version()}"]
+        cmake_args += [f"-DVERSION_INFO={self.distribution.get_version()}"]
         
         if DISABLE_ABC_CEXT:
             cmake_args += [f"-DDISABLE_ABC_CEXT=ON"]
@@ -130,7 +138,7 @@ class CMakeBuild(build_ext):
             ["cmake", ext.sourcedir, *cmake_args], cwd=build_temp, check=True
         )
         subprocess.run(
-            ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
+            ["cmake", "--build", ".", *build_args, "--target", ext.name], cwd=build_temp, check=True
         )
  
 
@@ -148,4 +156,9 @@ def build(setup_kwargs):
         "ext_modules": ext_modules,
         "cmdclass": {"build_ext": CMakeBuild},
         "zip_safe": False,
+
+        "package_data": {"cirbo": ["data/**/*"]},
+        # Strange option naming, but it actually disables
+        # *automatically* detected package data inclusion.
+        "include_package_data": False,
     })

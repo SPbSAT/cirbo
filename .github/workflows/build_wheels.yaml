@@ -4,48 +4,65 @@ on: workflow_dispatch
 
 jobs:
   build_wheels:
-    name: Build wheels for ${{ matrix.os }}, python ${{ matrix.pyver }}
-    runs-on: ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # windows-latest is not enabled because is untested yet.
-        # macos-latest is not enabled because ABC refures to compile.
-        os: [ubuntu-latest]
-        pyver: [cp39, cp310, cp311, cp312, cp313]
+        include:
+          - os: ubuntu-latest
+            cibw_archs_macos: ""
+          - os: macos-15-intel
+            cibw_archs_macos: x86_64
+            macos_deploy_target: "10.15"
+          - os: macos-14
+            cibw_archs_macos: arm64
+            macos_deploy_target: "11.0"
+            # FIXME: troubles with ABC build, need proper investigation.
+#          - os: windows-latest
+#            cibw_archs_macos: ""
+
+    runs-on: ${{ matrix.os }}
+
+    # To use bash commands syntax on Windows.
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          submodules: 'true'
-
-      - name: Update CMake
-        uses: jwlawson/actions-setup-cmake@v2.0
-
-      - name: Install brew dependencies
-        run: |
-          HOMEBREW_NO_AUTO_UPDATE=1 brew install readline ninja
-        if: ${{ contains(matrix.os, 'macos') }}
+          fetch-depth: 0
+          submodules: recursive
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v3.3.1
         env:
-          CIBW_BUILD: ${{matrix.pyver}}-*
-          CIBW_ARCHS_LINUX: auto
-          CIBW_ARCHS_MACOS: auto
-          CIBW_ARCHS_WINDOWS: auto
+          CIBW_BUILD: "cp3{9,10,11,12,13}-*"
+          CIBW_BUILD_FRONTEND: "pip"
+          CIBW_BUILD_VERBOSITY: "2"
+          # win32 conflicts with mockturtle
+          # "...conversion from '_Ty2' to 'size_t' requires a narrowing conversion..."
+          CIBW_SKIP: "*-win32"
+          CIBW_ARCHS_MACOS: ${{ matrix.cibw_archs_macos }}
+          CIBW_ARCHS_WINDOWS: "AMD64"
+          CIBW_ENVIRONMENT_MACOS: >-
+            MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}
+            CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}"
+          CIBW_BEFORE_ALL_MACOS: "HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja readline"
+          CIBW_BEFORE_ALL_LINUX: "yum install -y ninja-build; python -m pip install ninja"
           CIBW_TEST_REQUIRES: pytest mock
-          CIBW_TEST_COMMAND: pytest {package}/tests
-          CIBW_TEST_SKIP: >-
-            *-musllinux_*
-            *-macosx_universal2:arm64
-            pp*-macosx_*
+          CIBW_TEST_COMMAND: pytest -m "not manual" {package}/tests
+          CIBW_TEST_SKIP: "*-musllinux_*"
         with:
           package-dir: .
           output-dir: wheelhouse
           config-file: "{package}/pyproject.toml"
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: wheel-${{ matrix.pyver }}-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: |
+            wheelhouse/*.whl
+            **/CMakeFiles/CMakeOutput.log
+            **/CMakeFiles/CMakeError.log
