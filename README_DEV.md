@@ -174,7 +174,7 @@ Besides main source directory `cirbo/` this repo contains:
   include: `ABC`, `mockturtle` and `pybind11`.
   - Directory `tools/` with utilities helpful for running linting checks or formatters.
   - Directory `tests/` with all tests that cover both `cirbo/` and `extensions/`.
-  - 
+
 ## CI flow
 
 GitHub Actions are used for CI. Following checks are executed automatically for
