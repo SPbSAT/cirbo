@@ -1,6 +1,7 @@
 import collections
 import enum
 import typing as tp
+from typing import Optional
 
 from cirbo.core.circuit import Circuit, gate
 from cirbo.synthesis.generation.arithmetics._utils import (
@@ -16,18 +17,24 @@ from cirbo.synthesis.generation.arithmetics.summation import (
     add_sum_n_weighted_bits,
     add_sum_pow2_m1,
     add_sum_two_numbers,
+    add_sum_two_numbers_log_depth,
     add_sum_two_numbers_with_shift,
 )
+from cirbo.synthesis.generation.helpers import GenerationBasis
 
 
 __all__ = [
     'add_mul',
     'add_mul_karatsuba',
     'add_mul_karatsuba_with_efficient_sum',
+    'add_mul_log_depth_sum',
     'add_mul_alter',
     'add_mul_dadda',
     'add_mul_wallace',
     'add_mul_pow2_m1',
+    'add_smul_dadda',
+    'add_smul_wallace',
+    'add_mul_constant',
     'generate_mul',
     'MulMode',
 ]
@@ -40,6 +47,61 @@ class MulMode(enum.Enum):
     DADDA = "DADDA"
     WALLACE = "WALLACE"
     POW2_M1 = "POW2_M1"
+
+
+def add_mul_log_depth_sum(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    big_endian: bool = False,
+) -> list[gate.Label]:
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    n = len(input_labels_a)
+    m = len(input_labels_b)
+
+    if n < m:
+        input_labels_a, input_labels_b = input_labels_b, input_labels_a
+        n, m = m, n
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+
+    c: list[list[str]] = [[] for _ in range(m)]
+    d = [i for i in range(m)]
+    for i in range(m):
+        for j in range(n):
+            c[i].append(
+                add_gate_from_tt(circuit, input_labels_a[j], input_labels_b[i], '0001')
+            )
+
+    def sum_with_shift(
+        shift: int, labels_a: list[gate.Label], labels_b: list[gate.Label]
+    ) -> list[gate.Label]:
+        res = []
+        for i in range(shift):
+            res.append(labels_a[i])
+
+        res += sum_func(circuit, labels_a[shift:], labels_b, basis=basis)
+        return res
+
+    while len(c) > 1:
+        new_c = []
+        new_d = []
+        for i in range(0, len(c), 2):
+            if i + 1 < len(c):
+                new_c.append(sum_with_shift(d[i + 1] - d[i], c[i], c[i + 1]))
+                new_d.append(d[i])
+            else:
+                new_c.append(c[i])
+                new_d.append(d[i])
+        c = new_c
+        d = new_d
+    return reverse_if_big_endian(c[0][: n + m], big_endian)
 
 
 def generate_mul(
@@ -436,11 +498,44 @@ def add_dadda_karatsuba(
     return reverse_if_big_endian(final_res[:out_size], big_endian)
 
 
+def add_fin_sum(
+    circuit: Circuit,
+    c: list[tp.Deque[str]],
+    *,
+    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[gate.Label]:
+    out = []
+    a = []
+    b = []
+    zero = add_gate_from_tt(circuit, c[0][0], c[0][0], '0000')
+    ch = 0
+    for i in range(0, len(c)):
+        if len(c[i]) == 0:
+            if ch == 0:
+                out.append(zero)
+        elif len(c[i]) == 1 and ch == 0:
+            out.append(c[i][0])
+        else:
+            ch = 1
+            if len(c[i]) > 1:
+                a.append(c[i].popleft())
+                b.append(c[i].popleft())
+            else:
+                a.append(c[i].popleft())
+                b.append(zero)
+
+    out += sum_func(circuit, a, b, basis=basis)
+    return out
+
+
 def add_mul_dadda(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
+    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -479,15 +574,19 @@ def add_mul_dadda(
 
     while di != 1:
         for i in range(1, n + m):
-            while len(c[i]) >= di:
-                if len(c[i]) == di:
-                    g1, g2 = add_sum2(circuit, [c[i].popleft(), c[i].popleft()])
+            while len(c[i]) > di:
+                if len(c[i]) == di + 1:
+                    g1, g2 = add_sum2(
+                        circuit, [c[i].popleft(), c[i].popleft()], basis=basis
+                    )
                     c[i].append(g1)
                     if i + 1 < n + m:
                         c[i + 1].append(g2)
                 else:
                     g1, g2 = add_sum3(
-                        circuit, [c[i].popleft(), c[i].popleft(), c[i].popleft()]
+                        circuit,
+                        [c[i].popleft(), c[i].popleft(), c[i].popleft()],
+                        basis=basis,
                     )
                     c[i].append(g1)
                     if i + 1 < n + m:
@@ -497,9 +596,175 @@ def add_mul_dadda(
         else:
             di = (2 * di + 2) // 3
 
-    out = []
-    for i in range(n + m):
-        out.append(c[i].popleft())
+    out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+
+    return reverse_if_big_endian(out, big_endian)
+
+
+def add_smul_dadda(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+    big_endian: bool = False,
+) -> list[gate.Label]:
+    """
+    Multiplies two signed numbers using the Dadda multiplication algorithm.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    n = len(input_labels_a)
+    m = len(input_labels_b)
+
+    if n < m:
+        input_labels_a, input_labels_b = input_labels_b, input_labels_a
+        n, m = m, n
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+
+    c: list[tp.Deque[str]] = [collections.deque() for _ in range(n + m)]
+    for i in range(m):
+        for j in range(n):
+            if (i == m - 1) ^ (j == n - 1):
+                c[i + j].append(
+                    add_gate_from_tt(
+                        circuit, input_labels_a[j], input_labels_b[i], '1110'
+                    )
+                )
+            else:
+                c[i + j].append(
+                    add_gate_from_tt(
+                        circuit, input_labels_a[j], input_labels_b[i], '0001'
+                    )
+                )
+    c[n].append(add_gate_from_tt(circuit, input_labels_a[0], input_labels_b[0], '1111'))
+    c[n + m - 1].append(
+        add_gate_from_tt(circuit, input_labels_a[0], input_labels_b[0], '1111')
+    )
+
+    if n == 1 or m == 1:
+        return reverse_if_big_endian([c[i][0] for i in range(m + n - 1)], big_endian)
+
+    di = 2
+    while 3 * di // 2 < min(n, m):
+        di = 3 * di // 2
+
+    while di != 1:
+        for i in range(1, n + m):
+            while len(c[i]) > di:
+                if len(c[i]) == di + 1:
+                    g1, g2 = add_sum2(
+                        circuit, [c[i].popleft(), c[i].popleft()], basis=basis
+                    )
+                    c[i].append(g1)
+                    if i + 1 < n + m:
+                        c[i + 1].append(g2)
+                else:
+                    g1, g2 = add_sum3(
+                        circuit,
+                        [c[i].popleft(), c[i].popleft(), c[i].popleft()],
+                        basis=basis,
+                    )
+                    c[i].append(g1)
+                    if i + 1 < n + m:
+                        c[i + 1].append(g2)
+        if di == 2:
+            di = 1
+        else:
+            di = (2 * di + 2) // 3
+
+    out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+
+    return reverse_if_big_endian(out, big_endian)
+
+
+def add_smul_wallace(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    input_labels_b: tp.Iterable[gate.Label],
+    *,
+    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    big_endian: bool = False,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[gate.Label]:
+    """
+    Multiplies two signed numbers using the Wallace multiplication algorithm.
+
+    :param circuit: The general circuit.
+    :param input_labels_a: Iterable of gate labels representing the first input number.
+    :param input_labels_b: Iterable of gate labels representing the second input number.
+    :param big_endian: defines how to interpret numbers, big-endian or little-endian
+        format
+    :return: A list of gate labels representing the product of the two input numbers.
+
+    """
+    input_labels_a = list(input_labels_a)
+    input_labels_b = list(input_labels_b)
+    n = len(input_labels_a)
+    m = len(input_labels_b)
+
+    if big_endian:
+        input_labels_a.reverse()
+        input_labels_b.reverse()
+
+    c = [[PLACEHOLDER_STR] * m for _ in range(n + m)]
+    for i in range(m):
+        for j in range(n):
+            if (i == m - 1) ^ (j == n - 1):
+                c[i + j][i] = add_gate_from_tt(
+                    circuit, input_labels_a[j], input_labels_b[i], '1110'
+                )
+            else:
+                c[i + j][i] = add_gate_from_tt(
+                    circuit, input_labels_a[j], input_labels_b[i], '0001'
+                )
+    c[n][0] = add_gate_from_tt(circuit, input_labels_a[0], input_labels_b[0], '1111')
+    c[n + m - 1][m - 1] = add_gate_from_tt(
+        circuit, input_labels_a[0], input_labels_b[0], '1111'
+    )
+
+    if n == 1:
+        return reverse_if_big_endian([c[i][i] for i in range(m)], big_endian)
+
+    if m == 1:
+        return reverse_if_big_endian([c[i][0] for i in range(n)], big_endian)
+
+    while len(c[0]) != 2:
+        cn = [[PLACEHOLDER_STR] * (2 * (len(c[0]) // 3)) for _ in range(n + m)]
+        for row in range(0, len(c[0]) - len(c[0]) % 3, 3):
+            for col in range(n + m):
+                inp = []
+                for k in range(row, row + 3):
+                    if c[col][k] != PLACEHOLDER_STR:
+                        inp.append(c[col][k])
+
+                if len(inp) > 0:
+                    res = add_sum_n_bits(circuit, inp, basis=basis)
+                    for i in range(len(res)):
+                        if col + i < n + m:
+                            cn[col + i][2 * (row // 3) + i] = res[i]
+
+        for row in range(len(c[0]) - len(c[0]) % 3, len(c[0])):
+            for col in range(n + m):
+                cn[col].append(c[col][row])
+
+        c = cn
+
+    c_ = [collections.deque(x for x in col if x != PLACEHOLDER_STR) for col in c]
+    out = add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
+
     return reverse_if_big_endian(out, big_endian)
 
 
@@ -508,10 +773,12 @@ def add_mul_wallace(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
+    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
     big_endian: bool = False,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
     """
-    Multiplies two numbers using the Dadda multiplication algorithm.
+    Multiplies two numbers using the Wallace multiplication algorithm.
 
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
@@ -553,7 +820,7 @@ def add_mul_wallace(
                         inp.append(c[col][k])
 
                 if len(inp) > 0:
-                    res = add_sum_n_bits(circuit, inp)
+                    res = add_sum_n_bits(circuit, inp, basis=basis)
                     for i in range(len(res)):
                         if col + i < n + m:
                             cn[col + i][2 * (row // 3) + i] = res[i]
@@ -564,21 +831,42 @@ def add_mul_wallace(
 
         c = cn
 
-    labels_a = []
-    labels_b = []
-    shift = 0
-    for i in range(n + m):
-        if c[i][0] != PLACEHOLDER_STR:
-            labels_a.append(c[i][0])
-        if c[i][1] != PLACEHOLDER_STR:
-            labels_b.append(c[i][1])
-        elif len(labels_b) == 0:
-            shift += 1
+    c_ = [collections.deque(x for x in col if x != PLACEHOLDER_STR) for col in c]
+    out = add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
 
-    return reverse_if_big_endian(
-        add_sum_two_numbers_with_shift(circuit, shift, labels_a, labels_b)[: n + m],
-        big_endian,
-    )
+    return reverse_if_big_endian(out, big_endian)
+
+
+def add_mul_constant(
+    circuit: Circuit,
+    input_labels_a: tp.Iterable[gate.Label],
+    b: int,
+    *,
+    big_endian: bool = False,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[gate.Label]:
+    input_labels_a = list(input_labels_a)
+    n = len(input_labels_a)
+
+    if big_endian:
+        input_labels_a.reverse()
+
+    labels_with_pow = list()
+    for i in range(b.bit_length()):
+        if b & (1 << i):
+            for j in range(n):
+                labels_with_pow.append((j + i, input_labels_a[j]))
+
+    weighted_sum = add_sum_n_weighted_bits(circuit, labels_with_pow, basis=basis)
+    max_power = max(p for p, _ in weighted_sum) if weighted_sum else -1
+    result: list[Optional[str]] = [None] * (max_power + 1)
+    for power, label in weighted_sum:
+        result[power] = label
+
+    label0 = input_labels_a[0]
+    zero = add_gate_from_tt(circuit, label0, label0, '0000')
+    out = [lbl if lbl is not None else zero for lbl in result]
+    return reverse_if_big_endian(out, big_endian)
 
 
 def add_mul_pow2_m1(
@@ -587,9 +875,10 @@ def add_mul_pow2_m1(
     input_labels_b: tp.Iterable[gate.Label],
     *,
     big_endian: bool = False,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
     """
-    Multiplies two numbers with lengths 2^k - 1 using a specific squaring method.
+    Multiplies two numbers using summators with lengths 2^k - 1.
 
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing the first input number.
@@ -632,7 +921,7 @@ def add_mul_pow2_m1(
         if len(inp) == 1:
             out[i] = [[inp[0]]]
         else:
-            out[i] = add_sum_pow2_m1(circuit, inp)
+            out[i] = add_sum_pow2_m1(circuit, inp, basis=basis)
     return reverse_if_big_endian([out[i][0][0] for i in range(n + m)], big_endian)
 
 
