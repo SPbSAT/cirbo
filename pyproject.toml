@@ -41,7 +41,7 @@ keywords = ["circuit", "synthesis", "analysis"]
 dependencies = [
     "more-itertools >= 10.8.0",
     "typing-extensions >= 4.14.1",
-    "python-sat >= 1.8.dev26",
+    "python-sat (==1.8.dev30)",
     "pebble >= 5.1.3",
     "graphviz >= 0.21",
     "sortedcontainers (>=2.4.0,<3.0.0)",
