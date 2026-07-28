@@ -25,7 +25,7 @@ def _parse_env_flag(name: str, default: bool = False) -> bool:
     if v is None:
         return default
     v = v.strip().lower()
-    return v not in ("", "0", "false", "no", "off")
+    return v not in ("", "0", "false", "no", "off", "release")
 
 
 # Disables building extensions and subdirectories related to ABC
@@ -50,7 +50,11 @@ class CMakeBuild(build_ext):
         # Using this requires trailing slash for auto-detection & inclusion of
         # auxiliary "native" libs
 
-        debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
+        debug = (
+            _parse_env_flag("DEBUG", False)
+            if self.debug is None
+            else bool(self.debug)
+        )
         cfg = "Debug" if debug else "Release"
 
         # CMake lets you override the generator - we need to check this.
