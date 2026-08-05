@@ -18,6 +18,7 @@ __all__ = [
     'SearchResult',
     'EquivalenceChecker',
     'MiterEquivalenceChecker',
+    'TerminationReason',
     'SearchStrategy',
     'ParetoHillClimber',
     'measure_circuit',
@@ -226,7 +227,7 @@ def optimize(
     *,
     search_strategy: tp.Optional[SearchStrategy] = None,
 ) -> SearchResult:
-    """Optimize ``circuit`` by running provided mutations according to the search strategy."""
+    """Optimize ``circuit`` by running provided mutations according to the strategy."""
     _resolved_search_strategy: SearchStrategy = (
         ParetoHillClimber() if search_strategy is None else search_strategy
     )

@@ -7,9 +7,9 @@ from cirbo.minimization.metaheuristic import (
     CircuitMetrics,
     CircuitMutation,
     InvalidSearchConfigError,
-    SearchConfig,
     measure_circuit,
     optimize,
+    SearchConfig,
 )
 from cirbo.minimization.metaheuristic.engine import TerminationReason
 

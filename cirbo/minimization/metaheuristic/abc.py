@@ -51,8 +51,8 @@ class _ABCMutation(CircuitMutation):
     """
     Shared implementation for a random mutation based on the ABC command set.
 
-    Each time mutation is invoked a random ABC command from the internal
-    class-level list is performed on the circuit and result is returned.
+    Each time mutation is invoked a random ABC command from the internal class-level
+    list is performed on the circuit and result is returned.
 
     """
 

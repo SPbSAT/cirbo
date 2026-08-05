@@ -29,6 +29,5 @@ class TransformerMutation(CircuitMutation):
         self._transformer = transformer
 
     def mutate(self, circuit: Circuit, rng: random.Random) -> tp.Optional[Circuit]:
-        """Apply the wrapped transformer. ``rng`` is accepted for uniformity."""
-        del rng
+        """Apply the wrapped transformer."""
         return self._transformer.transform(circuit)
