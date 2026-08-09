@@ -50,7 +50,7 @@ If area <= expected_area
 	Return [circuit: {folder_to_save}/{skill-name}_{unique_id}_{delay}_{area}.bench; status: COMPLETED; reason: Requested area has been reached; area: area; delta; area - expected_area]
 Else
 	attempt -= 1
-	If attempt is less than 0
+	If attempt is less or equal than 0
 		Exit
 	Check that the construction matches expectations and has no bugs and try to rebuild the groups using another combination from characteristic
 Take the circuit with the minimum size for which CHECKER is true and VALIDATOR says that the circuit is correct
