@@ -20,7 +20,9 @@ from .subtraction import (
     add_sub2,
     add_sub3,
     add_sub_two_numbers,
+    add_sub_two_numbers_log_depth,
     add_subtract_with_compare,
+    add_subtract_with_compare_log_depth,
     generate_sub_two_numbers,
 )
 from .summation import (
@@ -74,7 +76,9 @@ __all__ = [
     'add_sub2',
     'add_sub3',
     'add_sub_two_numbers',
+    'add_sub_two_numbers_log_depth',
     'add_subtract_with_compare',
+    'add_subtract_with_compare_log_depth',
     'generate_sub_two_numbers',
     # summation.py
     'generate_sum_n_bits',

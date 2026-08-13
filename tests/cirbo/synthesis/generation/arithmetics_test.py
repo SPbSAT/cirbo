@@ -28,9 +28,14 @@ from cirbo.synthesis.generation.arithmetics import (
     add_sum_two_numbers_log_depth_brent_kung,
     add_sum_two_numbers_log_depth_krapchenko,
     add_sum_two_numbers_with_shift,
+    add_sub_two_numbers,
+    add_sub_two_numbers_log_depth,
+    add_subtract_with_compare,
+    add_subtract_with_compare_log_depth,
     generate_equal,
     generate_mul,
     generate_square,
+    generate_sub_two_numbers,
     generate_sum_n_bits,
     generate_sum_weighted_bits_efficient,
     generate_sum_weighted_bits_naive,
@@ -106,6 +111,12 @@ def sum_two_numbers_naive(inputs_a, inputs_b):
     a = to_num(inputs_a)
     b = to_num(inputs_b)
     return to_bin(a + b, max(len(inputs_a), len(inputs_b)) + 1)
+
+
+def sub_two_numbers_naive(inputs_a, inputs_b):
+    a = to_num(inputs_a)
+    b = to_num(inputs_b)
+    return to_bin((a - b) % (1 << len(inputs_a)), len(inputs_a))
 
 
 def sum_naive_with_powers(powers_and_values_list):
@@ -607,6 +618,106 @@ def test_add_sum_n_bits_easy(n, big_endian):
         if not big_endian:
             res.reverse()
         assert sum_naive(input_labels) == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize(
+    "size",
+    [
+        [1, 1],
+        [1, 7],
+        [7, 1],
+        [3, 6],
+        pytest.param([8, 2], marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("big_endian", [True, False])
+@pytest.mark.parametrize("func", [add_sub_two_numbers, add_sub_two_numbers_log_depth])
+def test_sub_two_numbers(func, basis, size, big_endian):
+    x, y = size
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x + y)]
+    for i in range(x + y):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = func(
+        ckt,
+        input_labels[:x],
+        input_labels[x:],
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res)
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert sub_two_numbers_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize(
+    "size",
+    [1, 2, 3, pytest.param(8, marks=pytest.mark.slow)],
+)
+@pytest.mark.parametrize("big_endian", [True, False])
+@pytest.mark.parametrize(
+    "func", [add_subtract_with_compare, add_subtract_with_compare_log_depth]
+)
+def test_subtract_with_compare(func, basis, size, big_endian):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(2 * size)]
+    for i in range(2 * size):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res, borrow = func(
+        ckt,
+        input_labels[:size],
+        input_labels[size:],
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res + [borrow])
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(size)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(size)]
+        values = ckt.evaluate(input_labels_a + input_labels_b)
+        borrow_value = values[-1]
+        res = values[:-1]
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert sub_two_numbers_naive(input_labels_a, input_labels_b) == res
+        assert borrow_value == int(to_num(input_labels_a) < to_num(input_labels_b))
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("big_endian", [True, False])
+@pytest.mark.parametrize("size", [1, 2, 3, pytest.param(8, marks=pytest.mark.slow)])
+def test_generate_sub_two_numbers(basis, size, big_endian):
+    ckt = generate_sub_two_numbers(size, size, basis=basis, big_endian=big_endian)
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(size)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(size)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert sub_two_numbers_naive(input_labels_a, input_labels_b) == res
 
 
 @pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
