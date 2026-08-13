@@ -1244,6 +1244,36 @@ class Circuit(Function):
             topsort_unvisited=topsort_unvisited,
         )
 
+    def get_depth(self) -> int:
+        """
+        Computes the logical depth of the circuit.
+
+        The depth of a circuit is defined as the length of the longest path from any
+        input or constant gate to any other gate in the circuit. Input and constant
+        gates have depth 0, and every other gate has depth equal to 1 plus the maximum
+        depth of its operands.
+
+        :return: integer value representing the maximum depth of the circuit.
+        """
+        if not self.gates:
+            return 0
+
+        gates = self.gates
+        mem: dict[gate.Label, int] = {}
+
+        def depth(label: gate.Label) -> int:
+            if label in mem:
+                return mem[label]
+
+            current_gate = gates[label]
+            if current_gate.gate_type == gate.INPUT or not current_gate.operands:
+                mem[label] = 0
+            else:
+                mem[label] = 1 + max(depth(operand) for operand in current_gate.operands)
+            return mem[label]
+
+        return max(depth(current_gate.label) for current_gate in gates.values())
+
     def evaluate_full_circuit(
         self,
         assignment: dict[gate.Label, GateState],
