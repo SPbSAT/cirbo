@@ -12,9 +12,14 @@ from cirbo.synthesis.generation.arithmetics import (
     add_mul,
     add_mul_alter,
     add_mul_dadda,
+    add_mul_karatsuba,
     add_mul_karatsuba_with_efficient_sum,
+    add_mul_constant,
+    add_mul_log_depth_sum,
     add_mul_pow2_m1,
     add_mul_wallace,
+    add_smul_dadda,
+    add_smul_wallace,
     add_sqrt,
     add_square,
     add_square_pow2_m1,
@@ -77,6 +82,18 @@ def mul_naive(inputs_a, inputs_b):
         out_len -= 1
 
     return to_bin(a * b, out_len)
+
+
+def smul_naive(inputs_a, inputs_b):
+    def to_signed_num(inputs):
+        unsigned = to_num(inputs)
+        if inputs[-1] == 1:
+            unsigned -= 1 << len(inputs)
+        return unsigned
+
+    out_len = len(inputs_a) + len(inputs_b)
+    res = to_signed_num(inputs_a) * to_signed_num(inputs_b)
+    return to_bin(res % (1 << out_len), out_len)
 
 
 def square_naive(inputs_a):
@@ -143,9 +160,7 @@ def sum_weighted_bits_naive(weighted_bits, size):
     [
         add_mul,
         add_mul_alter,
-        add_mul_dadda,
-        add_mul_wallace,
-        add_mul_pow2_m1,
+        add_mul_karatsuba,
         add_mul_karatsuba_with_efficient_sum,
     ],
 )
@@ -183,6 +198,129 @@ def test_mul(func, size, big_endian):
             res.reverse()
 
         assert mul_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        add_mul_dadda,
+        add_mul_wallace,
+        add_mul_pow2_m1,
+        add_mul_log_depth_sum,
+    ],
+)
+@pytest.mark.parametrize(
+    "size",
+    [
+        [1, 1],
+        [1, 7],
+        [7, 1],
+        [3, 6],
+        pytest.param([8, 2], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([24, 15], marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_mul_with_basis(func, size, basis, big_endian):
+    x, y = size
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x + y)]
+    for i in range(x + y):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = func(
+        ckt,
+        input_labels[:x],
+        input_labels[x:],
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res)
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert mul_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize("constant", [1, 2, 3, 5, 13])
+@pytest.mark.parametrize("size", [1, 2, 5, pytest.param(17, marks=pytest.mark.slow)])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_mul_constant(size, constant, basis, big_endian):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(size)]
+    for i in range(size):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    out = add_mul_constant(
+        ckt,
+        input_labels,
+        constant,
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(out)
+
+    for test in range(TEST_SIZE):
+        inputs = [random.choice([0, 1]) for _ in range(size)]
+        res = ckt.evaluate(inputs)
+        if big_endian:
+            inputs.reverse()
+        else:
+            res.reverse()
+
+        assert to_bin(to_num(inputs) * constant, len(out)) == res
+
+
+@pytest.mark.parametrize("func", [add_smul_dadda, add_smul_wallace])
+@pytest.mark.parametrize(
+    "size",
+    [
+        [2, 2],
+        [3, 3],
+        pytest.param([8, 8], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_smul_with_basis(func, size, basis, big_endian):
+    x, y = size
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x + y)]
+    for i in range(x + y):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = func(
+        ckt,
+        input_labels[:x],
+        input_labels[x:],
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res)
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert smul_naive(input_labels_a, input_labels_b) == res
 
 
 @pytest.mark.parametrize(
