@@ -7,6 +7,8 @@ from cirbo.core.circuit import Circuit
 from cirbo.core.circuit.gate import Gate, INPUT
 from cirbo.synthesis.generation import GenerationBasis
 from cirbo.synthesis.generation.arithmetics import (
+    add_crt,
+    add_crt_calc,
     add_div_mod,
     add_div_by_const,
     add_equal,
@@ -49,6 +51,7 @@ from cirbo.synthesis.generation.arithmetics import (
     generate_sum_n_bits,
     generate_sum_weighted_bits_efficient,
     generate_sum_weighted_bits_naive,
+    modular_inverse,
     MulMode,
     SquareMode,
     mdfa_sum_weighted_bits,
@@ -122,6 +125,17 @@ def div_mod_naive(inputs_a, inputs_b):
     a = to_num(inputs_a)
     b = to_num(inputs_b)
     return to_bin(a // b, len(inputs_b)) + to_bin(a % b, len(inputs_b))
+
+
+def crt_naive(residues, moduli):
+    product = math.prod(moduli)
+    for value in range(product):
+        if all(
+            value % modulus == residue
+            for residue, modulus in zip(residues, moduli)
+        ):
+            return value
+    raise ValueError("crt solution was not found")
 
 
 def sum_naive(inputs_a):
@@ -903,6 +917,54 @@ def test_div_mod_by_const(func, x, constant, basis, big_endian):
             expected = value // constant
         else:
             expected = value % constant
+        assert to_bin(expected, len(out)) == res
+
+
+def test_modular_inverse():
+    assert modular_inverse(35, 3) == 2
+    assert modular_inverse(21, 5) == 1
+    assert modular_inverse(15, 7) == 1
+    with pytest.raises(ValueError):
+        modular_inverse(6, 9)
+
+
+@pytest.mark.parametrize("func", [add_crt, add_crt_calc])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_crt(func, basis, big_endian):
+    moduli = [3, 5, 7]
+    factors = [70, 21, 15, 105]
+    input_len = sum((modulus - 1).bit_length() for modulus in moduli)
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(input_len)]
+    for label in input_labels:
+        ckt.add_gate(Gate(label, INPUT))
+
+    if func is add_crt:
+        out = func(ckt, input_labels, moduli, basis=basis, big_endian=big_endian)
+    else:
+        out = func(
+            ckt,
+            input_labels,
+            moduli,
+            factors,
+            basis=basis,
+            big_endian=big_endian,
+        )
+    ckt.set_outputs(out)
+
+    for test in range(TEST_SIZE):
+        residues = [random.randrange(modulus) for modulus in moduli]
+        input_bits = []
+        for residue, modulus in zip(residues, moduli):
+            bit_len = (modulus - 1).bit_length()
+            input_bits.extend((residue >> bit) & 1 for bit in range(bit_len))
+
+        res = ckt.evaluate(input_bits[::-1] if big_endian else input_bits)
+        if not big_endian:
+            res.reverse()
+
+        expected = crt_naive(residues, moduli)
         assert to_bin(expected, len(out)) == res
 
 
