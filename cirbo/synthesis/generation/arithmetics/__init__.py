@@ -19,7 +19,13 @@ from .multiplication import (
     MulMode,
 )
 from .sqrt import add_sqrt, generate_sqrt
-from .square import add_square, add_square_pow2_m1, generate_square, SquareMode
+from .square import (
+    add_square,
+    add_square_dadda,
+    add_square_pow2_m1,
+    generate_square,
+    SquareMode,
+)
 from .subtraction import (
     add_sub2,
     add_sub3,
@@ -78,6 +84,7 @@ __all__ = [
     # square.py
     'add_square',
     'add_square_pow2_m1',
+    'add_square_dadda',
     'generate_square',
     'SquareMode',
     # subtraction.py
