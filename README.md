@@ -32,12 +32,10 @@ More examples are available in the [tutorial](https://github.com/SPbSAT/cirbo/tr
 
 ## Installation
 
-The package is currently available on Test PyPI and will be published on PyPI after testing.
+Cirbo is available on PyPI and can be installed with pip:
 
-To install the package from Test PyPI into your virtual environment, run:
-
-```sh
-python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ cirbo
+```bash
+python -m pip install cirbo
 ```
 
 Instructions on how to set up the development environment are provided in the separate [dev README](README_DEV.md).
