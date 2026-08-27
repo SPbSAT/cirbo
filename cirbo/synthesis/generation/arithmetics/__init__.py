@@ -1,6 +1,7 @@
 """Subpackage defines plenty of methods useful for generation of small arithmetic
 circuits by several methods."""
 
+from ._utils import xor_two_bits
 from .div_mod import add_div_mod, generate_div_mod
 from .equality import add_equal, generate_equal
 from .multiplication import (
@@ -41,7 +42,6 @@ from .summation import (
     generate_sum_weighted_bits_efficient,
     generate_sum_weighted_bits_naive,
     mdfa_sum_weighted_bits,
-    xor_two_bits,
 )
 
 

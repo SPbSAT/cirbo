@@ -2,7 +2,6 @@ import math
 import typing as tp
 from collections import deque
 from itertools import zip_longest
-from typing import cast, Optional
 
 from sortedcontainers import SortedList
 
@@ -13,6 +12,7 @@ from cirbo.synthesis.generation.arithmetics._utils import (
     PLACEHOLDER_STR,
     reverse_if_big_endian,
     validate_const_size,
+    xor_two_bits,
 )
 from cirbo.synthesis.generation.exceptions import BadBasisError
 from cirbo.synthesis.generation.helpers import GenerationBasis
@@ -36,8 +36,11 @@ __all__ = [
     "generate_sum_weighted_bits_efficient",
     "generate_sum_weighted_bits_naive",
     "mdfa_sum_weighted_bits",
-    "xor_two_bits",
 ]
+
+
+def conventional_basis(basis: tp.Union[str, GenerationBasis]) -> GenerationBasis:
+    return GenerationBasis(basis.upper()) if isinstance(basis, str) else basis
 
 
 def add_sum_two_numbers(
@@ -45,7 +48,7 @@ def add_sum_two_numbers(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -80,22 +83,6 @@ def add_sum_two_numbers(
         d[i] = list(add_sum_n_bits(circuit, inp, basis=basis))
     d[n] = [d[n - 1][1]]
     return reverse_if_big_endian([d[i][0] for i in range(n + 1)], big_endian)
-
-
-def xor_two_bits(
-    circuit: Circuit,
-    a: gate.Label,
-    b: gate.Label,
-    *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
-) -> gate.Label:
-    if basis == GenerationBasis.XAIG:
-        return add_gate_from_tt(circuit, a, b, '0110')
-    if basis == GenerationBasis.AIG:
-        ab = add_gate_from_tt(circuit, a, b, '0001')
-        nab = add_gate_from_tt(circuit, a, b, '1000')
-        return add_gate_from_tt(circuit, ab, nab, '1000')
-    raise BadBasisError(f"Unsupported basis: {basis}")
 
 
 def add_sum_two_numbers_with_shift(
@@ -162,7 +149,7 @@ def add_sum_two_numbers_log_depth(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -228,7 +215,7 @@ def add_sum_two_numbers_log_depth_brent_kung(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -316,7 +303,7 @@ def add_sum_two_numbers_log_depth_krapchenko(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -411,7 +398,7 @@ def add_sum_two_numbers_log_depth_krapchenko(
 
         block_carries = krapchenko_core(u_prime, v_prime, reduced_size)
 
-        new_carries: list[Optional[str]] = [None] * size_n
+        new_carries: list[tp.Optional[str]] = [None] * size_n
         for j in range(reduced_size):
             pos = (j + 1) * (1 << tau) - 1
             new_carries[pos] = block_carries[j]
@@ -433,7 +420,7 @@ def add_sum_two_numbers_log_depth_krapchenko(
                 c_mid = add_gate_from_tt(circuit, g_block, and_vl, '0111')
                 new_carries[middle_pos] = c_mid
 
-        return cast(list[str], new_carries)
+        return tp.cast(list[str], new_carries)
 
     orig_n = n
     next_pow2 = 1
@@ -465,7 +452,7 @@ def add_sum_n_weighted_bits_log_depth(
     circuit: Circuit,
     input_labels_with_pow: tp.Iterable[tuple[int, gate.Label]],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[tuple[int, gate.Label]]:
     """
     Function to add a variable number of bits using Full and Half adders.
@@ -656,8 +643,9 @@ def add_sum2(
     circuit: Circuit,
     input_labels: tp.Iterable[gate.Label],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
+    basis = conventional_basis(basis)
     if basis == GenerationBasis.AIG:
         return add_sum2_aig(circuit, input_labels)
     if basis == GenerationBasis.XAIG:
@@ -674,19 +662,14 @@ def add_sum3(
     circuit: Circuit,
     input_labels: tp.Iterable[gate.Label],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
+    basis = conventional_basis(basis)
     input_labels = list(input_labels)
     validate_const_size(input_labels, 3)
     x1, x2, x3 = input_labels
     if basis == GenerationBasis.AIG:
-        g1 = add_gate_from_tt(circuit, x1, x2, '0001')
-        g2 = add_gate_from_tt(circuit, x1, x2, '0111')
-        g3 = add_gate_from_tt(circuit, g1, g2, '0100')
-        g4 = add_gate_from_tt(circuit, g3, x3, '0111')
-        g5 = add_gate_from_tt(circuit, g3, x3, '0001')
-        o1 = add_gate_from_tt(circuit, g5, g4, '0100')
-        o2 = add_gate_from_tt(circuit, g1, g5, '0111')
+        return add_sum3_aig(circuit, [x1, x2, x3])
     elif basis == GenerationBasis.XAIG:
         g1 = add_gate_from_tt(circuit, x1, x2, '0110')
         g2 = add_gate_from_tt(circuit, x2, x3, '0110')
@@ -813,7 +796,7 @@ def add_sum3_aig(
 def generate_sum_n_bits(
     n: int,
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> Circuit:
     """
@@ -841,7 +824,7 @@ def generate_sum_n_bits(
 def generate_sum_weighted_bits_efficient(
     weights: tp.Iterable[int],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> Circuit:
     """
     Global task: for given weights w_0, ..., w_{n - 1}
@@ -869,7 +852,7 @@ def generate_sum_weighted_bits_efficient(
 def generate_sum_weighted_bits_naive(
     weights: tp.Iterable[int],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> Circuit:
     """
     Global task: for given weights w_0, ..., w_{n - 1}
@@ -900,7 +883,7 @@ def add_sum_n_bits(
     circuit: Circuit,
     input_labels: tp.Iterable[gate.Label],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -921,6 +904,7 @@ def add_sum_n_bits(
 
     """
 
+    basis = conventional_basis(basis)
     input_labels = list(input_labels)
     if big_endian:
         input_labels.reverse()
@@ -1063,7 +1047,7 @@ def add_sum_n_weighted_bits_naive(
     circuit: Circuit,
     input_labels_with_pow: tp.Iterable[tuple[int, gate.Label]],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[tuple[int, gate.Label]]:
     """
     Global task: for given weights w_0, ..., w_{n - 1} and input gates
@@ -1081,6 +1065,7 @@ def add_sum_n_weighted_bits_naive(
     :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     """
 
+    basis = conventional_basis(basis)
     res = []
     input_labels_with_pow = list(input_labels_with_pow)
     single = SortedList(input_labels_with_pow)  # sorted list of single
@@ -1108,10 +1093,7 @@ def add_sum_n_weighted_bits_naive(
         now_solo = now_singles
         while len(now_solo) > 2:
             x, y, z = now_solo[-1], now_solo[-2], now_solo[-3]
-            if basis == GenerationBasis.AIG:
-                now_level_gate, next_level_gate = add_sum3_aig(circuit, [x, y, z])
-            else:
-                now_level_gate, next_level_gate = add_sum3(circuit, [x, y, z])
+            now_level_gate, next_level_gate = add_sum3(circuit, [x, y, z], basis=basis)
             for _ in range(3):
                 now_solo.pop()
             now_solo.append(now_level_gate)
@@ -1119,10 +1101,7 @@ def add_sum_n_weighted_bits_naive(
 
         if len(now_solo) == 2:
             x, y = now_solo[-1], now_solo[-2]
-            if basis == GenerationBasis.AIG:
-                now_level_gate, next_level_gate = add_sum2_aig(circuit, [x, y])
-            else:
-                now_level_gate, next_level_gate = add_sum2(circuit, [x, y])
+            now_level_gate, next_level_gate = add_sum2(circuit, [x, y], basis=basis)
             for _ in range(2):
                 now_solo.pop()
             now_solo.append(now_level_gate)
@@ -1136,7 +1115,7 @@ def add_sum_n_weighted_bits(
     circuit: Circuit,
     input_labels_with_pow: tp.Iterable[tuple[int, gate.Label]],
     *,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[tuple[int, gate.Label]]:
     """
     Global task: for given weights w_0, ..., w_{n - 1} and input gates
@@ -1154,6 +1133,7 @@ def add_sum_n_weighted_bits(
     :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     """
 
+    basis = conventional_basis(basis)
     res = []
 
     input_labels_with_pow = list(input_labels_with_pow)
@@ -1267,7 +1247,7 @@ def add_sum_pow2_m1(
     input_labels: tp.Iterable[gate.Label],
     *,
     big_endian: bool = False,
-    basis: GenerationBasis = GenerationBasis.XAIG,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[list[gate.Label]]:
     input_labels = list(input_labels)
     n = len(input_labels)
@@ -1287,7 +1267,7 @@ def add_sum_pow2_m1(
                 it += 1
 
     if len(input_labels) == 2:
-        out.append(add_sum2(circuit, input_labels[0:2]))
+        out.append(add_sum2(circuit, input_labels[0:2], basis=basis))
         input_labels = input_labels[2:]
         input_labels.append(out[it][0])
 
