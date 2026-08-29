@@ -26,6 +26,24 @@ IF(NOT DISABLE_ABC_CEXT)
 
     add_subdirectory(third_party/abc)
 
+    # ABC exports its private -fno-exceptions flag to consumers.
+    # Remove it from the interface; ABC itself is still built with this flag.
+    get_target_property(ABC_INTERFACE_OPTIONS libabc-pic INTERFACE_COMPILE_OPTIONS)
+
+    if(ABC_INTERFACE_OPTIONS)
+        set(ABC_FILTERED_INTERFACE_OPTIONS)
+
+        foreach(OPTION ${ABC_INTERFACE_OPTIONS})
+            if(NOT OPTION MATCHES "fno-exceptions")
+                list(APPEND ABC_FILTERED_INTERFACE_OPTIONS "${OPTION}")
+            endif()
+        endforeach()
+
+        set_target_properties(libabc-pic PROPERTIES
+            INTERFACE_COMPILE_OPTIONS "${ABC_FILTERED_INTERFACE_OPTIONS}"
+        )
+    endif()
+
     pybind11_add_module(abc_wrapper extensions/abc_wrapper/src/module.cpp)
     target_link_libraries(abc_wrapper PRIVATE libabc-pic)
     target_include_directories(abc_wrapper PRIVATE third_party)
@@ -48,7 +66,4 @@ IF(NOT DISABLE_ABC_CEXT)
         target_compile_definitions(libabc PRIVATE HAVE_STRUCT_TIMESPEC=1)
       endif()
     endif()
-
-    # Fixes pybing11 build errors when exceptions are not defined.
-    target_compile_options(abc_wrapper PRIVATE -fexceptions -frtti)
 ENDIF(NOT DISABLE_ABC_CEXT)

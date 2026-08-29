@@ -9,16 +9,15 @@
   Revision    [Initial version.]
 
   Note        [The structure `Extra_FileReader_t_`, the enum `Extra_CharType_t`,
-               the macros `EXTRA_BUFFER_SIZE`, `EXTRA_OFFSET_SIZE`, and
-               `EXTRA_MINIMUM`, the function `Extra_FileReaderAllocFromString`,
-               which is a modified version of `Extra_FileReaderAlloc`, and the
-               functions `Io_ReadBenchNetwork`, `Io_WriteBenchOneNode`, and
-               `Io_WriteBenchOne` used in this file were adapted from the ABC:
-               Logic synthesis and verification system, written by Alan Mishchenko
-               at UC Berkeley. Specifically, `Extra_FileReader_t_`, `Extra_CharType_t`,
-               `EXTRA_BUFFER_SIZE`, `EXTRA_OFFSET_SIZE`, and `EXTRA_MINIMUM` were
-               adapted from `extraUtilReader.c`, `Io_ReadBenchNetwork` was copied
-               from `ioReadBench.c`, and `Io_WriteBenchOneNode` and `Io_WriteBenchOne`
+               the macros `EXTRA_OFFSET_SIZE` and `EXTRA_MINIMUM`, the function
+               `Extra_FileReaderAllocFromString`, which is a modified version of
+               `Extra_FileReaderAlloc`, and the functions `Io_ReadBenchNetwork`,
+               `Io_WriteBenchOneNode`, and `Io_WriteBenchOne` used in this file
+               were adapted from the ABC: Logic synthesis and verification system,
+               written by Alan Mishchenko at UC Berkeley. Specifically,
+               `Extra_FileReader_t_`, `Extra_CharType_t`, `EXTRA_OFFSET_SIZE`, and
+               `EXTRA_MINIMUM` were adapted from `extraUtilReader.c`, `Io_ReadBenchNetwork`
+               was copied from `ioReadBench.c`, and `Io_WriteBenchOneNode` and `Io_WriteBenchOne`
                were copied from `ioWriteBench.c`.]
 
 ***********************************************************************/
@@ -28,6 +27,9 @@
 #include <time.h>
 #include <stdlib.h>
 
+#include <stdexcept>
+#include <string>
+
 #include <abc/src/misc/util/abc_global.h>
 #include <abc/src/misc/extra/extra.h>
 #include <abc/src/misc/vec/vec.h>
@@ -35,16 +37,16 @@
 #include <abc/src/base/main/main.h>
 #include <abc/src/base/main/mainInt.h>
 
-#define EXTRA_BUFFER_SIZE        4*1048576    // 1M   - size of the data chunk stored in memory
+/**
+The structure of this file was adapted from src/misc/extra/extraUtilReader.c,
+src/base/io/ioReadBench.c and src/base/io/ioWriteBench.c of the ABC: Logic
+synthesis and verification system, written by Alan Mishchenko at UC Berkeley.
+**/
+
 #define EXTRA_OFFSET_SIZE           4096    // 4K   - load new data when less than this is left
 
 #define EXTRA_MINIMUM(a,b)       (((a) < (b))? (a) : (b))
 
-/**
-The structure of this file was adapted from extraUtilReader.c
-from the ABC: Logic synthesis and verification system, written
-by Alan Mishchenko at UC Berkeley.
-**/
 struct Extra_FileReader_t_
 {
     // the input file
@@ -81,7 +83,6 @@ Extra_FileReader_t *Extra_FileReaderAllocFromString(char *pFileContent, char *pC
 {
     Extra_FileReader_t *p;
     char *pChar;
-    int nCharsToRead;
 
     // start the file reader
     p = ABC_ALLOC(Extra_FileReader_t, 1);
@@ -102,20 +103,18 @@ Extra_FileReader_t *Extra_FileReaderAllocFromString(char *pFileContent, char *pC
     p->nFileSize = strlen(pFileContent);
 
     // allocate the buffer
-    p->pBuffer = ABC_ALLOC(char, EXTRA_BUFFER_SIZE + 1);
-    p->nBufferSize = EXTRA_BUFFER_SIZE;
-    p->pBufferCur = p->pBuffer;
+    p->pBuffer = ABC_ALLOC(char, p->nFileSize + 1);
+    p->nBufferSize = p->nFileSize;
+    p->pBufferCur  = p->pBuffer;
 
-    // determine how many chars to read
-    nCharsToRead = EXTRA_MINIMUM(p->nFileSize, EXTRA_BUFFER_SIZE);
-
-    // load the first part into the buffer
-    strncpy(p->pBuffer, pFileContent, nCharsToRead);
-    p->nFileRead = nCharsToRead;
+    // load the content into the buffer
+    memcpy(p->pBuffer, pFileContent, p->nFileSize);
+    p->pBuffer[p->nFileSize] = '\0';
+    p->nFileRead = p->nFileSize;
 
     // set the pointers to the end and the stopping point
-    p->pBufferEnd = p->pBuffer + nCharsToRead;
-    p->pBufferStop = (p->nFileRead == p->nFileSize) ? p->pBufferEnd : p->pBuffer + EXTRA_BUFFER_SIZE - EXTRA_OFFSET_SIZE;
+    p->pBufferEnd  = p->pBuffer + p->nFileSize;
+    p->pBufferStop = p->pBufferEnd;
 
     // start the arrays
     p->vTokens = Vec_PtrAlloc(100);
@@ -425,18 +424,23 @@ int Io_WriteBenchOne( FILE * pFile, Abc_Ntk_t * pNtk )
     return 1;
 }
 
-char* runAbcCommands(char *pFileContent, const char *sCommand)
+std::string runAbcCommands(char *pFileContent, const char *sCommand)
 {
     Abc_Frame_t *pAbc = Abc_FrameGetGlobalFrame();
 
     Extra_FileReader_t *p = Extra_FileReaderAllocFromString(pFileContent, "#", "\n\r", " \t,()=");
 
     Abc_Ntk_t *pNtk = Io_ReadBenchNetwork(p);
+    Extra_FileReaderFree(p);
+    if (pNtk == NULL)
+        throw std::runtime_error("Network wasn't read.");
+
     pNtk = Abc_NtkToLogic(pNtk);
 
     Abc_FrameReplaceCurrentNetwork(pAbc, pNtk);
 
-    Cmd_CommandExecute(pAbc, sCommand);
+    if (Cmd_CommandExecute(pAbc, sCommand))
+        throw std::runtime_error("Command execution ended with error.");
 
     Abc_Ntk_t *pNtkTemp = Abc_NtkToNetlistBench(pAbc->pNtkCur);
 
@@ -446,5 +450,7 @@ char* runAbcCommands(char *pFileContent, const char *sCommand)
     Io_WriteBenchOne(memFile, pNtkTemp);
     fclose(memFile);
 
-    return buffer;
+    std::string result(buffer, size);
+    free(buffer);
+    return result;
 }
