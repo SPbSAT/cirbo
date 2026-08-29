@@ -4,7 +4,13 @@ helpful for circuit equivalence checking using."""
 
 from .cnf import Cnf, tseytin_transformation
 from .miter import build_miter
-from .sat import is_circuit_satisfiable, is_satisfiable, PySatResult, PySATSolverNames
+from .sat import (
+    is_circuit_satisfiable,
+    is_satisfiable,
+    check_circuits_equivalence,
+    PySatResult,
+    PySATSolverNames,
+)
 
 
 __all__ = [
@@ -16,6 +22,7 @@ __all__ = [
     # sat.py
     'is_satisfiable',
     'is_circuit_satisfiable',
+    'check_circuits_equivalence',
     'PySatResult',
     'PySATSolverNames',
 ]

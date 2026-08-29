@@ -1,4 +1,4 @@
-"""Extensible Pareto metaheuristic search for Boolean circuits."""
+"""Extensible metaheuristic search for Boolean circuits."""
 
 import abc
 import dataclasses
@@ -7,8 +7,8 @@ import random
 import time
 import typing as tp
 
-from cirbo.core.circuit import Circuit, gate
-from cirbo.sat import build_miter, is_circuit_satisfiable
+from cirbo.core.circuit import Circuit
+from cirbo.sat.sat import check_circuits_equivalence
 from .exceptions import InvalidSearchConfigError
 from .mutation import CircuitMutation
 
@@ -16,8 +16,6 @@ __all__ = [
     'CircuitMetrics',
     'SearchConfig',
     'SearchResult',
-    'EquivalenceChecker',
-    'MiterEquivalenceChecker',
     'TerminationReason',
     'SearchStrategy',
     'ParetoHillClimber',
@@ -34,33 +32,13 @@ class CircuitMetrics:
     depth: int
 
 
-# FIXME: move to Circuit class when another PR is merged.
 def measure_circuit(circuit: Circuit) -> CircuitMetrics:
     """Measure gate count and the longest non-input gate path to an output."""
-    levels: dict[gate.Label, int] = {}
-    for current in circuit.top_sort(inverse=True):
-        if current.gate_type == gate.INPUT:
-            levels[current.label] = 0
-        elif current.operands:
-            levels[current.label] = 1 + max(levels[item] for item in current.operands)
-        else:
-            levels[current.label] = 1
-    depth = max((levels[item] for item in circuit.outputs), default=0)
-    return CircuitMetrics(size=circuit.size, depth=depth)
+    return CircuitMetrics(size=circuit.size, depth=circuit.get_depth())
 
 
-class EquivalenceChecker(tp.Protocol):
-    """Protocol for optional candidate-equivalence validation."""
-
-    def is_equivalent(self, left: Circuit, right: Circuit) -> bool:
-        """Return whether two circuits have equal Boolean functions."""
-
-
-class MiterEquivalenceChecker:
-    """SAT-based equivalence checker implemented using a miter circuit."""
-
-    def is_equivalent(self, left: Circuit, right: Circuit) -> bool:
-        return not is_circuit_satisfiable(build_miter(left, right)).answer
+def _dominates(left: CircuitMetrics, right: CircuitMetrics) -> bool:
+    return left.size <= right.size and left.depth <= right.depth and left != right
 
 
 @dataclasses.dataclass(frozen=True)
@@ -70,7 +48,6 @@ class SearchConfig:
     max_iterations: tp.Optional[int] = None
     time_limit_sec: tp.Optional[float] = None
     seed: tp.Optional[int] = None
-    equivalence_checker: tp.Optional[EquivalenceChecker] = None
     mutation_weights: tp.Optional[tp.Sequence[float]] = None
 
     def __post_init__(self) -> None:
@@ -78,14 +55,31 @@ class SearchConfig:
             raise InvalidSearchConfigError(
                 'Either max_iterations or time_limit_sec must be specified.'
             )
+
         if self.max_iterations is not None and self.max_iterations < 0:
             raise InvalidSearchConfigError('max_iterations must be non-negative.')
+
         if self.time_limit_sec is not None and self.time_limit_sec < 0:
             raise InvalidSearchConfigError('time_limit_sec must be non-negative.')
+
         if self.mutation_weights is not None and any(
             weight <= 0 for weight in self.mutation_weights
         ):
             raise InvalidSearchConfigError('mutation weights must be positive.')
+
+    def choose_random_mutation(
+        self,
+        rng: random.Random,
+        mutations: tp.Sequence[CircuitMutation],
+    ) -> CircuitMutation:
+        """
+        Chooses random mutation according to this config.
+        Uses weighted probabilities if weights are specified.
+        """
+        if self.mutation_weights is None:
+            return rng.choice(mutations)
+        else:
+            return rng.choices(mutations, weights=self.mutation_weights, k=1)[0]
 
 
 class TerminationReason(enum.Enum):
@@ -123,10 +117,6 @@ class SearchStrategy(metaclass=abc.ABCMeta):
     ) -> SearchResult:
         """Run a bounded search and return its result."""
         raise NotImplementedError()
-
-
-def _dominates(left: CircuitMetrics, right: CircuitMetrics) -> bool:
-    return left.size <= right.size and left.depth <= right.depth and left != right
 
 
 class ParetoHillClimber(SearchStrategy):
@@ -171,12 +161,8 @@ class ParetoHillClimber(SearchStrategy):
                 break
 
             source, _ = rng.choice(archive)
-            if config.mutation_weights is None:
-                mutation = rng.choice(mutations)
-            else:
-                mutation = rng.choices(mutations, weights=config.mutation_weights, k=1)[
-                    0
-                ]
+            mutation = config.choose_random_mutation(rng=rng, mutations=mutations)
+
             iterations += 1
             candidate = mutation.mutate(source, rng)
             if candidate is None:
@@ -184,7 +170,7 @@ class ParetoHillClimber(SearchStrategy):
             evaluated += 1
             if (
                 config.equivalence_checker is not None
-                and not config.equivalence_checker.is_equivalent(
+                and not check_circuits_equivalence(
                     initial_circuit,
                     candidate,
                 )
@@ -220,6 +206,9 @@ class ParetoHillClimber(SearchStrategy):
         )
 
 
+# FIXME: need to be able to update front as whole when processing only one circuit.
+
+
 def optimize(
     circuit: Circuit,
     mutations: tp.Sequence[CircuitMutation],
@@ -232,3 +221,6 @@ def optimize(
         ParetoHillClimber() if search_strategy is None else search_strategy
     )
     return _resolved_search_strategy.run(circuit, mutations, config)
+
+
+def optimize_front(): ...

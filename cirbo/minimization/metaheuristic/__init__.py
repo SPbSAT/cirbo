@@ -3,9 +3,7 @@
 from .abc import ABC_EASY_COMMANDS, ABC_HARD_COMMANDS, ABCEasyMutation, ABCHardMutation
 from .engine import (
     CircuitMetrics,
-    EquivalenceChecker,
     measure_circuit,
-    MiterEquivalenceChecker,
     optimize,
     ParetoHillClimber,
     SearchConfig,
@@ -26,8 +24,6 @@ __all__ = [
     'ABCEasyMutation',
     'ABCHardMutation',
     'measure_circuit',
-    'EquivalenceChecker',
-    'MiterEquivalenceChecker',
     'SearchConfig',
     'SearchResult',
     'SearchStrategy',

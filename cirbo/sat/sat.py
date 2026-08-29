@@ -6,12 +6,14 @@ import pysat.formula
 import pysat.solvers
 
 from cirbo.core.circuit import Circuit
+from cirbo.sat import build_miter
 from cirbo.sat.cnf import Cnf
-
+from cirbo.sat.exceptions import MiterDifferentShapesError
 
 __all__ = [
     'is_satisfiable',
     'is_circuit_satisfiable',
+    'check_circuits_equivalence',
     'PySatResult',
     'PySATSolverNames',
 ]
@@ -91,3 +93,27 @@ def is_circuit_satisfiable(
         cnf=Cnf.from_circuit(circuit),
         solver_name=solver_name,
     )
+
+
+def check_circuits_equivalence(
+    left: Circuit,
+    right: Circuit,
+    *,
+    solver_name: tp.Union[PySATSolverNames, str] = PySATSolverNames.CADICAL195,
+) -> bool:
+    """
+    Checks if two circuits are equivalent, that is they evaluate to equal output values
+    on every possible input values set.
+
+    :param left: first Circuit.
+    :param right: second Circuit.
+    :param solver_name: solver type/name.
+    :return: result returned from PySat.
+
+    """
+    try:
+        return is_circuit_satisfiable(
+            build_miter(left, right), solver_name=solver_name
+        ).answer
+    except MiterDifferentShapesError:
+        return False

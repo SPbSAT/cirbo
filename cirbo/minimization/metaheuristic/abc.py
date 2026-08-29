@@ -17,20 +17,20 @@ __all__ = [
 
 
 ABC_EASY_COMMANDS: tuple[str, ...] = (
-    'resyn; resyn; ps;',
-    'resyn2; resyn2; ps;',
-    'resyn2a; resyn2a; ps;',
-    'resyn3; resyn3; ps;',
-    'orchestrate; b; orchestrate; ps;',
-    'dc2; b; ps',
-    'if -g -K 6 -C 8; b; ps',
-    'c2rs; b; ps',
-    'r2rs; b; ps',
+    'resyn; resyn;',
+    'resyn2; resyn2;',
+    'resyn2a; resyn2a;',
+    'resyn3; resyn3;',
+    'orchestrate; b; orchestrate;',
+    'dc2; b',
+    'if -g -K 6 -C 8; b',
+    'c2rs; b',
+    'r2rs; b',
 )
 
 ABC_HARD_COMMANDS: tuple[str, ...] = ABC_EASY_COMMANDS + (
-    'rewire -I 20; b; ps',
-    '&get; &deepsyn -I 1 -J 20; &put; ps',
+    'rewire -I 20; b',
+    '&get; &deepsyn -I 1 -J 20; &put',
 )
 
 
@@ -66,9 +66,12 @@ class _ABCMutation(CircuitMutation):
         """Command selected during the most recent mutation execution, if any."""
         return self._last_command
 
+    # FIXME: consequent ABC mutations mustn't cause overhead on from-to cribo Circuit and "strash;" abuse.
+    #        So, maybe, need to add a folding step after mutations sequence is generated.
+
     def mutate(self, circuit: Circuit, rng: random.Random) -> Circuit:
         """Run one randomly selected ABC command on the ``circuit``."""
-        command = rng.choice(self._commands)
+        command = "strash;" + rng.choice(self._commands)
         self._last_command = command
         return _get_abc_transform()(circuit, command)
 

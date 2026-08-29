@@ -1,4 +1,9 @@
-"""Trivial optimize usage with an existing transformer as a mutation."""
+"""
+Trivial optimize usage with an existing transformer as a mutation.
+
+Runs MergeDuplicateGates() on the provided circuit once.
+
+"""
 
 from cirbo.core import Circuit, Gate, gate
 from cirbo.minimization import SearchConfig, TransformerMutation, optimize
@@ -13,7 +18,7 @@ circuit.mark_as_output('result')
 result = optimize(
     circuit,
     mutations=[TransformerMutation(MergeDuplicateGates())],
-    config=SearchConfig(max_iterations=10, seed=42),
+    config=SearchConfig(max_iterations=1, seed=42),
 )
 
 print(result.initial_metrics)

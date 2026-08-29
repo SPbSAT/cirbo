@@ -22,7 +22,10 @@ def _circuit() -> Circuit:
 
 @pytest.mark.parametrize(
     'mutation_type, commands',
-    [(ABCEasyMutation, ABC_EASY_COMMANDS), (ABCHardMutation, ABC_HARD_COMMANDS)],
+    [
+        (ABCEasyMutation, ABC_EASY_COMMANDS),
+        (ABCHardMutation, ABC_HARD_COMMANDS),
+    ],
 )
 def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
     calls = []
@@ -36,14 +39,13 @@ def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
     result = mutation.mutate(_circuit(), random.Random(17))
 
     assert result.get_truth_table() == _circuit().get_truth_table()
+    assert mutation.last_command is not None
     assert calls == [mutation.last_command]
     assert mutation.last_command in commands
 
 
 def test_hard_commands_extend_easy_commands():
     assert ABC_HARD_COMMANDS[: len(ABC_EASY_COMMANDS)] == ABC_EASY_COMMANDS
-    assert 'rewire -I 20; b; ps' in ABC_HARD_COMMANDS
-    assert '&get; &deepsyn -I 1 -J 20; &put; ps' in ABC_HARD_COMMANDS
 
 
 def test_abc_mutation_reports_missing_extension(monkeypatch):
@@ -54,3 +56,15 @@ def test_abc_mutation_reports_missing_extension(monkeypatch):
 
     with pytest.raises(ABCUnavailableError, match='extension is unavailable'):
         ABCEasyMutation().mutate(_circuit(), random.Random(1))
+
+
+@pytest.mark.parametrize(
+    'command',
+    ABC_HARD_COMMANDS,
+)
+def test_all_abc_commands_are_valid(monkeypatch, command):
+    commands = [command]
+    monkeypatch.setattr(ABCHardMutation, '_commands', commands)
+
+    ckt = ABCHardMutation().mutate(_circuit(), random.Random(1))
+    assert isinstance(ckt, Circuit)

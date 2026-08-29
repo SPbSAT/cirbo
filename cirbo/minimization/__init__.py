@@ -10,9 +10,7 @@ from .metaheuristic import (
     ABCHardMutation,
     CircuitMetrics,
     CircuitMutation,
-    EquivalenceChecker,
     measure_circuit,
-    MiterEquivalenceChecker,
     optimize,
     ParetoHillClimber,
     SearchConfig,
@@ -42,8 +40,6 @@ __all__ = [
     'SearchStrategy',
     'ParetoHillClimber',
     'optimize',
-    'EquivalenceChecker',
-    'MiterEquivalenceChecker',
     'CircuitMutation',
     'TransformerMutation',
 ]
