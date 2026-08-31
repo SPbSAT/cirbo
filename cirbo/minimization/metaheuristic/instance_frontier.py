@@ -118,6 +118,9 @@ class InstanceParetoFrontier(InstanceFrontier):
         for instance in self.instances:
             if instance.dominates(new_instance):
                 return False
+            # FIXME: maybe need to allow several instances with the same metrics.
+            if instance.metrics == new_instance.metrics:
+                return False
 
         self.instances = [
             instance

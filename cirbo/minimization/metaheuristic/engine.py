@@ -8,10 +8,12 @@ import random
 import time
 import typing as tp
 
+from cirbo.core import Circuit
 from cirbo.sat.sat import check_circuits_equivalence
 from .exceptions import InvalidSearchConfigError
 from .instance_frontier import (
     InstanceFrontier,
+    InstanceParetoFrontier,
 )
 from .mutation import CircuitMutation
 
@@ -66,7 +68,7 @@ class SearchConfig:
         mutations: tp.Sequence[CircuitMutation],
     ) -> CircuitMutation:
         """
-        Chooses random mutation according to this config.
+        Chooses a random mutation according to this config.
         Uses weighted probabilities if weights are specified.
         """
         if self.mutation_weights is None:
@@ -188,7 +190,7 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
 
 
 def optimize(
-    instance_frontier: InstanceFrontier,
+    instance_frontier: tp.Union[Circuit, InstanceFrontier],
     mutations: tp.Sequence[CircuitMutation],
     config: SearchConfig,
     *,
@@ -198,8 +200,13 @@ def optimize(
     _resolved_search_strategy: SearchStrategy = (
         ParetoRandomRestartHillClimber() if search_strategy is None else search_strategy
     )
+    _frontier = (
+        InstanceParetoFrontier([instance_frontier])
+        if isinstance(instance_frontier, Circuit)
+        else instance_frontier
+    )
     return _resolved_search_strategy.run(
-        instance_frontier=instance_frontier,
+        instance_frontier=_frontier,
         mutations=mutations,
         config=config,
     )

@@ -49,7 +49,7 @@ class _IdentityMutation(CircuitMutation):
 
 
 def test_measure_circuit():
-    assert measure_circuit(_duplicate_and_circuit()) == CircuitMetrics(5, 2)
+    assert CircuitMetrics.from_circuit(_duplicate_and_circuit()) == CircuitMetrics(5, 2)
 
 
 def test_pareto_search_uses_test_mutation():
@@ -61,7 +61,7 @@ def test_pareto_search_uses_test_mutation():
         SearchConfig(max_iterations=2, seed=1),
     )
     assert candidate.get_truth_table() == source.get_truth_table()
-    assert result.best_metrics == CircuitMetrics(3, 1)
+    assert result.frontier.get_frontier()[0].metrics == CircuitMetrics(3, 1)
     assert result.accepted_candidates == 1
     assert result.termination_reason == TerminationReason.ITERATION_LIMIT
 
@@ -70,7 +70,7 @@ def test_pareto_search_rejects_equal_metrics():
     result = optimize(
         _duplicate_and_circuit(),
         [_IdentityMutation()],
-        SearchConfig(max_iterations=1),
+        SearchConfig(max_iterations=1, check_equivalence=True),
     )
     assert result.accepted_candidates == 0
     assert result.rejected_candidates == 1
