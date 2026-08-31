@@ -17,29 +17,39 @@ __all__ = [
 
 
 ABC_EASY_COMMANDS: tuple[str, ...] = (
-    'b; rewrite; rewrite -z; b; rewrite -z; b; b; rewrite; rewrite -z; b; rewrite -z; b;',  # alias is "resyn; resyn;"
     (
-        'b; rewrite; refactor; b; rewrite; rewrite -z; b; refactor -z; rewrite -z; b; b; rewrite; refactor; b; '
+        'b; rewrite; rewrite -z; b; rewrite -z; b; b; rewrite; rewrite -z; '
+        'b; rewrite -z; b;'
+    ),  # alias is "resyn; resyn;"
+    (
+        'b; rewrite; refactor; b; rewrite; rewrite -z; b; refactor -z; '
+        'rewrite -z; b; b; rewrite; refactor; b; '
         'rewrite; rewrite -z; b; refactor -z; rewrite -z; b;'
     ),  # alias is "resyn2; resyn2;"
     (
-        'b; rewrite; b; rewrite; rewrite -z; b; rewrite -z; b; b; rewrite; b; rewrite; rewrite -z; b; rewrite -z; b;'
+        'b; rewrite; b; rewrite; rewrite -z; b; rewrite -z; b; b; rewrite; '
+        'b; rewrite; rewrite -z; b; rewrite -z; b;'
     ),  # alias is "resyn2a; resyn2a;"
     (
-        'b; resub; resub -K 6; b; resub -z; resub -z -K 6; b; resub -z -K 5; b; b; resub; resub -K 6; b; '
+        'b; resub; resub -K 6; b; resub -z; resub -z -K 6; b; '
+        'resub -z -K 5; b; b; resub; resub -K 6; b; '
         'resub -z; resub -z -K 6; b; resub -z -K 5; b;'
     ),  # alias is "resyn3; resyn3;"
     'orchestrate; b; orchestrate;',
     'dc2; b',
     'if -g -K 6 -C 8; b',
     (
-        'b -l; resub -K 6 -l; rewrite -l; resub -K 6 -N 2 -l; refactor -l; resub -K 8 -l; b -l; resub -K 8 -N 2 -l; '
-        'rewrite -l; resub -K 10 -l; rewrite -z -l; resub -K 10 -N 2 -l; b -l; resub -K 12 -l; refactor -z -l; '
+        'b -l; resub -K 6 -l; rewrite -l; resub -K 6 -N 2 -l; refactor -l; '
+        'resub -K 8 -l; b -l; resub -K 8 -N 2 -l; rewrite -l; '
+        'resub -K 10 -l; rewrite -z -l; resub -K 10 -N 2 -l; b -l; '
+        'resub -K 12 -l; refactor -z -l; '
         'resub -K 12 -N 2 -l; rewrite -z -l; b -l; b'
     ),  # alias is "c2rs; b"
     (
-        'b; resub -K 6; rewrite; resub -K 6 -N 2; refactor; resub -K 8; b; resub -K 8 -N 2; rewrite; resub -K 10; '
-        'rewrite -z; resub -K 10 -N 2; b; resub -K 12; refactor -z; resub -K 12 -N 2; rewrite -z; b; b'
+        'b; resub -K 6; rewrite; resub -K 6 -N 2; refactor; resub -K 8; '
+        'b; resub -K 8 -N 2; rewrite; resub -K 10; rewrite -z; '
+        'resub -K 10 -N 2; b; resub -K 12; refactor -z; '
+        'resub -K 12 -N 2; rewrite -z; b; b'
     ),  # alias is "r2rs; b"
 )
 

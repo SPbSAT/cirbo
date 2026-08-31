@@ -5,6 +5,7 @@ from cirbo.minimization.exception import CircuitMinimizationError
 __all__ = [
     'MetaheuristicError',
     'InvalidSearchConfigError',
+    'InvalidFrontierError',
     'ABCUnavailableError',
 ]
 
@@ -15,6 +16,10 @@ class MetaheuristicError(CircuitMinimizationError):
 
 class InvalidSearchConfigError(MetaheuristicError):
     """Raised when a search has no finite stopping condition."""
+
+
+class InvalidFrontierError(MetaheuristicError):
+    """Raised when an instance frontier cannot be searched safely."""
 
 
 class ABCUnavailableError(MetaheuristicError):

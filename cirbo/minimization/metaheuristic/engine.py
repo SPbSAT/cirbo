@@ -4,17 +4,15 @@ import abc
 import copy
 import dataclasses
 import enum
+import math
 import random
 import time
 import typing as tp
 
 from cirbo.core import Circuit
 from cirbo.sat.sat import check_circuits_equivalence
-from .exceptions import InvalidSearchConfigError
-from .instance_frontier import (
-    InstanceFrontier,
-    InstanceParetoFrontier,
-)
+from .exceptions import InvalidFrontierError, InvalidSearchConfigError
+from .instance_frontier import InstanceFrontier, InstanceParetoFrontier
 from .mutation import CircuitMutation
 
 __all__ = [
@@ -35,14 +33,12 @@ class SearchConfig:
     :max_iterations: Maximum number of iterations to run the search for.
     :time_limit_sec: Maximum time limit in seconds to run the search for.
     :seed: Seed for the random number generator.
-    :mutation_weights: Weights (probabilities) for the mutations.
     :check_equivalence: Whether to check new found circuits for equivalence.
     """
 
     max_iterations: tp.Optional[int] = None
     time_limit_sec: tp.Optional[float] = None
     seed: tp.Optional[int] = None
-    mutation_weights: tp.Optional[tp.Sequence[float]] = None
     check_equivalence: bool = False
 
     def __post_init__(self) -> None:
@@ -54,27 +50,23 @@ class SearchConfig:
         if self.max_iterations is not None and self.max_iterations < 0:
             raise InvalidSearchConfigError('max_iterations must be non-negative.')
 
-        if self.time_limit_sec is not None and self.time_limit_sec < 0:
-            raise InvalidSearchConfigError('time_limit_sec must be non-negative.')
-
-        if self.mutation_weights is not None and any(
-            weight <= 0 for weight in self.mutation_weights
+        if self.time_limit_sec is not None and (
+            self.time_limit_sec < 0 or not math.isfinite(self.time_limit_sec)
         ):
-            raise InvalidSearchConfigError('mutation weights must be positive.')
+            raise InvalidSearchConfigError(
+                'time_limit_sec must be finite and non-negative.'
+            )
 
-    def choose_random_mutation(
-        self,
-        rng: random.Random,
-        mutations: tp.Sequence[CircuitMutation],
-    ) -> CircuitMutation:
-        """
-        Chooses a random mutation according to this config.
-        Uses weighted probabilities if weights are specified.
-        """
-        if self.mutation_weights is None:
-            return rng.choice(mutations)
-        else:
-            return rng.choices(mutations, weights=self.mutation_weights, k=1)[0]
+
+def choose_random_mutation(
+    rng: random.Random,
+    mutations: tp.Sequence[CircuitMutation],
+    mutation_weights: tp.Optional[tp.Sequence[float]] = None,
+) -> CircuitMutation:
+    """Choose a random mutation, using weighted probabilities when specified."""
+    if mutation_weights is None:
+        return rng.choice(mutations)
+    return rng.choices(mutations, weights=mutation_weights, k=1)[0]
 
 
 class TerminationReason(enum.Enum):
@@ -107,6 +99,8 @@ class SearchStrategy(metaclass=abc.ABCMeta):
         instance_frontier: InstanceFrontier,
         mutations: tp.Sequence[CircuitMutation],
         config: SearchConfig,
+        *,
+        mutation_weights: tp.Optional[tp.Sequence[float]] = None,
     ) -> SearchResult:
         """Run a bounded search and return its result."""
         raise NotImplementedError()
@@ -120,13 +114,10 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
         instance_frontier: InstanceFrontier,
         mutations: tp.Sequence[CircuitMutation],
         config: SearchConfig,
+        *,
+        mutation_weights: tp.Optional[tp.Sequence[float]] = None,
     ) -> SearchResult:
-        if config.mutation_weights is not None and len(config.mutation_weights) != len(
-            mutations
-        ):
-            raise InvalidSearchConfigError(
-                "Config's `mutation_weights` must have exactly one item per mutation."
-            )
+        _validate_mutation_weights(mutations, mutation_weights)
 
         current_frontier = copy.deepcopy(instance_frontier)
 
@@ -159,7 +150,11 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
                 break
 
             initial_point = rng.choice(current_frontier.get_frontier())
-            mutation = config.choose_random_mutation(rng=rng, mutations=mutations)
+            mutation = choose_random_mutation(
+                rng=rng,
+                mutations=mutations,
+                mutation_weights=mutation_weights,
+            )
 
             _iterations += 1
             candidate = mutation.mutate(initial_point.circuit, rng)
@@ -195,8 +190,9 @@ def optimize(
     config: SearchConfig,
     *,
     search_strategy: tp.Optional[SearchStrategy] = None,
+    mutation_weights: tp.Optional[tp.Sequence[float]] = None,
 ) -> SearchResult:
-    """Optimize ``instance_frontier`` by running provided mutations according to the strategy."""
+    """Optimize a circuit or frontier using the provided mutations and strategy."""
     _resolved_search_strategy: SearchStrategy = (
         ParetoRandomRestartHillClimber() if search_strategy is None else search_strategy
     )
@@ -205,8 +201,36 @@ def optimize(
         if isinstance(instance_frontier, Circuit)
         else instance_frontier
     )
+
+    if len(_frontier) == 0:
+        raise InvalidFrontierError('The instance frontier must not be empty.')
+
+    _validate_mutation_weights(mutations, mutation_weights)
+
+    if config.check_equivalence:
+        _frontier.validate_equivalence()
+
     return _resolved_search_strategy.run(
         instance_frontier=_frontier,
         mutations=mutations,
         config=config,
+        mutation_weights=mutation_weights,
     )
+
+
+def _validate_mutation_weights(
+    mutations: tp.Sequence[CircuitMutation],
+    mutation_weights: tp.Optional[tp.Sequence[float]],
+) -> None:
+    if mutation_weights is None:
+        return
+
+    if len(mutation_weights) != len(mutations):
+        raise InvalidSearchConfigError(
+            'mutation_weights must have exactly one item per mutation.'
+        )
+
+    if any(weight <= 0 or not math.isfinite(weight) for weight in mutation_weights):
+        raise InvalidSearchConfigError(
+            'mutation_weights must contain only finite positive values.'
+        )

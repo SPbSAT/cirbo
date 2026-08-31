@@ -10,16 +10,17 @@ from .metaheuristic import (
     ABCHardMutation,
     CircuitMetrics,
     CircuitMutation,
+    InstanceDescriptor,
+    InstanceFrontier,
+    InstanceParetoFrontier,
+    InvalidFrontierError,
     optimize,
     ParetoRandomRestartHillClimber,
     SearchConfig,
     SearchResult,
     SearchStrategy,
+    TerminationReason,
     TransformerMutation,
-    CircuitMetrics,
-    InstanceDescriptor,
-    InstanceFrontier,
-    InstanceParetoFrontier,
 )
 from .simplification import cleanup, MergeUnaryOperators, RemoveRedundantGates
 from .subcircuit import minimize_subcircuits
@@ -39,6 +40,7 @@ __all__ = [
     'SearchConfig',
     'SearchResult',
     'SearchStrategy',
+    'TerminationReason',
     'ParetoRandomRestartHillClimber',
     'optimize',
     'CircuitMutation',
@@ -47,4 +49,5 @@ __all__ = [
     'InstanceDescriptor',
     'InstanceFrontier',
     'InstanceParetoFrontier',
+    'InvalidFrontierError',
 ]

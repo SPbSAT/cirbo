@@ -5,9 +5,9 @@ helpful for circuit equivalence checking using."""
 from .cnf import Cnf, tseytin_transformation
 from .miter import build_miter
 from .sat import (
+    check_circuits_equivalence,
     is_circuit_satisfiable,
     is_satisfiable,
-    check_circuits_equivalence,
     PySatResult,
     PySATSolverNames,
 )

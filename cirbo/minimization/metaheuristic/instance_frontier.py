@@ -5,6 +5,8 @@ import random
 import typing as tp
 
 from cirbo.core import Circuit
+from cirbo.sat.sat import check_circuits_equivalence
+from .exceptions import InvalidFrontierError
 
 __all__ = [
     'CircuitMetrics',
@@ -64,17 +66,34 @@ class InstanceDescriptor:
 
 
 class InstanceFrontier(metaclass=abc.ABCMeta):
+    def validate_equivalence(self) -> None:
+        """Validate that every circuit in the frontier computes the same function."""
+        instances = self.get_frontier()
+        if not instances:
+            raise InvalidFrontierError('The instance frontier must not be empty.')
+
+        reference = instances[0].circuit
+        if any(
+            not check_circuits_equivalence(reference, instance.circuit)
+            for instance in instances[1:]
+        ):
+            raise InvalidFrontierError(
+                'All circuits in the instance frontier must be equivalent.'
+            )
+
     @abc.abstractmethod
     def consider_circuit(self, new_circuit: Circuit) -> bool:
         """
         Considers a new circuit for the front.
 
         As a result, this method may:
-        1. Add a new instance to the front if it is not dominated by any existing instance or dominates some instances.
+        1. Add a new instance to the front if it is not dominated by any
+           existing instance or dominates some instances.
         2. Remove instances from the front if they are dominated by the new instance.
         3. Do nothing if the new instance is dominated by some existing instance.
 
-        Note that this method doesn't validate that the new instance implements the same function as old ones.
+        Note that this method doesn't validate that the new instance implements
+        the same function as old ones.
 
         :return: True iff the new instance was added to the front.
 
@@ -118,7 +137,6 @@ class InstanceParetoFrontier(InstanceFrontier):
         for instance in self.instances:
             if instance.dominates(new_instance):
                 return False
-            # FIXME: maybe need to allow several instances with the same metrics.
             if instance.metrics == new_instance.metrics:
                 return False
 

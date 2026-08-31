@@ -7,9 +7,11 @@ from .engine import (
     SearchConfig,
     SearchResult,
     SearchStrategy,
+    TerminationReason,
 )
 from .exceptions import (
     ABCUnavailableError,
+    InvalidFrontierError,
     InvalidSearchConfigError,
     MetaheuristicError,
 )
@@ -29,12 +31,14 @@ __all__ = [
     'SearchConfig',
     'SearchResult',
     'SearchStrategy',
+    'TerminationReason',
     'ParetoRandomRestartHillClimber',
     'optimize',
     'CircuitMutation',
     'TransformerMutation',
     'MetaheuristicError',
     'InvalidSearchConfigError',
+    'InvalidFrontierError',
     'ABCUnavailableError',
     'CircuitMetrics',
     'InstanceDescriptor',

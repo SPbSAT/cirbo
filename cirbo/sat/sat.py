@@ -6,9 +6,9 @@ import pysat.formula
 import pysat.solvers
 
 from cirbo.core.circuit import Circuit
-from cirbo.sat import build_miter
 from cirbo.sat.cnf import Cnf
 from cirbo.sat.exceptions import MiterDifferentShapesError
+from cirbo.sat.miter import build_miter
 
 __all__ = [
     'is_satisfiable',
@@ -104,6 +104,8 @@ def check_circuits_equivalence(
     """
     Checks if two circuits are equivalent, that is they evaluate to equal output values
     on every possible input values set.
+
+    Note: if circuits have different shapes, they are not equivalent.
 
     :param left: First Circuit.
     :param right: Second Circuit.

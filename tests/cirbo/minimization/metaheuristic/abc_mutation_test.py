@@ -41,7 +41,7 @@ def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
     assert result.get_truth_table() == _circuit().get_truth_table()
     assert mutation.last_command is not None
     assert calls == [mutation.last_command]
-    assert mutation.last_command in commands
+    assert mutation.last_command.removeprefix('strash;') in commands
 
 
 def test_hard_commands_extend_easy_commands():
@@ -62,6 +62,7 @@ def test_abc_mutation_reports_missing_extension(monkeypatch):
     'command',
     ABC_HARD_COMMANDS,
 )
+@pytest.mark.ABC
 def test_all_abc_commands_are_valid(monkeypatch, command):
     commands = [command]
     monkeypatch.setattr(ABCHardMutation, '_commands', commands)
