@@ -1,6 +1,7 @@
 """Subpackage defines plenty of methods useful for generation of small arithmetic
 circuits by several methods."""
 
+from ._utils import xor_two_bits
 from .div_mod import add_div_mod, generate_div_mod
 from .equality import add_equal, generate_equal
 from .multiplication import (
@@ -29,13 +30,18 @@ from .summation import (
     add_sum_n_bits,
     add_sum_n_bits_easy,
     add_sum_n_weighted_bits,
+    add_sum_n_weighted_bits_log_depth,
     add_sum_n_weighted_bits_naive,
     add_sum_pow2_m1,
     add_sum_two_numbers,
+    add_sum_two_numbers_log_depth,
+    add_sum_two_numbers_log_depth_brent_kung,
+    add_sum_two_numbers_log_depth_krapchenko,
     add_sum_two_numbers_with_shift,
     generate_sum_n_bits,
     generate_sum_weighted_bits_efficient,
     generate_sum_weighted_bits_naive,
+    mdfa_sum_weighted_bits,
 )
 
 
@@ -78,9 +84,15 @@ __all__ = [
     'add_sum_n_bits_easy',
     'add_sum_pow2_m1',
     'add_sum_two_numbers',
+    'add_sum_two_numbers_log_depth',
+    'add_sum_two_numbers_log_depth_brent_kung',
+    'add_sum_two_numbers_log_depth_krapchenko',
     'add_sum_two_numbers_with_shift',
     'add_sum_n_weighted_bits',
+    'add_sum_n_weighted_bits_log_depth',
     'add_sum_n_weighted_bits_naive',
     'generate_sum_weighted_bits_efficient',
     "generate_sum_weighted_bits_naive",
+    'mdfa_sum_weighted_bits',
+    'xor_two_bits',
 ]

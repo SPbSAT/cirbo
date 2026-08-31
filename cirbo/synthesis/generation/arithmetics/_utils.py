@@ -2,7 +2,12 @@ import typing as tp
 import uuid
 
 from cirbo.core.circuit import Circuit, gate
-from cirbo.synthesis.generation.exceptions import BadShapesError, DifferentShapesError
+from cirbo.synthesis.generation.exceptions import (
+    BadBasisError,
+    BadShapesError,
+    DifferentShapesError,
+)
+from cirbo.synthesis.generation.helpers import GenerationBasis
 
 
 __all__ = [
@@ -14,6 +19,7 @@ __all__ = [
     'generate_random_label',
     'generate_list_of_input_labels',
     'reverse_if_big_endian',
+    'xor_two_bits',
 ]
 
 
@@ -82,6 +88,24 @@ def reverse_if_big_endian(
     if big_endian:
         res.reverse()
     return res
+
+
+def xor_two_bits(
+    circuit: Circuit,
+    a: gate.Label,
+    b: gate.Label,
+    *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> gate.Label:
+    """Add a two-input XOR gate in the requested generation basis."""
+    basis = GenerationBasis(basis.upper()) if isinstance(basis, str) else basis
+    if basis == GenerationBasis.XAIG:
+        return add_gate_from_tt(circuit, a, b, '0110')
+    if basis == GenerationBasis.AIG:
+        ab = add_gate_from_tt(circuit, a, b, '0001')
+        nab = add_gate_from_tt(circuit, a, b, '1000')
+        return add_gate_from_tt(circuit, ab, nab, '1000')
+    raise BadBasisError(f"Unsupported basis: {basis}")
 
 
 binary_tt_to_type = {

@@ -1,10 +1,12 @@
 import math
 import random
+from itertools import product
 
 import pytest
 
 from cirbo.core.circuit import Circuit
 from cirbo.core.circuit.gate import Gate, INPUT
+from cirbo.synthesis.circuit_search import Basis
 from cirbo.synthesis.generation import GenerationBasis
 from cirbo.synthesis.generation.arithmetics import (
     add_div_mod,
@@ -19,15 +21,30 @@ from cirbo.synthesis.generation.arithmetics import (
     add_square,
     add_square_pow2_m1,
     add_sum_n_bits,
+    add_sum_n_bits_easy,
     add_sum_n_weighted_bits,
+    add_sum_n_weighted_bits_log_depth,
+    add_sum_n_weighted_bits_naive,
+    add_sum_pow2_m1,
+    add_sum_two_numbers,
+    add_sum_two_numbers_log_depth,
+    add_sum_two_numbers_log_depth_brent_kung,
+    add_sum_two_numbers_log_depth_krapchenko,
+    add_sum_two_numbers_with_shift,
     generate_equal,
     generate_mul,
     generate_square,
     generate_sum_n_bits,
     generate_sum_weighted_bits_efficient,
     generate_sum_weighted_bits_naive,
+    mdfa_sum_weighted_bits,
     MulMode,
     SquareMode,
+)
+from cirbo.synthesis.generation.arithmetics._utils import (
+    add_gate_from_tt,
+    binary_tt_to_type,
+    PLACEHOLDER_STR,
 )
 
 TEST_SIZE = 100
@@ -89,6 +106,12 @@ def sum_naive(inputs_a):
     return to_bin(a, len_res)
 
 
+def sum_two_numbers_naive(inputs_a, inputs_b):
+    a = to_num(inputs_a)
+    b = to_num(inputs_b)
+    return to_bin(a + b, max(len(inputs_a), len(inputs_b)) + 1)
+
+
 def sum_naive_with_powers(powers_and_values_list):
     res = 0
     mx = 0
@@ -102,6 +125,29 @@ def sum_naive_with_powers(powers_and_values_list):
         mx //= 2
 
     return to_bin(res, sz)
+
+
+def sum_weighted_bits_naive(weighted_bits, size):
+    return to_bin(sum(2 ** p[0] * p[1] for p in weighted_bits), size)[::-1]
+
+
+def assert_circuit_in_basis(circuit, basis):
+    basis = GenerationBasis(basis.upper()) if isinstance(basis, str) else basis
+    basis_definition = {
+        GenerationBasis.AIG: Basis.AIG,
+        GenerationBasis.XAIG: Basis.XAIG,
+    }[basis]
+    allowed_gate_types = {
+        binary_tt_to_type[operation.value] for operation in basis_definition.value
+    }
+    # Arithmetic generators use a constant zero gate as an auxiliary value.
+    allowed_gate_types.add(binary_tt_to_type["0000"])
+
+    assert all(
+        current_gate.gate_type in allowed_gate_types
+        for current_gate in circuit.gates.values()
+        if current_gate.gate_type != INPUT
+    )
 
 
 @pytest.mark.parametrize(
@@ -252,6 +298,237 @@ def test_gen_square(number_inputs, type, big_endian):
         assert square_naive(input_labels) == res
 
 
+@pytest.mark.parametrize(
+    "func",
+    [
+        add_sum_two_numbers,
+        add_sum_two_numbers_log_depth,
+        add_sum_two_numbers_log_depth_brent_kung,
+        add_sum_two_numbers_log_depth_krapchenko,
+    ],
+)
+@pytest.mark.parametrize(
+    "size",
+    [
+        [1, 1],
+        [1, 7],
+        [7, 1],
+        [3, 6],
+        pytest.param([8, 2], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([24, 15], marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_sum_two_numbers(func, size, basis, big_endian):
+    x, y = size
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x + y)]
+    for i in range(x + y):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = func(
+        ckt,
+        input_labels[:x],
+        input_labels[x:],
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert sum_two_numbers_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize(
+    "size,shift",
+    [
+        ([1, 1], 0),
+        ([1, 1], 2),
+        ([3, 2], 1),
+        ([3, 2], 5),
+        ([2, 5], 3),
+        pytest.param([8, 2], 1, marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_sum_two_numbers_with_shift(size, shift, big_endian):
+    x, y = size
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x + y)]
+    for i in range(x + y):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+    zero = add_gate_from_tt(ckt, input_labels[0], input_labels[0], "0000")
+
+    res = add_sum_two_numbers_with_shift(
+        ckt,
+        shift,
+        input_labels[:x],
+        input_labels[x:],
+        big_endian=big_endian,
+    )
+    res = [zero if label == PLACEHOLDER_STR else label for label in res]
+    ckt.set_outputs(res)
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        expected = to_bin(
+            to_num(input_labels_a) + (to_num(input_labels_b) << shift),
+            len(res),
+        )
+        assert expected == res
+
+
+def normalize_weighted_output(circuit, zero, weighted_bits):
+    a = [zero] * (max(p[0] for p in weighted_bits) + 1)
+    for p in weighted_bits:
+        a[p[0]] = p[1]
+    return a
+
+
+def build_weighted_bits_case(shape):
+    ckt = Circuit()
+    n = sum(shape)
+    input_labels = [f'x{i}' for i in range(n)]
+    for i in range(n):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+    zero = add_gate_from_tt(
+        ckt,
+        input_labels[0],
+        input_labels[0],
+        '0000',
+    )
+    weighted_bits = []
+    c = 0
+    for i in range(len(shape)):
+        for _ in range(shape[i]):
+            weighted_bits.append((i, input_labels[c]))
+            c += 1
+    return ckt, weighted_bits, zero, n
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        add_sum_n_weighted_bits_log_depth,
+        add_sum_n_weighted_bits_naive,
+        add_sum_n_weighted_bits,
+    ],
+)
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [0, 0, 10],
+        [1, 0, 1],
+        [1, 2, 3, 4, 3, 2, 1],
+        [8],
+        [2, 2, 2, 2],
+        [1, 0, 2, 1, 3, 2, 4, 3, 4, 2, 3, 1, 2],
+        pytest.param([30], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([2] * 20, marks=pytest.mark.slow),
+    ],
+)
+def test_sum_weighted_bits_with_basis(func, basis, shape):
+    ckt, weighted_bits, zero, n = build_weighted_bits_case(shape)
+    res = func(ckt, weighted_bits, basis=basis)
+    res = normalize_weighted_output(ckt, zero, res)
+    ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
+    for test in range(TEST_SIZE):
+        labels_input = [random.choice([0, 1]) for _ in range(n)]
+        weighted_input = [[weighted_bits[i][0], labels_input[i]] for i in range(n)]
+        res = ckt.evaluate(labels_input)
+        assert sum_weighted_bits_naive(weighted_input, len(res)) == res
+
+
+@pytest.mark.parametrize("func", [mdfa_sum_weighted_bits])
+@pytest.mark.parametrize(
+    "shape",
+    [
+        [0, 0, 10],
+        [1, 0, 1],
+        # Exercise the MDFA reduction branches for single bits and pairs.
+        [7],
+        [4, 7],
+        [7, 7, 0, 20],
+        [10, 3],
+        [20, 0],
+        [25, 0],
+        [1, 2, 3, 4, 3, 2, 1],
+        [8],
+        [2, 2, 2, 2],
+        [1, 0, 2, 1, 3, 2, 4, 3, 4, 2, 3, 1, 2],
+        pytest.param([30], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([2] * 20, marks=pytest.mark.slow),
+    ],
+)
+def test_sum_weighted_bits_no_basis(func, shape):
+    ckt, weighted_bits, zero, n = build_weighted_bits_case(shape)
+    res = func(ckt, weighted_bits)
+    res = normalize_weighted_output(ckt, zero, res)
+    ckt.set_outputs(res)
+    for test in range(TEST_SIZE):
+        labels_input = [random.choice([0, 1]) for _ in range(n)]
+        weighted_input = [[weighted_bits[i][0], labels_input[i]] for i in range(n)]
+        res = ckt.evaluate(labels_input)
+        assert sum_weighted_bits_naive(weighted_input, len(res)) == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("n", [1, 2, 3, 4, 7, 31])
+@pytest.mark.parametrize("big_endian", [False, True])
+def test_add_sum_pow2_m1(basis, n, big_endian):
+    ckt = Circuit()
+    input_labels = [f"x{i}" for i in range(n)]
+    for label in input_labels:
+        ckt.add_gate(Gate(label, INPUT))
+
+    grouped_result = add_sum_pow2_m1(
+        ckt, input_labels, basis=basis, big_endian=big_endian
+    )
+    result = [label for group in grouped_result for label in group]
+    ckt.set_outputs(result)
+    assert_circuit_in_basis(ckt, basis)
+
+    inputs = (
+        product((0, 1), repeat=n)
+        if n <= 7
+        else (tuple(random.choice([0, 1]) for _ in range(n)) for _ in range(TEST_SIZE))
+    )
+    for values in inputs:
+        evaluated = ckt.evaluate(list(values))
+        offset = 0
+        weighted_sum = 0
+        for index, group in enumerate(grouped_result):
+            group_size = len(group)
+            weighted_sum += (2**index) * sum(evaluated[offset : offset + group_size])
+            offset += group_size
+        input_sum = sum(values)
+        assert weighted_sum == input_sum
+
+
 @pytest.mark.parametrize("num", list(range(128)))
 def test_add_equal(num):
     r = 7
@@ -343,7 +620,7 @@ def test_div_mod(x, big_endian):
         assert div_mod_naive(input_labels_a, input_labels_b) == res
 
 
-@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize(
     "n",
     list(range(1, 18))
@@ -361,6 +638,7 @@ def test_add_sum_n_bits(basis, n, big_endian):
         ckt.add_gate(Gate(input_labels[i], INPUT))
     res = add_sum_n_bits(ckt, input_labels, basis=basis, big_endian=big_endian)
     ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
     for test in range(TEST_SIZE):
         input_labels = [random.choice([0, 1]) for _ in range(n)]
         res = ckt.evaluate(input_labels)
@@ -369,7 +647,35 @@ def test_add_sum_n_bits(basis, n, big_endian):
         assert sum_naive(input_labels) == res
 
 
-@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("big_endian", [True, False])
+@pytest.mark.parametrize(
+    "n",
+    [
+        1,
+        2,
+        3,
+        60,
+        128,
+        pytest.param(1000, marks=pytest.mark.slow),
+    ],
+)
+def test_add_sum_n_bits_easy(n, big_endian):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(n)]
+    for i in range(n):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = add_sum_n_bits_easy(ckt, input_labels, big_endian=big_endian)
+    ckt.set_outputs(res)
+    for test in range(TEST_SIZE):
+        input_labels = [random.choice([0, 1]) for _ in range(n)]
+        res = ckt.evaluate(input_labels)
+        if not big_endian:
+            res.reverse()
+        assert sum_naive(input_labels) == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize(
     "n",
     list(range(1, 18))
@@ -382,6 +688,7 @@ def test_add_sum_n_bits(basis, n, big_endian):
 @pytest.mark.parametrize("big_endian", [True, False])
 def test_generate_sum_n_bits(basis, n, big_endian):
     ckt = generate_sum_n_bits(n, basis=basis, big_endian=big_endian)
+    assert_circuit_in_basis(ckt, basis)
     for test in range(TEST_SIZE):
         input_labels = [random.choice([0, 1]) for _ in range(n)]
         res = ckt.evaluate(input_labels)
@@ -416,6 +723,7 @@ def test_sum_weighted_bits_in_xaig():
         weights.append(0)
         weights.append(0)
         circuit = generate_sum_weighted_bits_efficient(weights)
+        assert_circuit_in_basis(circuit, GenerationBasis.XAIG)
         assert circuit.gates_number() <= 4.5 * size - 2 * len(circuit.outputs)
 
 
@@ -426,6 +734,7 @@ def test_sum_weighted_bits_in_aig():
         circuit = generate_sum_weighted_bits_efficient(
             weights, basis=GenerationBasis.AIG
         )
+        assert_circuit_in_basis(circuit, GenerationBasis.AIG)
         assert circuit.gates_number() <= 7 * size - 3 * len(circuit.outputs)
 
 
@@ -446,7 +755,7 @@ def test_sum_weighted_bits_in_xaig(n, density_in_percent):
     assert ckt.gates_number() <= n * 4.5 - len(ckt.outputs) * 2
 
 
-@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize(
     "n",
     list(range(1, 18))
@@ -459,8 +768,12 @@ def test_sum_weighted_bits_in_xaig(n, density_in_percent):
 def test_sum_weighted_bits_naive(basis, n, density_in_percent):
     max_level = n * density_in_percent // 100
     powers = [random.randint(0, max_level) for _ in range(n)]
-    ckt = generate_sum_weighted_bits_naive(powers)
-    if basis == GenerationBasis.XAIG:
+    ckt = generate_sum_weighted_bits_naive(powers, basis=basis)
+    assert_circuit_in_basis(ckt, basis)
+    normalized_basis = (
+        GenerationBasis(basis.upper()) if isinstance(basis, str) else basis
+    )
+    if normalized_basis == GenerationBasis.XAIG:
         assert ckt.gates_number() <= n * 5 - len(ckt.outputs) * 3
-    if basis == GenerationBasis.AIG:
+    if normalized_basis == GenerationBasis.AIG:
         assert ckt.gates_number() <= n * 7 - len(ckt.outputs) * 3
