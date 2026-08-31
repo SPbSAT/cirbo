@@ -81,9 +81,6 @@ class _ABCMutation(CircuitMutation):
         """Command selected during the most recent mutation execution, if any."""
         return self._last_command
 
-    # FIXME: consequent ABC mutations mustn't cause overhead on from-to cribo Circuit and "strash;" abuse.
-    #        So, maybe, need to add a folding step after mutations sequence is generated.
-
     def mutate(self, circuit: Circuit, rng: random.Random) -> Circuit:
         """Run one randomly selected ABC command on the ``circuit``."""
         command = "strash;" + rng.choice(self._commands)

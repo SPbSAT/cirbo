@@ -1,54 +1,48 @@
 """Extensible metaheuristic search for Boolean circuits."""
 
 import abc
+import copy
 import dataclasses
 import enum
 import random
 import time
 import typing as tp
 
-from cirbo.core.circuit import Circuit
 from cirbo.sat.sat import check_circuits_equivalence
 from .exceptions import InvalidSearchConfigError
+from .instance_frontier import (
+    measure_circuit,
+    InstanceFrontier,
+)
 from .mutation import CircuitMutation
 
 __all__ = [
-    'CircuitMetrics',
     'SearchConfig',
     'SearchResult',
     'TerminationReason',
     'SearchStrategy',
-    'ParetoHillClimber',
-    'measure_circuit',
+    'ParetoRandomRestartHillClimber',
     'optimize',
 ]
 
 
-@dataclasses.dataclass(frozen=True, order=True)
-class CircuitMetrics:
-    """Objective values used by the built-in Pareto search."""
-
-    size: int
-    depth: int
-
-
-def measure_circuit(circuit: Circuit) -> CircuitMetrics:
-    """Measure gate count and the longest non-input gate path to an output."""
-    return CircuitMetrics(size=circuit.size, depth=circuit.get_depth())
-
-
-def _dominates(left: CircuitMetrics, right: CircuitMetrics) -> bool:
-    return left.size <= right.size and left.depth <= right.depth and left != right
-
-
 @dataclasses.dataclass(frozen=True)
 class SearchConfig:
-    """Bounded-run and candidate-validation settings for a search."""
+    """
+    Bounded-run and candidate-validation settings for a search.
+
+    :max_iterations: Maximum number of iterations to run the search for.
+    :time_limit_sec: Maximum time limit in seconds to run the search for.
+    :seed: Seed for the random number generator.
+    :mutation_weights: Weights (probabilities) for the mutations.
+    :check_equivalence: Whether to check new found circuits for equivalence.
+    """
 
     max_iterations: tp.Optional[int] = None
     time_limit_sec: tp.Optional[float] = None
     seed: tp.Optional[int] = None
     mutation_weights: tp.Optional[tp.Sequence[float]] = None
+    check_equivalence: bool = False
 
     def __post_init__(self) -> None:
         if self.max_iterations is None and self.time_limit_sec is None:
@@ -85,6 +79,7 @@ class SearchConfig:
 class TerminationReason(enum.Enum):
     """Reasons for search termination."""
 
+    UNKNOWN = 'unknown'
     ITERATION_LIMIT = 'iteration_limit'
     TIME_LIMIT = 'time_limit'
     NO_MUTATIONS = 'no_mutations'
@@ -94,10 +89,7 @@ class TerminationReason(enum.Enum):
 class SearchResult:
     """Result and accounting data produced by a search strategy."""
 
-    frontier: tuple[tuple[Circuit, CircuitMetrics], ...]
-    best: Circuit
-    initial_metrics: CircuitMetrics
-    best_metrics: CircuitMetrics
+    frontier: InstanceFrontier
     iterations: int
     evaluated_candidates: int
     accepted_candidates: int
@@ -111,7 +103,7 @@ class SearchStrategy(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def run(
         self,
-        initial_circuit: Circuit,
+        instance_frontier: InstanceFrontier,
         mutations: tp.Sequence[CircuitMutation],
         config: SearchConfig,
     ) -> SearchResult:
@@ -119,12 +111,12 @@ class SearchStrategy(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 
-class ParetoHillClimber(SearchStrategy):
-    """Randomised hill climber retaining a size/depth Pareto archive."""
+class ParetoRandomRestartHillClimber(SearchStrategy):
+    """Randomized hill climber retaining a size/depth Pareto archive."""
 
     def run(
         self,
-        initial_circuit: Circuit,
+        instance_frontier: InstanceFrontier,
         mutations: tp.Sequence[CircuitMutation],
         config: SearchConfig,
     ) -> SearchResult:
@@ -132,95 +124,83 @@ class ParetoHillClimber(SearchStrategy):
             mutations
         ):
             raise InvalidSearchConfigError(
-                'mutation_weights must have one item per mutation.'
+                "Config's `mutation_weights` must have exactly one item per mutation."
             )
-        initial_metrics = measure_circuit(initial_circuit)
-        archive: list[tuple[Circuit, CircuitMetrics]] = [
-            (initial_circuit, initial_metrics)
-        ]
+
+        current_frontier = copy.deepcopy(instance_frontier)
+
         rng = random.Random(config.seed)
-        started_at = time.monotonic()
-        iterations = evaluated = accepted = rejected = 0
-        while True:
+
+        _started_at = time.monotonic()
+        _iterations = 0
+        _evaluated = 0
+        _accepted = 0
+        _rejected = 0
+
+        _termination_reason: TerminationReason = TerminationReason.UNKNOWN
+
+        if not mutations:
+            _termination_reason = TerminationReason.NO_MUTATIONS
+
+        while _termination_reason == TerminationReason.UNKNOWN:
             if (
                 config.max_iterations is not None
-                and iterations >= config.max_iterations
+                and _iterations >= config.max_iterations
             ):
-                termination_reason = TerminationReason.ITERATION_LIMIT
+                _termination_reason = TerminationReason.ITERATION_LIMIT
                 break
 
             if (
                 config.time_limit_sec is not None
-                and time.monotonic() - started_at >= config.time_limit_sec
+                and time.monotonic() - _started_at >= config.time_limit_sec
             ):
-                termination_reason = TerminationReason.TIME_LIMIT
+                _termination_reason = TerminationReason.TIME_LIMIT
                 break
 
-            if not mutations:
-                termination_reason = TerminationReason.NO_MUTATIONS
-                break
-
-            source, _ = rng.choice(archive)
+            initial_point = rng.choice(current_frontier.get_front())
             mutation = config.choose_random_mutation(rng=rng, mutations=mutations)
 
-            iterations += 1
-            candidate = mutation.mutate(source, rng)
+            _iterations += 1
+            candidate = mutation.mutate(initial_point.circuit, rng)
             if candidate is None:
                 continue
-            evaluated += 1
-            if (
-                config.equivalence_checker is not None
-                and not check_circuits_equivalence(
-                    initial_circuit,
-                    candidate,
-                )
-            ):
-                rejected += 1
-                continue
-            candidate_metrics = measure_circuit(candidate)
-            if any(metrics == candidate_metrics for _, metrics in archive) or any(
-                _dominates(metrics, candidate_metrics) for _, metrics in archive
-            ):
-                rejected += 1
-                continue
-            archive = [
-                (item, metrics)
-                for item, metrics in archive
-                if not _dominates(candidate_metrics, metrics)
-            ]
-            archive.append((candidate, candidate_metrics))
-            accepted += 1
+            _evaluated += 1
 
-        archive.sort(key=lambda item: item[1])
-        best, best_metrics = archive[0]
+            if config.check_equivalence is not None and not check_circuits_equivalence(
+                current_frontier.any_instance(rng=rng).circuit,
+                candidate,
+            ):
+                _rejected += 1
+                continue
+
+            if current_frontier.consider_circuit(candidate):
+                _accepted += 1
+            else:
+                _rejected += 1
+
         return SearchResult(
-            frontier=tuple(archive),
-            best=best,
-            initial_metrics=initial_metrics,
-            best_metrics=best_metrics,
-            iterations=iterations,
-            evaluated_candidates=evaluated,
-            accepted_candidates=accepted,
-            rejected_candidates=rejected,
-            termination_reason=termination_reason,
+            frontier=current_frontier,
+            iterations=_iterations,
+            evaluated_candidates=_evaluated,
+            accepted_candidates=_accepted,
+            rejected_candidates=_rejected,
+            termination_reason=_termination_reason,
         )
 
 
-# FIXME: need to be able to update front as whole when processing only one circuit.
-
-
 def optimize(
-    circuit: Circuit,
+    instance_frontier: InstanceFrontier,
     mutations: tp.Sequence[CircuitMutation],
     config: SearchConfig,
     *,
     search_strategy: tp.Optional[SearchStrategy] = None,
 ) -> SearchResult:
-    """Optimize ``circuit`` by running provided mutations according to the strategy."""
+    """Optimize ``instance_frontier`` by running provided mutations according to the strategy."""
     _resolved_search_strategy: SearchStrategy = (
-        ParetoHillClimber() if search_strategy is None else search_strategy
+        ParetoRandomRestartHillClimber() if search_strategy is None else search_strategy
     )
-    return _resolved_search_strategy.run(circuit, mutations, config)
-
-
-def optimize_front(): ...
+    return _resolved_search_strategy.run(
+        instance_frontier=instance_frontier,
+        mutations=mutations,
+        config=config,
+    )
