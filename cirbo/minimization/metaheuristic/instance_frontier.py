@@ -8,7 +8,6 @@ from cirbo.core import Circuit
 
 __all__ = [
     'CircuitMetrics',
-    'dominates',
     'InstanceDescriptor',
     'InstanceFrontier',
     'InstanceParetoFrontier',
@@ -29,14 +28,7 @@ class CircuitMetrics:
 
     def dominates(self, other: "CircuitMetrics") -> bool:
         """Return True if self dominates other."""
-        return self.size >= other.size and self.depth >= other.depth and self != other
-
-
-def dominates(left: CircuitMetrics, right: CircuitMetrics) -> bool:
-    """
-    :return: True if left dominates right.
-    """
-    return left.size >= right.size and left.depth >= right.depth and left != right
+        return self.size <= other.size and self.depth <= other.depth and self != other
 
 
 @dataclasses.dataclass
@@ -90,7 +82,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_front(self) -> tp.List[InstanceDescriptor]:
+    def get_frontier(self) -> tp.List[InstanceDescriptor]:
         """
         :return: The sequence of instances that are currently in the front.
         """
@@ -103,11 +95,18 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def __len__(self) -> int:
+        """
+        :return: Number of instances in the front.
+
+        """
+        raise NotImplementedError
+
 
 class InstanceParetoFrontier(InstanceFrontier):
     def __init__(
         self,
-        *,
         circuits: tp.Sequence[Circuit],
     ):
         self.instances: tp.List[InstanceDescriptor] = []
@@ -130,8 +129,11 @@ class InstanceParetoFrontier(InstanceFrontier):
         )
         return True
 
-    def get_front(self) -> tp.List[InstanceDescriptor]:
+    def get_frontier(self) -> tp.List[InstanceDescriptor]:
         return self.instances
 
     def any_instance(self, rng: random.Random) -> InstanceDescriptor:
         return self.instances[0]
+
+    def __len__(self) -> int:
+        return len(self.instances)

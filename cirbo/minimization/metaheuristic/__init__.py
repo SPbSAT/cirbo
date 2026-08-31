@@ -2,8 +2,6 @@
 
 from .abc import ABC_EASY_COMMANDS, ABC_HARD_COMMANDS, ABCEasyMutation, ABCHardMutation
 from .engine import (
-    CircuitMetrics,
-    measure_circuit,
     optimize,
     ParetoRandomRestartHillClimber,
     SearchConfig,
@@ -15,15 +13,19 @@ from .exceptions import (
     InvalidSearchConfigError,
     MetaheuristicError,
 )
+from .instance_frontier import (
+    CircuitMetrics,
+    InstanceDescriptor,
+    InstanceFrontier,
+    InstanceParetoFrontier,
+)
 from .mutation import CircuitMutation, TransformerMutation
 
 __all__ = [
-    'CircuitMetrics',
     'ABC_EASY_COMMANDS',
     'ABC_HARD_COMMANDS',
     'ABCEasyMutation',
     'ABCHardMutation',
-    'measure_circuit',
     'SearchConfig',
     'SearchResult',
     'SearchStrategy',
@@ -34,4 +36,8 @@ __all__ = [
     'MetaheuristicError',
     'InvalidSearchConfigError',
     'ABCUnavailableError',
+    'CircuitMetrics',
+    'InstanceDescriptor',
+    'InstanceFrontier',
+    'InstanceParetoFrontier',
 ]

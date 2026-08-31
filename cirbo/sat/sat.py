@@ -105,15 +105,16 @@ def check_circuits_equivalence(
     Checks if two circuits are equivalent, that is they evaluate to equal output values
     on every possible input values set.
 
-    :param left: first Circuit.
-    :param right: second Circuit.
-    :param solver_name: solver type/name.
-    :return: result returned from PySat.
+    :param left: First Circuit.
+    :param right: Second Circuit.
+    :param solver_name: Solver type/name.
+    :return: True iff circuits are equivalent.
 
     """
     try:
-        return is_circuit_satisfiable(
-            build_miter(left, right), solver_name=solver_name
+        return not is_circuit_satisfiable(
+            circuit=build_miter(left, right),
+            solver_name=solver_name,
         ).answer
     except MiterDifferentShapesError:
         return False

@@ -10,13 +10,16 @@ from .metaheuristic import (
     ABCHardMutation,
     CircuitMetrics,
     CircuitMutation,
-    measure_circuit,
     optimize,
     ParetoRandomRestartHillClimber,
     SearchConfig,
     SearchResult,
     SearchStrategy,
     TransformerMutation,
+    CircuitMetrics,
+    InstanceDescriptor,
+    InstanceFrontier,
+    InstanceParetoFrontier,
 )
 from .simplification import cleanup, MergeUnaryOperators, RemoveRedundantGates
 from .subcircuit import minimize_subcircuits
@@ -29,12 +32,10 @@ __all__ = [
     # subcircuit.py
     'minimize_subcircuits',
     # metaheuristic
-    'CircuitMetrics',
     'ABC_EASY_COMMANDS',
     'ABC_HARD_COMMANDS',
     'ABCEasyMutation',
     'ABCHardMutation',
-    'measure_circuit',
     'SearchConfig',
     'SearchResult',
     'SearchStrategy',
@@ -42,4 +43,8 @@ __all__ = [
     'optimize',
     'CircuitMutation',
     'TransformerMutation',
+    'CircuitMetrics',
+    'InstanceDescriptor',
+    'InstanceFrontier',
+    'InstanceParetoFrontier',
 ]

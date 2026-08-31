@@ -11,7 +11,6 @@ import typing as tp
 from cirbo.sat.sat import check_circuits_equivalence
 from .exceptions import InvalidSearchConfigError
 from .instance_frontier import (
-    measure_circuit,
     InstanceFrontier,
 )
 from .mutation import CircuitMutation
@@ -157,7 +156,7 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
                 _termination_reason = TerminationReason.TIME_LIMIT
                 break
 
-            initial_point = rng.choice(current_frontier.get_front())
+            initial_point = rng.choice(current_frontier.get_frontier())
             mutation = config.choose_random_mutation(rng=rng, mutations=mutations)
 
             _iterations += 1
@@ -166,7 +165,7 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
                 continue
             _evaluated += 1
 
-            if config.check_equivalence is not None and not check_circuits_equivalence(
+            if config.check_equivalence and not check_circuits_equivalence(
                 current_frontier.any_instance(rng=rng).circuit,
                 candidate,
             ):

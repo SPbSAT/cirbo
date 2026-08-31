@@ -7,7 +7,6 @@ from cirbo.minimization.metaheuristic import (
     CircuitMetrics,
     CircuitMutation,
     InvalidSearchConfigError,
-    measure_circuit,
     optimize,
     SearchConfig,
 )
