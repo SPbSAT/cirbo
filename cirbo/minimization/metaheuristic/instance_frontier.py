@@ -35,10 +35,7 @@ class CircuitMetrics:
 
 @dataclasses.dataclass
 class InstanceDescriptor:
-    """
-    Describes an instance of a circuit to be minimized.
-
-    """
+    """Describes an instance of a circuit to be minimized."""
 
     circuit: Circuit
     source_path: tp.Optional[pathlib.Path]
