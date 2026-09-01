@@ -19,6 +19,7 @@ __all__ = [
     'generate_random_label',
     'generate_list_of_input_labels',
     'reverse_if_big_endian',
+    'conventional_basis',
     'xor_two_bits',
 ]
 
@@ -26,6 +27,10 @@ __all__ = [
 # String is a placeholder used in several generation methods
 # to represent yet-to-be-filled gate Label in lists.
 PLACEHOLDER_STR = '_PLACEHOLDER_STR_'
+
+
+def conventional_basis(basis: tp.Union[str, GenerationBasis]) -> GenerationBasis:
+    return GenerationBasis(basis.upper()) if isinstance(basis, str) else basis
 
 
 def validate_const_size(
