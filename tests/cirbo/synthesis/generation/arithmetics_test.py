@@ -20,6 +20,10 @@ from cirbo.synthesis.generation.arithmetics import (
     add_sqrt,
     add_square,
     add_square_pow2_m1,
+    add_sub_two_numbers,
+    add_sub_two_numbers_log_depth,
+    add_subtract_with_compare,
+    add_subtract_with_compare_log_depth,
     add_sum_n_bits,
     add_sum_n_bits_easy,
     add_sum_n_weighted_bits,
@@ -31,10 +35,6 @@ from cirbo.synthesis.generation.arithmetics import (
     add_sum_two_numbers_log_depth_brent_kung,
     add_sum_two_numbers_log_depth_krapchenko,
     add_sum_two_numbers_with_shift,
-    add_sub_two_numbers,
-    add_sub_two_numbers_log_depth,
-    add_subtract_with_compare,
-    add_subtract_with_compare_log_depth,
     generate_equal,
     generate_mul,
     generate_square,
@@ -152,6 +152,8 @@ def assert_circuit_in_basis(circuit, basis):
         binary_tt_to_type[operation.value] for operation in basis_definition.value
     }
     # Arithmetic generators use a constant zero gate as an auxiliary value.
+    # FIXME: ALWAYS_FALSE gates are unsupported in AIG/XAIG bases. The generator
+    # should simplify the circuit before returning.
     allowed_gate_types.add(binary_tt_to_type["0000"])
 
     assert all(
@@ -507,6 +509,8 @@ def test_sum_weighted_bits_no_basis(func, shape):
         assert sum_weighted_bits_naive(weighted_input, len(res)) == res
 
 
+# FIXME: add_sum_pow2_m1 is covered indirectly by test_mul; remove this test when
+# basis handling is updated.
 @pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize("n", [1, 2, 3, 4, 7, 31])
 @pytest.mark.parametrize("big_endian", [False, True])
