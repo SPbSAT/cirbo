@@ -22,6 +22,7 @@ class CircuitMutation(metaclass=abc.ABCMeta):
         Return a mutated copy of ``circuit``, or ``None`` when not applicable.
 
         Note: this method MUST NOT modify the input circuit.
+
         """
         raise NotImplementedError()
 

@@ -5,10 +5,10 @@ import pytest
 from cirbo.core import Circuit, Gate, gate
 from cirbo.minimization.metaheuristic import (
     abc as abc_mutations,
-    ABC_LIGHT_COMMANDS,
     ABC_HEAVY_COMMANDS,
-    ABCLightMutation,
+    ABC_LIGHT_COMMANDS,
     ABCHeavyMutation,
+    ABCLightMutation,
     ABCUnavailableError,
 )
 

@@ -4,18 +4,18 @@ composition in the method `cleanup` and subcircuit minimization algorithm define
 `minimize_subcircuits` method."""
 
 from .metaheuristic import (
-    ABC_LIGHT_COMMANDS,
     ABC_HEAVY_COMMANDS,
-    ABCLightMutation,
+    ABC_LIGHT_COMMANDS,
     ABCHeavyMutation,
+    ABCLightMutation,
     CircuitMetrics,
     CircuitMutation,
     InstanceDescriptor,
     InstanceFrontier,
-    ParetoFrontier,
     InvalidFrontierError,
-    optimize,
     MultiStartRandomWalk,
+    optimize,
+    ParetoFrontier,
     SearchConfig,
     SearchResult,
     SearchStrategy,

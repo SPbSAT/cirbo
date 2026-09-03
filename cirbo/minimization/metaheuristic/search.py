@@ -30,11 +30,12 @@ class SearchConfig:
     """
     Bounded-run and candidate-validation settings for a search.
 
-    :param max_iterations: Maximum number of main iterations to run the search for. The meaning of "main iteration"
-                           may vary for different `SearchStrategy` implementations.
+    :param max_iterations: Maximum number of main iterations to run the search for.
+                           The meaning of "main iteration" may vary for different
+                           `SearchStrategy` implementations.
     :param time_limit_sec: Maximum time limit in seconds to run the search for.
     :param seed: Seed for the random number generator.
-    :param check_equivalence: Whether to check new found circuits for equivalence.
+    :param check_equivalence: Whether to check a new found circuits for equivalence.
 
     """
 

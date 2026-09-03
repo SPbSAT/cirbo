@@ -1,10 +1,10 @@
 """Extensible metaheuristics for optimization of the Boolean circuits."""
 
 from .abc import (
-    ABC_LIGHT_COMMANDS,
     ABC_HEAVY_COMMANDS,
-    ABCLightMutation,
+    ABC_LIGHT_COMMANDS,
     ABCHeavyMutation,
+    ABCLightMutation,
 )
 from .exceptions import (
     ABCUnavailableError,
@@ -20,8 +20,8 @@ from .instance_frontier import (
 )
 from .mutation import CircuitMutation, TransformerMutation
 from .search import (
-    optimize,
     MultiStartRandomWalk,
+    optimize,
     SearchConfig,
     SearchResult,
     SearchStrategy,
