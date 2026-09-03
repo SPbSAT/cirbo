@@ -175,3 +175,7 @@ abc.history
 
 # makefile zip archive
 cirbo_zip/
+
+# Local container configuration
+.devcontainer/
+.dockerignore

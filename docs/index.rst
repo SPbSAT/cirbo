@@ -14,6 +14,8 @@ Cirbo API documentation
    :maxdepth: 2
    :caption: Contents:
 
+   preparata_muller_1971
+
 .. autosummary::
    :toctree: _autosummary
    :template: custom-module-template.rst
