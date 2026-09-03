@@ -5,10 +5,17 @@ Runs MergeDuplicateGates() on the provided circuit once.
 
 """
 
+import pprint
+
 from cirbo.core import Circuit, Gate, gate
-from cirbo.minimization import SearchConfig, TransformerMutation, optimize
+from cirbo.minimization import (
+    SearchConfig,
+    TransformerMutation,
+    optimize,
+    MultiStartRandomWalk,
+)
 from cirbo.minimization.metaheuristic.instance_frontier import (
-    InstanceParetoFrontier,
+    ParetoFrontier,
     CircuitMetrics,
 )
 from cirbo.minimization.simplification import MergeDuplicateGates
@@ -21,12 +28,13 @@ ckt.mark_as_output('result')
 initial_metrics = CircuitMetrics.from_circuit(ckt)
 
 result = optimize(
-    InstanceParetoFrontier(circuits=[ckt]),
+    ParetoFrontier(circuits=[ckt]),
     mutations=[TransformerMutation(MergeDuplicateGates())],
     config=SearchConfig(max_iterations=1, seed=42, check_equivalence=True),
+    search_strategy=MultiStartRandomWalk(1),
 )
 
-print(len(result.frontier))
+pprint.pp(result)
 print(initial_metrics)
-print(result.frontier.get_frontier()[0].metrics)
+print(result.frontier)
 print(result.termination_reason)

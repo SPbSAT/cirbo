@@ -5,10 +5,10 @@ import pytest
 from cirbo.core import Circuit, Gate, gate
 from cirbo.minimization.metaheuristic import (
     abc as abc_mutations,
-    ABC_EASY_COMMANDS,
-    ABC_HARD_COMMANDS,
-    ABCEasyMutation,
-    ABCHardMutation,
+    ABC_LIGHT_COMMANDS,
+    ABC_HEAVY_COMMANDS,
+    ABCLightMutation,
+    ABCHeavyMutation,
     ABCUnavailableError,
 )
 
@@ -23,8 +23,8 @@ def _circuit() -> Circuit:
 @pytest.mark.parametrize(
     'mutation_type, commands',
     [
-        (ABCEasyMutation, ABC_EASY_COMMANDS),
-        (ABCHardMutation, ABC_HARD_COMMANDS),
+        (ABCLightMutation, ABC_LIGHT_COMMANDS),
+        (ABCHeavyMutation, ABC_HEAVY_COMMANDS),
     ],
 )
 def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
@@ -45,7 +45,7 @@ def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
 
 
 def test_hard_commands_extend_easy_commands():
-    assert ABC_HARD_COMMANDS[: len(ABC_EASY_COMMANDS)] == ABC_EASY_COMMANDS
+    assert ABC_HEAVY_COMMANDS[: len(ABC_LIGHT_COMMANDS)] == ABC_LIGHT_COMMANDS
 
 
 def test_abc_mutation_reports_missing_extension(monkeypatch):
@@ -55,17 +55,17 @@ def test_abc_mutation_reports_missing_extension(monkeypatch):
     monkeypatch.setattr(abc_mutations, '_get_abc_transform', unavailable)
 
     with pytest.raises(ABCUnavailableError, match='extension is unavailable'):
-        ABCEasyMutation().mutate(_circuit(), random.Random(1))
+        ABCLightMutation().mutate(_circuit(), random.Random(1))
 
 
 @pytest.mark.parametrize(
     'command',
-    ABC_HARD_COMMANDS,
+    ABC_HEAVY_COMMANDS,
 )
 @pytest.mark.ABC
 def test_all_abc_commands_are_valid(monkeypatch, command):
     commands = [command]
-    monkeypatch.setattr(ABCHardMutation, '_commands', commands)
+    monkeypatch.setattr(ABCHeavyMutation, '_commands', commands)
 
-    ckt = ABCHardMutation().mutate(_circuit(), random.Random(1))
+    ckt = ABCHeavyMutation().mutate(_circuit(), random.Random(1))
     assert isinstance(ckt, Circuit)

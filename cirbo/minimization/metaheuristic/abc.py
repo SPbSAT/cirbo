@@ -9,14 +9,14 @@ from .exceptions import ABCUnavailableError
 from .mutation import CircuitMutation
 
 __all__ = [
-    'ABC_EASY_COMMANDS',
-    'ABC_HARD_COMMANDS',
-    'ABCEasyMutation',
-    'ABCHardMutation',
+    'ABC_LIGHT_COMMANDS',
+    'ABC_HEAVY_COMMANDS',
+    'ABCLightMutation',
+    'ABCHeavyMutation',
 ]
 
 
-ABC_EASY_COMMANDS: tuple[str, ...] = (
+ABC_LIGHT_COMMANDS: tuple[str, ...] = (
     (
         'b; rewrite; rewrite -z; b; rewrite -z; b; b; rewrite; rewrite -z; '
         'b; rewrite -z; b;'
@@ -53,7 +53,7 @@ ABC_EASY_COMMANDS: tuple[str, ...] = (
     ),  # alias is "r2rs; b"
 )
 
-ABC_HARD_COMMANDS: tuple[str, ...] = ABC_EASY_COMMANDS + (
+ABC_HEAVY_COMMANDS: tuple[str, ...] = ABC_LIGHT_COMMANDS + (
     'rewire -I 20; b',
     '&get; &deepsyn -I 1 -J 20; &put',
 )
@@ -98,13 +98,13 @@ class _ABCMutation(CircuitMutation):
         return _get_abc_transform()(circuit, command)
 
 
-class ABCEasyMutation(_ABCMutation):
+class ABCLightMutation(_ABCMutation):
     """Apply one randomly selected low-cost ABC simplification command."""
 
-    _commands = ABC_EASY_COMMANDS
+    _commands = ABC_LIGHT_COMMANDS
 
 
-class ABCHardMutation(_ABCMutation):
+class ABCHeavyMutation(_ABCMutation):
     """Apply one randomly selected higher-effort ABC simplification command."""
 
-    _commands = ABC_HARD_COMMANDS
+    _commands = ABC_HEAVY_COMMANDS

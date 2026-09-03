@@ -1,28 +1,32 @@
 """Use optional ABC mutations in the metaheuristic circuit optimizer."""
 
-from cirbo.core import Circuit, Gate, gate
+import pprint
+
+from cirbo.core import Circuit
 from cirbo.minimization import (
-    ABCHardMutation,
+    ABCHeavyMutation,
     SearchConfig,
     optimize,
-    InstanceParetoFrontier,
     CircuitMetrics,
+    MultiStartRandomWalk,
 )
+from cirbo.synthesis.generation.arithmetics import add_sum_n_bits
 
-ckt = Circuit.bare_circuit(3)
-ckt.add_gate(Gate('and_1', gate.AND, ('0', '1')))
-ckt.add_gate(Gate('and_2', gate.AND, ('0', '1')))
-ckt.add_gate(Gate('result', gate.OR, ('and_1', 'and_2')))
-ckt.mark_as_output('result')
+ckt = Circuit.bare_circuit(input_size=7)
+*_, b2 = add_sum_n_bits(ckt, ckt.inputs, basis='AIG')
+ckt.mark_as_output(b2)
+
 initial_metrics = CircuitMetrics.from_circuit(ckt)
 
 # Requires a build with the optional abc_wrapper extension enabled.
 result = optimize(
-    InstanceParetoFrontier(circuits=[ckt]),
-    mutations=[ABCHardMutation()],
-    config=SearchConfig(max_iterations=100, seed=42),
+    ckt,
+    ABCHeavyMutation(),
+    SearchConfig(1, seed=42),
+    search_strategy=MultiStartRandomWalk(100),
 )
 
-print(len(result.frontier))
+pprint.pp(result)
 print(initial_metrics)
-print(result.frontier.get_frontier()[0].metrics)
+print(result.frontier)
+print(result.termination_reason)

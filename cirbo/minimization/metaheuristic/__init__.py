@@ -1,13 +1,10 @@
 """Extensible metaheuristics for optimization of the Boolean circuits."""
 
-from .abc import ABC_EASY_COMMANDS, ABC_HARD_COMMANDS, ABCEasyMutation, ABCHardMutation
-from .engine import (
-    optimize,
-    ParetoRandomRestartHillClimber,
-    SearchConfig,
-    SearchResult,
-    SearchStrategy,
-    TerminationReason,
+from .abc import (
+    ABC_LIGHT_COMMANDS,
+    ABC_HEAVY_COMMANDS,
+    ABCLightMutation,
+    ABCHeavyMutation,
 )
 from .exceptions import (
     ABCUnavailableError,
@@ -19,20 +16,28 @@ from .instance_frontier import (
     CircuitMetrics,
     InstanceDescriptor,
     InstanceFrontier,
-    InstanceParetoFrontier,
+    ParetoFrontier,
 )
 from .mutation import CircuitMutation, TransformerMutation
+from .search import (
+    optimize,
+    MultiStartRandomWalk,
+    SearchConfig,
+    SearchResult,
+    SearchStrategy,
+    TerminationReason,
+)
 
 __all__ = [
-    'ABC_EASY_COMMANDS',
-    'ABC_HARD_COMMANDS',
-    'ABCEasyMutation',
-    'ABCHardMutation',
+    'ABC_LIGHT_COMMANDS',
+    'ABC_HEAVY_COMMANDS',
+    'ABCLightMutation',
+    'ABCHeavyMutation',
     'SearchConfig',
     'SearchResult',
     'SearchStrategy',
     'TerminationReason',
-    'ParetoRandomRestartHillClimber',
+    'MultiStartRandomWalk',
     'optimize',
     'CircuitMutation',
     'TransformerMutation',
@@ -43,5 +48,5 @@ __all__ = [
     'CircuitMetrics',
     'InstanceDescriptor',
     'InstanceFrontier',
-    'InstanceParetoFrontier',
+    'ParetoFrontier',
 ]

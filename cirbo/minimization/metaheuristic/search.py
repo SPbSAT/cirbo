@@ -12,7 +12,7 @@ import typing as tp
 from cirbo.core import Circuit
 from cirbo.sat.sat import check_circuits_equivalence
 from .exceptions import InvalidFrontierError, InvalidSearchConfigError
-from .instance_frontier import InstanceFrontier, InstanceParetoFrontier
+from .instance_frontier import InstanceFrontier, ParetoFrontier
 from .mutation import CircuitMutation
 
 __all__ = [
@@ -20,7 +20,7 @@ __all__ = [
     'SearchResult',
     'TerminationReason',
     'SearchStrategy',
-    'ParetoRandomRestartHillClimber',
+    'MultiStartRandomWalk',
     'optimize',
 ]
 
@@ -30,7 +30,8 @@ class SearchConfig:
     """
     Bounded-run and candidate-validation settings for a search.
 
-    :param max_iterations: Maximum number of iterations to run the search for.
+    :param max_iterations: Maximum number of main iterations to run the search for. The meaning of "main iteration"
+                           may vary for different `SearchStrategy` implementations.
     :param time_limit_sec: Maximum time limit in seconds to run the search for.
     :param seed: Seed for the random number generator.
     :param check_equivalence: Whether to check new found circuits for equivalence.
@@ -107,8 +108,26 @@ class SearchStrategy(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 
-class ParetoRandomRestartHillClimber(SearchStrategy):
-    """Randomized hill climber retaining a size/depth Pareto archive."""
+class MultiStartRandomWalk(SearchStrategy):
+    """
+    Multi-start random walk.
+
+    At each iteration, a fixed-length random walk is started from every point
+    of the current Pareto frontier. Each mutation is applied to the result of
+    the previous mutation regardless of whether the resulting circuit improves
+    the archive.
+
+    Config's max_iterations specifies the number of main iterations.
+    During each iteration, a random walk of `one_walk_length` mutations is
+    started from every point of the current frontier.
+
+    """
+
+    def __init__(self, one_walk_length: int = 100):
+        self._one_walk_length = one_walk_length
+
+        if self._one_walk_length <= 0:
+            raise InvalidSearchConfigError('one_walk_length must be positive!')
 
     def run(
         self,
@@ -119,8 +138,6 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
         mutation_weights: tp.Optional[tp.Sequence[float]] = None,
     ) -> SearchResult:
         _validate_mutation_weights(mutations, mutation_weights)
-
-        current_frontier = copy.deepcopy(instance_frontier)
 
         rng = random.Random(config.seed)
 
@@ -135,6 +152,19 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
         if not mutations:
             _termination_reason = TerminationReason.NO_MUTATIONS
 
+        def _check_time_limit() -> bool:
+            nonlocal _termination_reason
+            if (
+                config.time_limit_sec is not None
+                and time.monotonic() - _started_at >= config.time_limit_sec
+            ):
+                _termination_reason = TerminationReason.TIME_LIMIT
+                return True
+
+            return False
+
+        current_frontier = copy.deepcopy(instance_frontier)
+
         while _termination_reason == TerminationReason.UNKNOWN:
             if (
                 config.max_iterations is not None
@@ -143,37 +173,43 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
                 _termination_reason = TerminationReason.ITERATION_LIMIT
                 break
 
-            if (
-                config.time_limit_sec is not None
-                and time.monotonic() - _started_at >= config.time_limit_sec
-            ):
-                _termination_reason = TerminationReason.TIME_LIMIT
-                break
-
-            initial_point = rng.choice(current_frontier.get_frontier())
-            mutation = choose_random_mutation(
-                rng=rng,
-                mutations=mutations,
-                mutation_weights=mutation_weights,
-            )
-
             _iterations += 1
-            candidate = mutation.mutate(initial_point.circuit, rng)
-            if candidate is None:
-                continue
-            _evaluated += 1
 
-            if config.check_equivalence and not check_circuits_equivalence(
-                current_frontier.any_instance(rng=rng).circuit,
-                candidate,
-            ):
-                _rejected += 1
-                continue
+            current_initial_points = list(current_frontier.get_frontier())
+            for current_initial_circuit in current_initial_points:
+                if _check_time_limit():
+                    break
 
-            if current_frontier.consider_circuit(candidate):
-                _accepted += 1
-            else:
-                _rejected += 1
+                current_circuit = current_initial_circuit.circuit
+
+                for _ in range(self._one_walk_length):
+                    if _check_time_limit():
+                        break
+
+                    mutation = choose_random_mutation(
+                        rng=rng,
+                        mutations=mutations,
+                        mutation_weights=mutation_weights,
+                    )
+
+                    candidate = mutation.mutate(current_circuit, rng)
+                    if candidate is None:
+                        continue
+                    _evaluated += 1
+
+                    if config.check_equivalence and not check_circuits_equivalence(
+                        current_frontier.any_instance(rng=rng).circuit,
+                        candidate,
+                    ):
+                        _rejected += 1
+                        continue
+
+                    current_circuit = candidate
+
+                    if current_frontier.consider_circuit(candidate):
+                        _accepted += 1
+                    else:
+                        _rejected += 1
 
         return SearchResult(
             frontier=current_frontier,
@@ -187,7 +223,7 @@ class ParetoRandomRestartHillClimber(SearchStrategy):
 
 def optimize(
     instance_frontier: tp.Union[Circuit, InstanceFrontier],
-    mutations: tp.Sequence[CircuitMutation],
+    mutations: tp.Union[CircuitMutation, tp.Sequence[CircuitMutation]],
     config: SearchConfig,
     *,
     search_strategy: tp.Optional[SearchStrategy] = None,
@@ -195,25 +231,27 @@ def optimize(
 ) -> SearchResult:
     """Optimize a circuit or frontier using the provided mutations and strategy."""
     _resolved_search_strategy: SearchStrategy = (
-        ParetoRandomRestartHillClimber() if search_strategy is None else search_strategy
+        MultiStartRandomWalk() if search_strategy is None else search_strategy
     )
     _frontier = (
-        InstanceParetoFrontier([instance_frontier])
+        ParetoFrontier([instance_frontier])
         if isinstance(instance_frontier, Circuit)
         else instance_frontier
     )
 
+    _mutations = [mutations] if isinstance(mutations, CircuitMutation) else mutations
+
     if len(_frontier) == 0:
         raise InvalidFrontierError('The instance frontier must not be empty.')
 
-    _validate_mutation_weights(mutations, mutation_weights)
+    _validate_mutation_weights(_mutations, mutation_weights)
 
     if config.check_equivalence:
         _frontier.validate_equivalence()
 
     return _resolved_search_strategy.run(
         instance_frontier=_frontier,
-        mutations=mutations,
+        mutations=_mutations,
         config=config,
         mutation_weights=mutation_weights,
     )

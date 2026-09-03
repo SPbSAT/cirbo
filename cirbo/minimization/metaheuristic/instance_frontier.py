@@ -12,7 +12,7 @@ __all__ = [
     'CircuitMetrics',
     'InstanceDescriptor',
     'InstanceFrontier',
-    'InstanceParetoFrontier',
+    'ParetoFrontier',
 ]
 
 
@@ -26,14 +26,17 @@ class CircuitMetrics:
     @classmethod
     def from_circuit(cls, circuit: Circuit) -> "CircuitMetrics":
         """Measure gate count and the longest non-input gate path to an output."""
-        return CircuitMetrics(size=circuit.size, depth=circuit.get_depth())
+        return CircuitMetrics(size=circuit.gates_number(), depth=circuit.get_depth())
 
     def dominates(self, other: "CircuitMetrics") -> bool:
         """Return True if self dominates other."""
         return self.size <= other.size and self.depth <= other.depth and self != other
 
+    def __str__(self) -> str:
+        return f"(size={self.size}, depth={self.depth})"
 
-@dataclasses.dataclass
+
+@dataclasses.dataclass(frozen=True)
 class InstanceDescriptor:
     """Describes an instance of a circuit to be minimized."""
 
@@ -78,6 +81,10 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
                 'All circuits in the instance frontier must be equivalent.'
             )
 
+    def __str__(self) -> str:
+        _metrics = ', '.join(str(instance.metrics) for instance in self.get_frontier())
+        return f"{type(self).__name__}({_metrics})"
+
     @abc.abstractmethod
     def consider_circuit(self, new_circuit: Circuit) -> bool:
         """
@@ -98,7 +105,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_frontier(self) -> tp.List[InstanceDescriptor]:
+    def get_frontier(self) -> tp.Sequence[InstanceDescriptor]:
         """
         :return: The sequence of instances that are currently in the front.
         """
@@ -120,7 +127,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
 
-class InstanceParetoFrontier(InstanceFrontier):
+class ParetoFrontier(InstanceFrontier):
     def __init__(
         self,
         circuits: tp.Sequence[Circuit],
@@ -147,8 +154,8 @@ class InstanceParetoFrontier(InstanceFrontier):
         )
         return True
 
-    def get_frontier(self) -> tp.List[InstanceDescriptor]:
-        return self.instances
+    def get_frontier(self) -> tp.Sequence[InstanceDescriptor]:
+        return tuple(self.instances)
 
     def any_instance(self, rng: random.Random) -> InstanceDescriptor:
         return self.instances[0]

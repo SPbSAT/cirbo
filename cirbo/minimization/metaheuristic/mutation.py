@@ -18,7 +18,11 @@ class CircuitMutation(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def mutate(self, circuit: Circuit, rng: random.Random) -> tp.Optional[Circuit]:
-        """Return a mutated copy of ``circuit``, or ``None`` when not applicable."""
+        """
+        Return a mutated copy of ``circuit``, or ``None`` when not applicable.
+
+        Note: this method MUST NOT modify the input circuit.
+        """
         raise NotImplementedError()
 
 

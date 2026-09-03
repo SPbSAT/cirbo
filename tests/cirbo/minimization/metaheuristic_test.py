@@ -7,16 +7,16 @@ from cirbo.minimization.metaheuristic import (
     CircuitMetrics,
     CircuitMutation,
     InstanceDescriptor,
-    InstanceParetoFrontier,
+    ParetoFrontier,
     InvalidFrontierError,
     InvalidSearchConfigError,
     optimize,
-    ParetoRandomRestartHillClimber,
+    MultiStartRandomWalk,
     SearchConfig,
     SearchResult,
     SearchStrategy,
 )
-from cirbo.minimization.metaheuristic.engine import TerminationReason
+from cirbo.minimization.metaheuristic.search import TerminationReason
 
 
 def _duplicate_and_circuit() -> Circuit:
@@ -76,7 +76,7 @@ class _RecordingStrategy(SearchStrategy):
         mutation_weights=None,
     ) -> SearchResult:
         self.mutation_weights = mutation_weights
-        return ParetoRandomRestartHillClimber().run(
+        return MultiStartRandomWalk().run(
             instance_frontier,
             mutations,
             config,
@@ -85,7 +85,7 @@ class _RecordingStrategy(SearchStrategy):
 
 
 def test_measure_circuit():
-    assert CircuitMetrics.from_circuit(_duplicate_and_circuit()) == CircuitMetrics(5, 2)
+    assert CircuitMetrics.from_circuit(_duplicate_and_circuit()) == CircuitMetrics(3, 2)
 
 
 def test_pareto_search_uses_test_mutation():
@@ -97,7 +97,7 @@ def test_pareto_search_uses_test_mutation():
         SearchConfig(max_iterations=2, seed=1),
     )
     assert candidate.get_truth_table() == source.get_truth_table()
-    assert result.frontier.get_frontier()[0].metrics == CircuitMetrics(3, 1)
+    assert result.frontier.get_frontier()[0].metrics == CircuitMetrics(1, 1)
     assert result.accepted_candidates == 1
     assert result.termination_reason == TerminationReason.ITERATION_LIMIT
 
@@ -107,6 +107,7 @@ def test_pareto_search_rejects_equal_metrics():
         _duplicate_and_circuit(),
         [_IdentityMutation()],
         SearchConfig(max_iterations=1, check_equivalence=True),
+        search_strategy=MultiStartRandomWalk(1),
     )
     assert result.accepted_candidates == 0
     assert result.rejected_candidates == 1
@@ -131,6 +132,7 @@ def test_search_uses_separate_mutation_weights():
         [first, second],
         SearchConfig(max_iterations=3, seed=1),
         mutation_weights=[1e-100, 1.0],
+        search_strategy=MultiStartRandomWalk(1),
     )
     assert first.calls == 0
     assert second.calls == 3
@@ -172,14 +174,14 @@ def test_search_rejects_invalid_time_limit(time_limit_sec):
 def test_search_rejects_empty_frontier():
     with pytest.raises(InvalidFrontierError, match='must not be empty'):
         optimize(
-            InstanceParetoFrontier([]),
+            ParetoFrontier([]),
             [_IdentityMutation()],
             SearchConfig(max_iterations=1),
         )
 
 
 def test_frontier_validates_equivalence():
-    frontier = InstanceParetoFrontier([_duplicate_and_circuit()])
+    frontier = ParetoFrontier([_duplicate_and_circuit()])
     frontier.instances.append(
         InstanceDescriptor.from_circuit(_simplified_and_circuit())
     )
@@ -194,7 +196,7 @@ def test_frontier_validates_equivalence():
 
 
 def test_optimize_validates_frontier_only_when_enabled(monkeypatch):
-    frontier = InstanceParetoFrontier([_duplicate_and_circuit()])
+    frontier = ParetoFrontier([_duplicate_and_circuit()])
     calls = []
     monkeypatch.setattr(frontier, 'validate_equivalence', lambda: calls.append(True))
 

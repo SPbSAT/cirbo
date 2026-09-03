@@ -299,7 +299,7 @@ class Circuit(Function):
     @property
     def size(self) -> int:
         """
-        :return: number of gates into the circuit.
+        :return: number of gates in the circuit.
 
         """
         return len(self._gates)
