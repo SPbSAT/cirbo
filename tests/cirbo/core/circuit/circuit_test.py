@@ -171,6 +171,32 @@ def test_bare_circuit_with_labels():
     assert C0 == C1
 
 
+def test_get_depth():
+    empty = Circuit()
+    assert empty.get_depth() == 0
+
+    circuit = Circuit()
+    circuit.add_gate(Gate('x', INPUT))
+    circuit.add_gate(Gate('zero', ALWAYS_FALSE))
+    assert circuit.get_depth() == 0
+
+    circuit.set_outputs(['x', 'zero'])
+    assert circuit.get_depth() == 0
+
+    circuit.add_gate(Gate('not_x', NOT, ('x',)))
+    circuit.add_gate(Gate('and_gate', AND, ('x', 'not_x')))
+    circuit.add_gate(Gate('or_gate', OR, ('and_gate', 'zero')))
+    circuit.set_outputs(['not_x', 'or_gate'])
+    assert circuit.get_depth() == 3
+
+    circuit.add_gate(Gate('and_x_x', AND, ('x', 'x')))
+    circuit.set_outputs(['and_x_x'])
+    assert circuit.get_depth() == 1
+
+    circuit.set_outputs(['or_gate'])
+    assert circuit.get_depth() == 3
+
+
 def test_eq():
     instance_one = Circuit()
     instance_one.add_gate(Gate('A', INPUT))

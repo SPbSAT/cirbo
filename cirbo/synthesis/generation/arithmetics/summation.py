@@ -9,6 +9,7 @@ from cirbo.core.circuit import Circuit, gate
 
 from cirbo.synthesis.generation.arithmetics._utils import (
     add_gate_from_tt,
+    conventional_basis,
     PLACEHOLDER_STR,
     reverse_if_big_endian,
     validate_const_size,
@@ -37,10 +38,6 @@ __all__ = [
     "generate_sum_weighted_bits_naive",
     "mdfa_sum_weighted_bits",
 ]
-
-
-def conventional_basis(basis: tp.Union[str, GenerationBasis]) -> GenerationBasis:
-    return GenerationBasis(basis.upper()) if isinstance(basis, str) else basis
 
 
 def add_sum_two_numbers(
@@ -126,7 +123,8 @@ def add_sum_two_numbers_with_shift(
                 circuit,
                 input_labels_a[0],
                 input_labels_a[0],
-                '0000',
+                '0000',  # FIXME: ALWAYS_FALSE gates are unsupported in AIG/XAIG bases.
+                # The generator should simplify the circuit before returning.
             )
             for i in range(n, shift - n):
                 d[i] = [zero]
