@@ -1,6 +1,5 @@
 import math
 import random
-from itertools import product
 
 import pytest
 
@@ -9,14 +8,21 @@ from cirbo.core.circuit.gate import Gate, INPUT
 from cirbo.synthesis.circuit_search import Basis
 from cirbo.synthesis.generation import GenerationBasis
 from cirbo.synthesis.generation.arithmetics import (
+    add_dadda_karatsuba,
     add_div_mod,
     add_equal,
     add_mul,
     add_mul_alter,
+    add_mul_constant,
     add_mul_dadda,
+    add_mul_karatsuba,
     add_mul_karatsuba_with_efficient_sum,
+    add_mul_log_depth_sum,
     add_mul_pow2_m1,
     add_mul_wallace,
+    add_simple_karatsuba,
+    add_smul_dadda,
+    add_smul_wallace,
     add_sqrt,
     add_square,
     add_square_pow2_m1,
@@ -29,7 +35,6 @@ from cirbo.synthesis.generation.arithmetics import (
     add_sum_n_weighted_bits,
     add_sum_n_weighted_bits_log_depth,
     add_sum_n_weighted_bits_naive,
-    add_sum_pow2_m1,
     add_sum_two_numbers,
     add_sum_two_numbers_log_depth,
     add_sum_two_numbers_log_depth_brent_kung,
@@ -81,6 +86,18 @@ def mul_naive(inputs_a, inputs_b):
         out_len -= 1
 
     return to_bin(a * b, out_len)
+
+
+def smul_naive(inputs_a, inputs_b):
+    def to_signed_num(inputs):
+        unsigned = to_num(inputs)
+        if inputs[-1] == 1:
+            unsigned -= 1 << len(inputs)
+        return unsigned
+
+    out_len = len(inputs_a) + len(inputs_b)
+    res = to_signed_num(inputs_a) * to_signed_num(inputs_b)
+    return to_bin(res % (1 << out_len), out_len)
 
 
 def square_naive(inputs_a):
@@ -155,6 +172,7 @@ def assert_circuit_in_basis(circuit, basis):
     # FIXME: ALWAYS_FALSE gates are unsupported in AIG/XAIG bases. The generator
     # should simplify the circuit before returning.
     allowed_gate_types.add(binary_tt_to_type["0000"])
+    allowed_gate_types.add(binary_tt_to_type["1111"])
 
     assert all(
         current_gate.gate_type in allowed_gate_types
@@ -168,10 +186,10 @@ def assert_circuit_in_basis(circuit, basis):
     [
         add_mul,
         add_mul_alter,
-        add_mul_dadda,
-        add_mul_wallace,
-        add_mul_pow2_m1,
+        add_dadda_karatsuba,
+        add_mul_karatsuba,
         add_mul_karatsuba_with_efficient_sum,
+        add_simple_karatsuba,
     ],
 )
 @pytest.mark.parametrize(
@@ -211,6 +229,132 @@ def test_mul(func, size, big_endian):
 
 
 @pytest.mark.parametrize(
+    "func",
+    [
+        add_mul_dadda,
+        add_mul_wallace,
+        add_mul_pow2_m1,
+        add_mul_log_depth_sum,
+    ],
+)
+@pytest.mark.parametrize(
+    "size",
+    [
+        [1, 1],
+        [1, 7],
+        [7, 1],
+        [3, 6],
+        pytest.param([8, 2], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+        pytest.param([24, 15], marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_mul_with_basis(func, size, basis, big_endian):
+    x, y = size
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x + y)]
+    for i in range(x + y):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = func(
+        ckt,
+        input_labels[:x],
+        input_labels[x:],
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert mul_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize("constant", [1, 2, 3, 5, 13])
+@pytest.mark.parametrize("size", [1, 2, 5, pytest.param(17, marks=pytest.mark.slow)])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_mul_constant(size, constant, basis, big_endian):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(size)]
+    for i in range(size):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    out = add_mul_constant(
+        ckt,
+        input_labels,
+        constant,
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(out)
+    assert_circuit_in_basis(ckt, basis)
+
+    for test in range(TEST_SIZE):
+        inputs = [random.choice([0, 1]) for _ in range(size)]
+        res = ckt.evaluate(inputs)
+        if big_endian:
+            inputs.reverse()
+        else:
+            res.reverse()
+
+        assert to_bin(to_num(inputs) * constant, len(out)) == res
+
+
+@pytest.mark.parametrize("func", [add_smul_dadda, add_smul_wallace])
+@pytest.mark.parametrize(
+    "size",
+    [
+        [2, 2],
+        [3, 3],
+        pytest.param([8, 8], marks=pytest.mark.slow),
+        pytest.param([16, 16], marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_smul_with_basis(func, size, basis, big_endian):
+    x, y = size
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x + y)]
+    for i in range(x + y):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = func(
+        ckt,
+        input_labels[:x],
+        input_labels[x:],
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
+
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert smul_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize(
     "type",
     [
         MulMode.DEFAULT,
@@ -237,6 +381,34 @@ def test_mul(func, size, big_endian):
 def test_gen_mul(type, size, big_endian):
     x, y = size
     ckt = generate_mul(x, y, type=type, big_endian=big_endian)
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res.reverse()
+
+        assert mul_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize(
+    "type",
+    [
+        MulMode.DEFAULT,
+        MulMode.DADDA,
+        MulMode.WALLACE,
+        MulMode.POW2_M1,
+    ],
+)
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_gen_mul_with_basis(type, basis, big_endian):
+    x, y = 3, 6
+    ckt = generate_mul(x, y, type=type, basis=basis, big_endian=big_endian)
+    assert_circuit_in_basis(ckt, basis)
     for test in range(TEST_SIZE):
         input_labels_a = [random.choice([0, 1]) for _ in range(x)]
         input_labels_b = [random.choice([0, 1]) for _ in range(y)]
@@ -509,41 +681,6 @@ def test_sum_weighted_bits_no_basis(func, shape):
         assert sum_weighted_bits_naive(weighted_input, len(res)) == res
 
 
-# FIXME: add_sum_pow2_m1 is covered indirectly by test_mul; remove this test when
-# basis handling is updated.
-@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
-@pytest.mark.parametrize("n", [1, 2, 3, 4, 7, 31])
-@pytest.mark.parametrize("big_endian", [False, True])
-def test_add_sum_pow2_m1(basis, n, big_endian):
-    ckt = Circuit()
-    input_labels = [f"x{i}" for i in range(n)]
-    for label in input_labels:
-        ckt.add_gate(Gate(label, INPUT))
-
-    grouped_result = add_sum_pow2_m1(
-        ckt, input_labels, basis=basis, big_endian=big_endian
-    )
-    result = [label for group in grouped_result for label in group]
-    ckt.set_outputs(result)
-    assert_circuit_in_basis(ckt, basis)
-
-    inputs = (
-        product((0, 1), repeat=n)
-        if n <= 7
-        else (tuple(random.choice([0, 1]) for _ in range(n)) for _ in range(TEST_SIZE))
-    )
-    for values in inputs:
-        evaluated = ckt.evaluate(list(values))
-        offset = 0
-        weighted_sum = 0
-        for index, group in enumerate(grouped_result):
-            group_size = len(group)
-            weighted_sum += (2**index) * sum(evaluated[offset : offset + group_size])
-            offset += group_size
-        input_sum = sum(values)
-        assert weighted_sum == input_sum
-
-
 @pytest.mark.parametrize("num", list(range(128)))
 def test_add_equal(num):
     r = 7
@@ -733,7 +870,7 @@ def test_sub_two_numbers(func, basis, size, big_endian):
         assert sub_two_numbers_naive(input_labels_a, input_labels_b) == res
 
 
-@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize(
     "size",
     [1, 2, 3, pytest.param(8, marks=pytest.mark.slow)],
@@ -774,7 +911,7 @@ def test_subtract_with_compare(func, basis, size, big_endian):
         assert borrow_value == int(to_num(input_labels_a) < to_num(input_labels_b))
 
 
-@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize("big_endian", [True, False])
 @pytest.mark.parametrize("size", [1, 2, 3, pytest.param(8, marks=pytest.mark.slow)])
 def test_generate_sub_two_numbers(basis, size, big_endian):
@@ -793,7 +930,7 @@ def test_generate_sub_two_numbers(basis, size, big_endian):
         assert sub_two_numbers_naive(input_labels_a, input_labels_b) == res
 
 
-@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, GenerationBasis.AIG])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize(
     "n",
     list(range(1, 18))
