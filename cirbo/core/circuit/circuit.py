@@ -201,6 +201,57 @@ class Circuit(Function):
             return _parser.convert_to_circuit(s)
 
     @staticmethod
+    def from_aig_file(file_path: str) -> "Circuit":
+        """
+        Initialize the circuit from an AIG format file.
+
+        Supports both ASCII (.aag) and binary (.aig) AIGER formats. Only combinational
+        circuits (without latches) are supported.
+
+        :param file_path: path to the .aag or .aig file.
+        :return: parsed Circuit object.
+
+        """
+        from cirbo.core.parser.aig import AIGParser
+
+        parser = AIGParser()
+        return parser.parse_file(file_path)
+
+    @staticmethod
+    def from_aig_string(string: str) -> "Circuit":
+        """
+        Initialize the circuit from an AIG format string.
+
+        Only ASCII AIG format (.aag) is supported for string input. Only combinational
+        circuits (without latches) are supported.
+
+        :param string: string containing AIG data in ASCII format.
+        :return: parsed Circuit object.
+
+        """
+        from cirbo.core.parser.aig import AIGParser
+
+        parser = AIGParser()
+        return parser.parse_string(string)
+
+    @staticmethod
+    def from_aig_bytes(data: bytes) -> "Circuit":
+        """
+        Initialize the circuit from AIG format bytes.
+
+        Supports both ASCII (.aag) and binary (.aig) AIGER formats. Only combinational
+        circuits (without latches) are supported.
+
+        :param data: bytes containing AIG data.
+        :return: parsed Circuit object.
+
+        """
+        from cirbo.core.parser.aig import AIGParser
+
+        parser = AIGParser()
+        return parser.parse_bytes(data)
+
+    @staticmethod
     def bare_circuit_with_labels(
         labels: tp.Sequence[gate.Label],
         *,
@@ -497,6 +548,28 @@ class Circuit(Function):
         check_label_doesnt_exist(label, self)
         check_gates_exist(operands, self)
 
+        return self._emplace_gate(label, gate_type, operands, **kwargs)
+
+    def unchecked_emplace_gate(
+        self,
+        label: gate.Label,
+        gate_type: gate.GateType,
+        operands: tuple[gate.Label, ...] = (),
+        **kwargs,
+    ) -> tp_ext.Self:
+        """
+        Add gate in the circuit without neither checking that it is not already there,
+        or validating that its operands exist.
+
+        Note: this method should NOT be used in most of the cases.
+
+        :param label: new gate's label.
+        :param gate_type: new gate's type of operator.
+        :param operands: new gate's operands.
+        :param kwargs: others parameters for constructing new gate.
+        :return: this circuit after modification.
+
+        """
         return self._emplace_gate(label, gate_type, operands, **kwargs)
 
     def make_block_from_slice(
