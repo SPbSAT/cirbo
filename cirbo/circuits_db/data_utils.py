@@ -2,8 +2,8 @@
 
 import os
 import pathlib
+import typing as tp
 from importlib.resources import files
-
 
 __all__ = [
     'resolve_default_data_path',
@@ -12,7 +12,9 @@ __all__ = [
 ]
 
 
-def resolve_default_data_path(data_path: os.PathLike[str]) -> pathlib.Path:
+def resolve_default_data_path(
+    data_path: tp.Union[str, os.PathLike[str]]
+) -> pathlib.Path:
     """
     Resolves `Traversable` path to default data item (e.g. database of small circuits)
     based on given relative path to data file.
@@ -20,7 +22,8 @@ def resolve_default_data_path(data_path: os.PathLike[str]) -> pathlib.Path:
     :param data_path: relative to the `data/` directory path to the data file.
 
     """
-    return pathlib.Path(files("cirbo").joinpath(f"data/{data_path}"))  # type: ignore
+    data_path = pathlib.Path(data_path)
+    return pathlib.Path(files("cirbo").joinpath("data" / data_path))  # type: ignore
 
 
 DEFAULT_XAIG_DB_PATH = resolve_default_data_path(pathlib.Path("xaig_db.bin.xz"))

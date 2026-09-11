@@ -4,6 +4,7 @@ import abc
 import copy
 import dataclasses
 import enum
+import logging
 import math
 import random
 import time
@@ -24,6 +25,8 @@ __all__ = [
     'optimize',
 ]
 
+logger = logging.getLogger(__name__)
+
 
 @dataclasses.dataclass(frozen=True)
 class SearchConfig:
@@ -33,6 +36,8 @@ class SearchConfig:
     :param max_iterations: Maximum number of main iterations to run the search for.
                            The meaning of "main iteration" may vary for different
                            `SearchStrategy` implementations.
+    :param max_stagnation_iterations: Maximum main iterations without changes before
+           an algorithm will be forced to stop.
     :param time_limit_sec: Maximum time limit in seconds to run the search for.
     :param seed: Seed for the random number generator.
     :param check_equivalence: Whether to check a new found circuits for equivalence.
@@ -40,15 +45,13 @@ class SearchConfig:
     """
 
     max_iterations: tp.Optional[int] = None
+    max_stagnation_iterations: tp.Optional[int] = None
     time_limit_sec: tp.Optional[float] = None
     seed: tp.Optional[int] = None
     check_equivalence: bool = False
 
     def __post_init__(self) -> None:
-        if self.max_iterations is None and self.time_limit_sec is None:
-            raise InvalidSearchConfigError(
-                'Either max_iterations or time_limit_sec must be specified.'
-            )
+        self._validate_stop_criteria_is_set()
 
         if self.max_iterations is not None and self.max_iterations < 0:
             raise InvalidSearchConfigError('max_iterations must be non-negative.')
@@ -58,6 +61,17 @@ class SearchConfig:
         ):
             raise InvalidSearchConfigError(
                 'time_limit_sec must be finite and non-negative.'
+            )
+
+    def _validate_stop_criteria_is_set(self) -> None:
+        if (
+            True
+            and self.max_iterations is None
+            and self.time_limit_sec is None
+            and self.max_stagnation_iterations is None
+        ):
+            raise InvalidSearchConfigError(
+                'Either max_iterations, time_limit_sec or max_stagnation_iterations must be specified.'
             )
 
 
@@ -77,6 +91,7 @@ class TerminationReason(enum.Enum):
 
     UNKNOWN = 'unknown'
     ITERATION_LIMIT = 'iteration_limit'
+    STAGNATION_LIMIT = 'stagnation_iteration_limit'
     TIME_LIMIT = 'time_limit'
     NO_MUTATIONS = 'no_mutations'
 
@@ -87,6 +102,7 @@ class SearchResult:
 
     frontier: InstanceFrontier
     iterations: int
+    stagnation_iterations: int
     evaluated_candidates: int
     accepted_candidates: int
     rejected_candidates: int
@@ -124,8 +140,14 @@ class MultiStartRandomWalk(SearchStrategy):
 
     """
 
-    def __init__(self, one_walk_length: int = 100):
+    def __init__(
+        self,
+        one_walk_length: int = 100,
+        *,
+        inner_log_step: int = 5,
+    ):
         self._one_walk_length = one_walk_length
+        self._inner_log_step = inner_log_step
 
         if self._one_walk_length <= 0:
             raise InvalidSearchConfigError('one_walk_length must be positive!')
@@ -144,6 +166,7 @@ class MultiStartRandomWalk(SearchStrategy):
 
         _started_at = time.monotonic()
         _iterations = 0
+        _stagnation_iterations = 0
         _evaluated = 0
         _accepted = 0
         _rejected = 0
@@ -174,18 +197,87 @@ class MultiStartRandomWalk(SearchStrategy):
                 _termination_reason = TerminationReason.ITERATION_LIMIT
                 break
 
+            if (
+                config.max_stagnation_iterations is not None
+                and _stagnation_iterations >= config.max_stagnation_iterations
+            ):
+                _termination_reason = TerminationReason.STAGNATION_LIMIT
+                break
+
             _iterations += 1
+            _changes_on_iteration: bool = False
+
+            elapsed_sec = time.monotonic() - _started_at
+            logger.info(
+                "Main iteration %d/%s (stagnation %d/%s), elapsed %.2fs/%s, "
+                "evaluated=%d, accepted=%d, rejected=%d",
+                _iterations,
+                (config.max_iterations if config.max_iterations is not None else "∞"),
+                _stagnation_iterations,
+                (
+                    f"{config.max_stagnation_iterations}"
+                    if config.max_stagnation_iterations is not None
+                    else "∞"
+                ),
+                elapsed_sec,
+                (
+                    f"{config.time_limit_sec:.2f}s"
+                    if config.time_limit_sec is not None
+                    else "∞"
+                ),
+                _evaluated,
+                _accepted,
+                _rejected,
+            )
 
             current_initial_points = list(current_frontier.get_frontier())
-            for current_initial_circuit in current_initial_points:
+            for _ckt_index, current_initial_circuit in enumerate(
+                current_initial_points,
+                start=1,
+            ):
                 if _check_time_limit():
                     break
 
                 current_circuit = current_initial_circuit.circuit
 
-                for _ in range(self._one_walk_length):
+                for _current_iteration in range(self._one_walk_length):
                     if _check_time_limit():
                         break
+
+                    if (
+                        (_current_iteration + 1) % self._inner_log_step == 0
+                        or _current_iteration + 1 == self._one_walk_length
+                    ):
+                        elapsed_sec = time.monotonic() - _started_at
+                        logger.info(
+                            "Main %d/%s (stagnation %d/%s), circuit %d/%d, walk %d/%d, "
+                            "elapsed %.2fs/%s, evaluated=%d, accepted=%d, rejected=%d",
+                            _iterations,
+                            (
+                                config.max_iterations
+                                if config.max_iterations is not None
+                                else "∞"
+                            ),
+                            _stagnation_iterations,
+                            (
+                                f"{config.max_stagnation_iterations}"
+                                if config.max_stagnation_iterations is not None
+                                else "∞"
+                            ),
+                            _ckt_index,
+                            len(current_initial_points),
+                            _current_iteration + 1,
+                            self._one_walk_length,
+                            elapsed_sec,
+                            (
+                                f"{config.time_limit_sec:.2f}s"
+                                if config.time_limit_sec is not None
+                                else "∞"
+                            ),
+                            _evaluated,
+                            _accepted,
+                            _rejected,
+                        )
 
                     mutation = choose_random_mutation(
                         rng=rng,
@@ -209,12 +301,19 @@ class MultiStartRandomWalk(SearchStrategy):
 
                     if current_frontier.consider_circuit(candidate):
                         _accepted += 1
+                        _changes_on_iteration = True
                     else:
                         _rejected += 1
+
+            if _changes_on_iteration:
+                _stagnation_iterations = 0
+            else:
+                _stagnation_iterations += 1
 
         return SearchResult(
             frontier=current_frontier,
             iterations=_iterations,
+            stagnation_iterations=_stagnation_iterations,
             evaluated_candidates=_evaluated,
             accepted_candidates=_accepted,
             rejected_candidates=_rejected,

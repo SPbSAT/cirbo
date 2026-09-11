@@ -327,20 +327,28 @@ class Circuit(Function):
             1 for _gate in self._gates.values() if _gate.gate_type not in exclusion_list
         )
 
-    def get_depth(self) -> int:
+    def get_depth(
+        self,
+        *,
+        exclusion_list: tp.Optional[tp.Container[gate.GateType]] = None,
+    ) -> int:
         """
         Computes the logical depth of the circuit.
 
         The depth of a circuit is defined as the length of the longest path from any
         input or constant gate to any output gate in the circuit. Input and constant
-        gates have depth 0, and every other gate has depth equal to 1 plus the maximum
-        depth of its operands.
+        gates have depth 0. Every other gate has depth equal to the maximum depth of
+        its operands plus 1, unless its type is in `exclusion_list`, in which case
+        it does not increase the depth.
 
-        :return: integer value representing the maximum depth of the circuit.
+        :param exclusion_list: Gate types that do not contribute to the circuit depth.
+        :return: an integer value representing the maximum depth of the circuit.
 
         """
         if not self.gates or not self.outputs:
             return 0
+
+        excluded = exclusion_list if exclusion_list is not None else ()
 
         depths: dict[gate.Label, int] = {}
         operands_left: dict[gate.Label, int] = {}
@@ -357,13 +365,22 @@ class Circuit(Function):
 
         while queue:
             label = queue.popleft()
+
             for user_label in self.get_gate_users(label):
                 max_operand_depth[user_label] = max(
-                    max_operand_depth[user_label], depths[label]
+                    max_operand_depth[user_label],
+                    depths[label],
                 )
                 operands_left[user_label] -= 1
+
                 if operands_left[user_label] == 0:
-                    depths[user_label] = max_operand_depth[user_label] + 1
+                    user_gate = self.gates[user_label]
+
+                    depths[user_label] = (
+                        max_operand_depth[user_label]
+                        if user_gate.gate_type in excluded
+                        else max_operand_depth[user_label] + 1
+                    )
                     queue.append(user_label)
 
         return max(depths[output] for output in self.outputs)
@@ -1983,11 +2000,11 @@ class Circuit(Function):
         )
         graph.view()
 
-    def save_to_file(self, path: str) -> None:
+    def save_to_file(self, path: tp.Union[str, pathlib.Path]) -> None:
         """
         Save circuit to file.
 
-        :param path: path to file with file's name and file's extension.
+        :param path: path to the file with the file's name and file's extension.
 
         """
         p = pathlib.Path(path)

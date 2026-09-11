@@ -2,9 +2,7 @@
 
 from .abc import (
     ABC_HEAVY_COMMANDS,
-    ABC_LIGHT_COMMANDS,
     ABCHeavyMutation,
-    ABCLightMutation,
 )
 from .exceptions import (
     ABCUnavailableError,
@@ -13,7 +11,7 @@ from .exceptions import (
     MetaheuristicError,
 )
 from .instance_frontier import (
-    CircuitMetrics,
+    CircuitStats,
     InstanceDescriptor,
     InstanceFrontier,
     ParetoFrontier,
@@ -29,9 +27,7 @@ from .search import (
 )
 
 __all__ = [
-    'ABC_LIGHT_COMMANDS',
     'ABC_HEAVY_COMMANDS',
-    'ABCLightMutation',
     'ABCHeavyMutation',
     'SearchConfig',
     'SearchResult',
@@ -45,7 +41,7 @@ __all__ = [
     'InvalidSearchConfigError',
     'InvalidFrontierError',
     'ABCUnavailableError',
-    'CircuitMetrics',
+    'CircuitStats',
     'InstanceDescriptor',
     'InstanceFrontier',
     'ParetoFrontier',

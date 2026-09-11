@@ -2,14 +2,18 @@ import abc
 import dataclasses
 import pathlib
 import random
+import shutil
 import typing as tp
 
+import typing_extensions as tp_ext
+
 from cirbo.core import Circuit
+from cirbo.core.circuit import gate
 from cirbo.sat.sat import check_circuits_equivalence
 from .exceptions import InvalidFrontierError
 
 __all__ = [
-    'CircuitMetrics',
+    'CircuitStats',
     'InstanceDescriptor',
     'InstanceFrontier',
     'ParetoFrontier',
@@ -17,18 +21,21 @@ __all__ = [
 
 
 @dataclasses.dataclass(frozen=True, order=True)
-class CircuitMetrics:
+class CircuitStats:
     """Objective values used by the built-in Pareto search."""
 
-    size: int
     depth: int
+    size: int
 
     @classmethod
-    def from_circuit(cls, circuit: Circuit) -> "CircuitMetrics":
+    def from_circuit(cls, circuit: Circuit) -> "CircuitStats":
         """Measure gate count and the longest non-input gate path to an output."""
-        return CircuitMetrics(size=circuit.gates_number(), depth=circuit.get_depth())
+        return CircuitStats(
+            depth=circuit.get_depth(exclusion_list=(gate.NOT,)),
+            size=circuit.gates_number(),
+        )
 
-    def dominates(self, other: "CircuitMetrics") -> bool:
+    def dominates(self, other: "CircuitStats") -> bool:
         """Return True if self dominates other."""
         return self.size <= other.size and self.depth <= other.depth and self != other
 
@@ -42,7 +49,7 @@ class InstanceDescriptor:
 
     circuit: Circuit
     source_path: tp.Optional[pathlib.Path]
-    metrics: CircuitMetrics
+    metrics: CircuitStats
 
     @classmethod
     def from_path(cls, path: pathlib.Path) -> "InstanceDescriptor":
@@ -50,7 +57,7 @@ class InstanceDescriptor:
         return InstanceDescriptor(
             circuit=circuit,
             source_path=path,
-            metrics=CircuitMetrics.from_circuit(circuit),
+            metrics=CircuitStats.from_circuit(circuit),
         )
 
     @classmethod
@@ -58,7 +65,7 @@ class InstanceDescriptor:
         return InstanceDescriptor(
             circuit=circuit,
             source_path=None,
-            metrics=CircuitMetrics.from_circuit(circuit),
+            metrics=CircuitStats.from_circuit(circuit),
         )
 
     def dominates(self, other: "InstanceDescriptor") -> bool:
@@ -82,8 +89,43 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
             )
 
     def __str__(self) -> str:
-        _metrics = ', '.join(str(instance.metrics) for instance in self.get_frontier())
+        _metrics = ', '.join(
+            str(instance.metrics)
+            for instance in sorted(
+                self.get_frontier(), key=lambda instance: instance.metrics
+            )
+        )
         return f"{type(self).__name__}({_metrics})"
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    @classmethod
+    @abc.abstractmethod
+    def read_dir(cls, path: tp.Union[str, pathlib.Path]) -> tp_ext.Self:
+        """
+        Loads all instances from a directory.
+
+        Currently, supports only .bench instances.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def write_dir(
+        self,
+        path: tp.Union[str, pathlib.Path],
+        *,
+        prefix: str = "",
+        remove_existing: bool = False,
+    ) -> None:
+        """
+        Writes the frontier to a directory.
+
+        :param path: The path to the directory to write to.
+        :param prefix: The name of the function (prefix for each file name).
+        :param remove_existing: Whether to remove existing files in the directory.
+        """
+        raise NotImplementedError
 
     @abc.abstractmethod
     def consider_circuit(self, new_circuit: Circuit) -> bool:
@@ -112,6 +154,20 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def get_smallest(self) -> InstanceDescriptor:
+        """
+        :return: The smallest (by size) circuit in the frontier.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_shallowest(self) -> InstanceDescriptor:
+        """
+        :return: The shallowest (by depth) circuit in the frontier.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def any_instance(self, rng: random.Random) -> InstanceDescriptor:
         """
         :return: Any instance that is currently in the front.
@@ -128,6 +184,44 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
 
 
 class ParetoFrontier(InstanceFrontier):
+    @classmethod
+    def read_dir(cls, path: tp.Union[str, pathlib.Path]) -> tp_ext.Self:
+        from cirbo.core.parser.bench import BenchToCircuit
+
+        path = pathlib.Path(path)
+
+        _circuits = []
+        for path in sorted(path.glob("*.bench")):
+            with path.open() as f:
+                _circuits.append(BenchToCircuit().convert_to_circuit(f))
+
+        return cls(_circuits)
+
+    def write_dir(
+        self,
+        path: tp.Union[str, pathlib.Path],
+        *,
+        prefix: str = "",
+        remove_existing: bool = False,
+    ) -> None:
+        output_dir = pathlib.Path(path)
+        if output_dir.exists():
+            if not remove_existing:
+                raise ValueError(f"Directory {output_dir} already exists")
+            shutil.rmtree(output_dir)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        _prefix = f"{prefix}_" if prefix else ""
+        for descriptor in self.get_frontier():
+            output_path = output_dir / (
+                f"{_prefix}size_{descriptor.metrics.size}"
+                f"_depth_{descriptor.metrics.depth}.bench"
+            )
+            descriptor.circuit.save_to_file(output_path)
+
+        print(f"Saved frontier to {output_dir}")
+
     def __init__(
         self,
         circuits: tp.Sequence[Circuit],
@@ -156,6 +250,12 @@ class ParetoFrontier(InstanceFrontier):
 
     def get_frontier(self) -> tp.Sequence[InstanceDescriptor]:
         return tuple(self.instances)
+
+    def get_smallest(self) -> InstanceDescriptor:
+        return min(self.instances, key=lambda instance: instance.metrics.size)
+
+    def get_shallowest(self) -> InstanceDescriptor:
+        return min(self.instances, key=lambda instance: instance.metrics.depth)
 
     def any_instance(self, rng: random.Random) -> InstanceDescriptor:
         return self.instances[0]

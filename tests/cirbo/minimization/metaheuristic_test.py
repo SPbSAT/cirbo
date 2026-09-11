@@ -4,7 +4,7 @@ import pytest
 
 from cirbo.core import Circuit, Gate, gate
 from cirbo.minimization.metaheuristic import (
-    CircuitMetrics,
+    CircuitStats,
     CircuitMutation,
     InstanceDescriptor,
     InvalidFrontierError,
@@ -85,7 +85,9 @@ class _RecordingStrategy(SearchStrategy):
 
 
 def test_measure_circuit():
-    assert CircuitMetrics.from_circuit(_duplicate_and_circuit()) == CircuitMetrics(3, 2)
+    assert CircuitStats.from_circuit(_duplicate_and_circuit()) == CircuitStats(
+        depth=2, size=3
+    )
 
 
 def test_pareto_search_uses_test_mutation():
@@ -97,7 +99,7 @@ def test_pareto_search_uses_test_mutation():
         SearchConfig(max_iterations=2, seed=1),
     )
     assert candidate.get_truth_table() == source.get_truth_table()
-    assert result.frontier.get_frontier()[0].metrics == CircuitMetrics(1, 1)
+    assert result.frontier.get_frontier()[0].metrics == CircuitStats(1, 1)
     assert result.accepted_candidates == 1
     assert result.termination_reason == TerminationReason.ITERATION_LIMIT
 

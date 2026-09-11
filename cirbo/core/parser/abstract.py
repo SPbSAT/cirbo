@@ -27,13 +27,13 @@ class AbstractParser(metaclass=abc.ABCMeta):
         :param stream: Iterable, contains lines to parse.
 
         """
-        logger.info("/" * 80)
-        logger.info("Parsing started.")
+        logger.debug("/" * 80)
+        logger.debug("Parsing started.")
         for line in stream:
             yield from self._process_line(line)
         yield from self._eof()
-        logger.info("Parsing Ended.")
-        logger.info("/" * 80)
+        logger.debug("Parsing Ended.")
+        logger.debug("/" * 80)
 
     @abc.abstractmethod
     def _process_line(self, line: str) -> tp.Iterable:
