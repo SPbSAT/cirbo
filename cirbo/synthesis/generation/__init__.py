@@ -14,6 +14,7 @@ from cirbo.synthesis.generation.generation import (
     generate_plus_one,
 )
 from cirbo.synthesis.generation.helpers import GenerationBasis
+from cirbo.synthesis.generation.preparata_muller import generate_circuit_pm1971
 
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     'add_if_then_else',
     'add_pairwise_if_then_else',
     'add_pairwise_xor',
+    'generate_circuit_pm1971',
 ]
