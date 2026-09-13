@@ -8,7 +8,7 @@ from cirbo.integrations.abc import abc_transform, ABCCommand
 from .mutation import CircuitMutation
 
 __all__ = [
-    'ABCRandomHeavyMutation',
+    'ABCHeavyMutation',
     "DEEPSYN",
     "REWIRE",
     "DC2",
@@ -62,7 +62,7 @@ class _ABCRandomMutation(CircuitMutation):
         return abc_transform(circuit, command)
 
 
-class ABCRandomHeavyMutation(_ABCRandomMutation):
+class ABCHeavyMutation(_ABCRandomMutation):
     """Apply one randomly selected restructure ABC command."""
 
     _commands = ABC_HEAVY_COMMANDS

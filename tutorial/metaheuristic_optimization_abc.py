@@ -1,7 +1,7 @@
 """Use optional ABC mutations in the metaheuristic circuit optimizer."""
 
 from cirbo.minimization import (
-    ABCRandomHeavyMutation,
+    ABCHeavyMutation,
     SearchConfig,
     optimize,
     MultiStartRandomWalk,
@@ -15,7 +15,7 @@ initial_stats = CircuitStats.from_circuit(ckt)
 # Requires a build with the optional abc_wrapper extension enabled.
 result = optimize(
     ckt,
-    ABCRandomHeavyMutation(),
+    ABCHeavyMutation(),
     SearchConfig(20, 3, check_equivalence=True, seed=42),
     search_strategy=MultiStartRandomWalk(100),
 )

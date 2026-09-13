@@ -4,6 +4,8 @@ to improve pareto frontier of the ex215 IWLS 2026 benchmark.
 """
 
 import logging
+import os
+import shutil
 from pathlib import Path
 
 from cirbo.circuits_db.data_utils import resolve_default_data_path
@@ -13,7 +15,7 @@ from cirbo.minimization import (
     SearchConfig,
     MultiStartRandomWalk,
 )
-from cirbo.minimization.metaheuristic.abc import ABCRandomHeavyMutation
+from cirbo.minimization.metaheuristic.abc import ABCHeavyMutation
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,9 +25,9 @@ ex215_initial_frontier = ParetoFrontier.read_dir(ex215_dir)
 # Requires a build with the optional abc_wrapper extension enabled.
 res = optimize(
     ex215_initial_frontier,
-    ABCRandomHeavyMutation(),
-    SearchConfig(50, 3, seed=42),
-    search_strategy=MultiStartRandomWalk(20),
+    ABCHeavyMutation(),
+    SearchConfig(1, 3, seed=42),
+    search_strategy=MultiStartRandomWalk(1),
 )
 
 print(res)
@@ -33,4 +35,7 @@ print(res.frontier)
 print(f"Initial frontier size: {len(ex215_initial_frontier)}")
 print(f"Resulting frontier size: {len(res.frontier)}")
 
-res.frontier.write_dir(Path("ex215_optimized_frontier"), prefix="ex215")
+result_dir = Path("ex215_optimized_frontier")
+if os.path.exists(result_dir):
+    shutil.rmtree(result_dir)
+res.frontier.write_dir(result_dir, prefix="ex215")

@@ -5,7 +5,7 @@ composition in the method `cleanup` and subcircuit minimization algorithm define
 
 from .metaheuristic import (
     ABC_HEAVY_COMMANDS,
-    ABCRandomHeavyMutation,
+    ABCHeavyMutation,
     CircuitMutation,
     CircuitStats,
     InstanceDescriptor,
@@ -32,7 +32,7 @@ __all__ = [
     'minimize_subcircuits',
     # metaheuristic
     'ABC_HEAVY_COMMANDS',
-    'ABCRandomHeavyMutation',
+    'ABCHeavyMutation',
     'SearchConfig',
     'SearchResult',
     'SearchStrategy',

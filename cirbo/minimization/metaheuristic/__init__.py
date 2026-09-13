@@ -1,6 +1,6 @@
 """Extensible metaheuristics for optimization of the Boolean circuits."""
 
-from .abc import ABC_HEAVY_COMMANDS, ABCRandomHeavyMutation
+from .abc import ABC_HEAVY_COMMANDS, ABCHeavyMutation
 from .exceptions import (
     InvalidFrontierError,
     InvalidSearchConfigError,
@@ -24,7 +24,7 @@ from .search import (
 
 __all__ = [
     'ABC_HEAVY_COMMANDS',
-    'ABCRandomHeavyMutation',
+    'ABCHeavyMutation',
     'SearchConfig',
     'SearchResult',
     'SearchStrategy',
