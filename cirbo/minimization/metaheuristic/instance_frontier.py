@@ -9,7 +9,6 @@ import typing as tp
 import typing_extensions as tp_ext
 
 from cirbo.core import Circuit
-from cirbo.core.circuit import gate
 from cirbo.sat.sat import check_circuits_equivalence
 from .exceptions import InvalidFrontierError
 
@@ -26,7 +25,7 @@ class CircuitStats:
     """
     Objective values used by the built-in Pareto search.
 
-    Depth ans Size doesn't include LNOT, RNOT, IFF, LIFF, RIFF gates.
+    Depth and Size doesn't include LNOT, RNOT, IFF, LIFF, RIFF gates.
     """
 
     depth: int
