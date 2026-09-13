@@ -281,7 +281,7 @@ def test_mul_with_basis(func, size, basis, big_endian):
         assert mul_naive(input_labels_a, input_labels_b) == res
 
 
-@pytest.mark.parametrize("constant", [1, 2, 3, 5, 13])
+@pytest.mark.parametrize("constant", [0, 1, 2, 3, 5, 13])
 @pytest.mark.parametrize("size", [1, 2, 5, pytest.param(17, marks=pytest.mark.slow)])
 @pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize("big_endian", [True, False])
@@ -312,12 +312,26 @@ def test_mul_constant(size, constant, basis, big_endian):
         assert to_bin(to_num(inputs) * constant, len(out)) == res
 
 
+def test_mul_constant_negative():
+    ckt = Circuit()
+    input_labels = ['x0']
+    ckt.add_gate(Gate(input_labels[0], INPUT))
+
+    with pytest.raises(ValueError):
+        add_mul_constant(ckt, input_labels, -1)
+
+
 @pytest.mark.parametrize("func", [add_smul_dadda, add_smul_wallace])
 @pytest.mark.parametrize(
     "size",
     [
+        [1, 1],
+        [1, 7],
+        [7, 1],
         [2, 2],
         [3, 3],
+        [3, 6],
+        pytest.param([8, 2], marks=pytest.mark.slow),
         pytest.param([8, 8], marks=pytest.mark.slow),
         pytest.param([16, 16], marks=pytest.mark.slow),
     ],

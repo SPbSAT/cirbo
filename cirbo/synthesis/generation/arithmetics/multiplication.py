@@ -1,5 +1,6 @@
 import collections
 import enum
+import inspect
 import typing as tp
 
 from cirbo.core.circuit import Circuit, gate
@@ -51,13 +52,25 @@ class MulMode(enum.Enum):
     POW2_M1 = "POW2_M1"
 
 
+class _SumFuncProtocol(tp.Protocol):
+    def __call__(
+        self,
+        circuit: Circuit,
+        input_labels_a: tp.Sequence[str],
+        input_labels_b: tp.Sequence[str],
+        *,
+        basis: GenerationBasis,
+        big_endian: bool,
+    ) -> list[gate.Label]: ...
+
+
 def add_mul_log_depth_sum(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
-    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    sum_func: _SumFuncProtocol = add_sum_two_numbers_log_depth,
     big_endian: bool = False,
 ) -> list[gate.Label]:
     """
@@ -102,7 +115,9 @@ def add_mul_log_depth_sum(
         for i in range(shift):
             res.append(labels_a[i])
 
-        res += sum_func(circuit, labels_a[shift:], labels_b, basis=basis)
+        res += sum_func(
+            circuit, labels_a[shift:], labels_b, basis=basis, big_endian=False
+        )
         return res
 
     while len(c) > 1:
@@ -145,7 +160,7 @@ def generate_mul(
     basis = conventional_basis(basis)
     circuit = Circuit.bare_circuit(size_of_input_a + size_of_input_b)
     kwargs: dict[str, tp.Any] = {"big_endian": big_endian}
-    if type in _basis_aware_mul_modes:
+    if "basis" in inspect.signature(_process_mul[type]).parameters:
         kwargs["basis"] = basis
     outputs = _process_mul[type](
         circuit,
@@ -530,11 +545,11 @@ def add_dadda_karatsuba(
     return reverse_if_big_endian(final_res[:out_size], big_endian)
 
 
-def add_fin_sum(
+def _add_fin_sum(
     circuit: Circuit,
     c: list[tp.Deque[str]],
     *,
-    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    sum_func: _SumFuncProtocol = add_sum_two_numbers_log_depth,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
     basis = conventional_basis(basis)
@@ -558,7 +573,7 @@ def add_fin_sum(
                 a.append(c[i].popleft())
                 b.append(zero)
 
-    out += sum_func(circuit, a, b, basis=basis)
+    out += sum_func(circuit, a, b, basis=basis, big_endian=False)
     return out
 
 
@@ -567,7 +582,7 @@ def add_mul_dadda(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    sum_func: _SumFuncProtocol = add_sum_two_numbers_log_depth,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
@@ -632,7 +647,7 @@ def add_mul_dadda(
         else:
             di = (2 * di + 2) // 3
 
-    out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+    out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
 
     return reverse_if_big_endian(out, big_endian)
 
@@ -642,7 +657,7 @@ def add_smul_dadda(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    sum_func: _SumFuncProtocol = add_sum_two_numbers_log_depth,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:
@@ -674,9 +689,23 @@ def add_smul_dadda(
         input_labels_b.reverse()
 
     c: list[tp.Deque[str]] = [collections.deque() for _ in range(n + m)]
+
+    if m == 1:
+        for i, label in enumerate(input_labels_a):
+            c[i].append(add_gate_from_tt(circuit, label, input_labels_b[0], '0100'))
+        c[n].append(
+            add_gate_from_tt(circuit, input_labels_a[-1], input_labels_b[0], '0100')
+        )
+        c[0].append(input_labels_b[0])
+        out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+
+        return reverse_if_big_endian(out, big_endian)
+
+    # Build Baugh-Wooley style partial product columns.
     for i in range(m):
         for j in range(n):
             if (i == m - 1) ^ (j == n - 1):
+                # Invert partial products with exactly one signed bit.
                 c[i + j].append(
                     add_gate_from_tt(
                         circuit, input_labels_a[j], input_labels_b[i], '1110'
@@ -688,18 +717,17 @@ def add_smul_dadda(
                         circuit, input_labels_a[j], input_labels_b[i], '0001'
                     )
                 )
-    c[n].append(add_gate_from_tt(circuit, input_labels_a[0], input_labels_b[0], '1111'))
-    c[n + m - 1].append(
-        add_gate_from_tt(circuit, input_labels_a[0], input_labels_b[0], '1111')
-    )
-
-    if n == 1 or m == 1:
-        return reverse_if_big_endian([c[i][0] for i in range(m + n - 1)], big_endian)
+    # Compensate inverted signed partial products with correction ones.
+    one = add_gate_from_tt(circuit, input_labels_a[0], input_labels_b[0], '1111')
+    c[m - 1].append(one)
+    c[n - 1].append(one)
+    c[n + m - 1].append(one)
 
     di = 2
-    while 3 * di // 2 < min(n, m):
+    while 3 * di // 2 < max(map(len, c)):
         di = 3 * di // 2
 
+    # Do the usual Dadda-style reduction and then the final carry-propagate sum.
     while di != 1:
         for i in range(1, n + m):
             while len(c[i]) > di:
@@ -724,7 +752,7 @@ def add_smul_dadda(
         else:
             di = (2 * di + 2) // 3
 
-    out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+    out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
 
     return reverse_if_big_endian(out, big_endian)
 
@@ -734,7 +762,7 @@ def add_smul_wallace(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    sum_func: _SumFuncProtocol = add_sum_two_numbers_log_depth,
     big_endian: bool = False,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
@@ -757,14 +785,32 @@ def add_smul_wallace(
     n = len(input_labels_a)
     m = len(input_labels_b)
 
+    if n < m:
+        input_labels_a, input_labels_b = input_labels_b, input_labels_a
+        n, m = m, n
+
     if big_endian:
         input_labels_a.reverse()
         input_labels_b.reverse()
 
-    c = [[PLACEHOLDER_STR] * m for _ in range(n + m)]
+    if m == 1:
+        c: tp.Any = [collections.deque() for _ in range(n + m)]
+        for i, label in enumerate(input_labels_a):
+            c[i].append(add_gate_from_tt(circuit, label, input_labels_b[0], '0100'))
+        c[n].append(
+            add_gate_from_tt(circuit, input_labels_a[-1], input_labels_b[0], '0100')
+        )
+        c[0].append(input_labels_b[0])
+        out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+
+        return reverse_if_big_endian(out, big_endian)
+
+    # Build Baugh-Wooley style partial product columns.
+    c = [[PLACEHOLDER_STR] * (m + 3) for _ in range(n + m)]
     for i in range(m):
         for j in range(n):
             if (i == m - 1) ^ (j == n - 1):
+                # Invert partial products with exactly one signed bit.
                 c[i + j][i] = add_gate_from_tt(
                     circuit, input_labels_a[j], input_labels_b[i], '1110'
                 )
@@ -772,17 +818,13 @@ def add_smul_wallace(
                 c[i + j][i] = add_gate_from_tt(
                     circuit, input_labels_a[j], input_labels_b[i], '0001'
                 )
-    c[n][0] = add_gate_from_tt(circuit, input_labels_a[0], input_labels_b[0], '1111')
-    c[n + m - 1][m - 1] = add_gate_from_tt(
-        circuit, input_labels_a[0], input_labels_b[0], '1111'
-    )
+    # Compensate inverted signed partial products with correction ones.
+    one = add_gate_from_tt(circuit, input_labels_a[0], input_labels_b[0], '1111')
+    c[m - 1][m] = one
+    c[n - 1][m + 1] = one
+    c[n + m - 1][m + 2] = one
 
-    if n == 1:
-        return reverse_if_big_endian([c[i][i] for i in range(m)], big_endian)
-
-    if m == 1:
-        return reverse_if_big_endian([c[i][0] for i in range(n)], big_endian)
-
+    # Do the usual Wallace-style reduction
     while len(c[0]) != 2:
         cn = [[PLACEHOLDER_STR] * (2 * (len(c[0]) // 3)) for _ in range(n + m)]
         for row in range(0, len(c[0]) - len(c[0]) % 3, 3):
@@ -804,8 +846,9 @@ def add_smul_wallace(
 
         c = cn
 
+    # And then the final carry-propagate sum.
     c_ = [collections.deque(x for x in col if x != PLACEHOLDER_STR) for col in c]
-    out = add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
+    out = _add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
 
     return reverse_if_big_endian(out, big_endian)
 
@@ -815,7 +858,7 @@ def add_mul_wallace(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    sum_func: tp.Callable[..., list[gate.Label]] = add_sum_two_numbers_log_depth,
+    sum_func: _SumFuncProtocol = add_sum_two_numbers_log_depth,
     big_endian: bool = False,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
@@ -877,7 +920,7 @@ def add_mul_wallace(
         c = cn
 
     c_ = [collections.deque(x for x in col if x != PLACEHOLDER_STR) for col in c]
-    out = add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
+    out = _add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
 
     return reverse_if_big_endian(out, big_endian)
 
@@ -908,6 +951,13 @@ def add_mul_constant(
 
     if big_endian:
         input_labels_a.reverse()
+
+    if b < 0:
+        raise ValueError("Constant must be non-negative")
+
+    if b == 0:
+        zero = add_gate_from_tt(circuit, input_labels_a[0], input_labels_a[0], '0000')
+        return [zero]
 
     labels_with_pow = list()
     for i in range(b.bit_length()):
@@ -1036,11 +1086,4 @@ _process_mul: dict[MulMode, tp.Callable[..., list[gate.Label]]] = {
     MulMode.DADDA: add_mul_dadda,
     MulMode.WALLACE: add_mul_wallace,
     MulMode.POW2_M1: add_mul_pow2_m1,
-}
-
-_basis_aware_mul_modes = {
-    MulMode.DEFAULT,
-    MulMode.DADDA,
-    MulMode.WALLACE,
-    MulMode.POW2_M1,
 }
