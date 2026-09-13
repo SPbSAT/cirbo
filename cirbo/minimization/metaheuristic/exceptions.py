@@ -2,12 +2,7 @@
 
 from cirbo.minimization.exception import CircuitMinimizationError
 
-__all__ = [
-    'MetaheuristicError',
-    'InvalidSearchConfigError',
-    'InvalidFrontierError',
-    'ABCUnavailableError',
-]
+__all__ = ['MetaheuristicError', 'InvalidSearchConfigError', 'InvalidFrontierError']
 
 
 class MetaheuristicError(CircuitMinimizationError):
@@ -20,7 +15,3 @@ class InvalidSearchConfigError(MetaheuristicError):
 
 class InvalidFrontierError(MetaheuristicError):
     """Raised when an instance frontier cannot be searched safely."""
-
-
-class ABCUnavailableError(MetaheuristicError):
-    """Raised when an ABC mutation is used without the native ABC extension."""

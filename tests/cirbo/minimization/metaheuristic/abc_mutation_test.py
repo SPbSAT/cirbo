@@ -3,11 +3,11 @@ import random
 import pytest
 
 from cirbo.core import Circuit, Gate, gate
+from cirbo.integrations.abc import ABCUnavailableError
 from cirbo.minimization.metaheuristic import (
     abc,
     ABC_HEAVY_COMMANDS,
     ABCHeavyMutation,
-    ABCUnavailableError,
 )
 
 

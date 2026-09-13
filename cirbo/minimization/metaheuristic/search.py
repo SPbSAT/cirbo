@@ -79,7 +79,8 @@ class SearchConfig:
             and self.max_stagnation_iterations is None
         ):
             raise InvalidSearchConfigError(
-                'Either max_iterations, time_limit_sec or max_stagnation_iterations must be specified.'
+                'Either max_iterations, time_limit_sec or '
+                'max_stagnation_iterations must be specified.'
             )
 
 

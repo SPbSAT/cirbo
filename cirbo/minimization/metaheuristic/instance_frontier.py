@@ -53,7 +53,8 @@ class InstanceDescriptor:
     metrics: CircuitStats
 
     @classmethod
-    def from_path(cls, path: os.PathLike) -> "InstanceDescriptor":
+    def from_path(cls, path: tp.Union[str, os.PathLike[str]]) -> "InstanceDescriptor":
+        path = pathlib.Path(path)
         circuit = Circuit.from_bench_file(path)
         return InstanceDescriptor(
             circuit=circuit,
@@ -103,7 +104,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def read_dir(cls, path: tp.Union[str, os.PathLike]) -> tp_ext.Self:
+    def read_dir(cls, path: tp.Union[str, os.PathLike[str]]) -> tp_ext.Self:
         """
         Loads all instances from a directory.
 
@@ -115,7 +116,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def write_dir(
         self,
-        path: tp.Union[str, os.PathLike],
+        path: tp.Union[str, os.PathLike[str]],
         *,
         prefix: str = "",
         remove_existing: bool = False,
@@ -131,7 +132,9 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def consider_circuit(self, new_circuit: tp.Union[Circuit, os.PathLike]) -> bool:
+    def consider_circuit(
+        self, new_circuit: tp.Union[Circuit, os.PathLike[str]]
+    ) -> bool:
         """
         Considers a new circuit for the front.
 
@@ -190,17 +193,9 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
 
 class ParetoFrontier(InstanceFrontier):
     @classmethod
-    def read_dir(cls, path: tp.Union[str, os.PathLike]) -> tp_ext.Self:
-        from cirbo.core.parser.bench import BenchToCircuit
-
+    def read_dir(cls, path: tp.Union[str, os.PathLike[str]]) -> tp_ext.Self:
         path = pathlib.Path(path)
-
-        _circuits = []
-        for path in sorted(path.glob("*.bench")):
-            with path.open() as f:
-                _circuits.append(BenchToCircuit().convert_to_circuit(f))
-
-        return cls(_circuits)
+        return cls(list(sorted(path.glob("*.bench"))))
 
     def __init__(
         self,
@@ -212,7 +207,7 @@ class ParetoFrontier(InstanceFrontier):
 
     def write_dir(
         self,
-        path: tp.Union[str, os.PathLike],
+        path: tp.Union[str, os.PathLike[str]],
         *,
         prefix: str = "",
         remove_existing: bool = False,
@@ -235,10 +230,12 @@ class ParetoFrontier(InstanceFrontier):
 
         print(f"Saved frontier to {output_dir}")
 
-    def consider_circuit(self, new_circuit: tp.Union[Circuit, os.PathLike]) -> bool:
+    def consider_circuit(
+        self, new_circuit: tp.Union[Circuit, str, os.PathLike[str]]
+    ) -> bool:
         if isinstance(new_circuit, Circuit):
             new_instance = InstanceDescriptor.from_circuit(new_circuit)
-        elif isinstance(new_circuit, os.PathLike):
+        elif isinstance(new_circuit, (str, os.PathLike)):
             new_instance = InstanceDescriptor.from_path(new_circuit)
         else:
             raise TypeError(

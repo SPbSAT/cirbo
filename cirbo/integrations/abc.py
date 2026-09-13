@@ -2,11 +2,19 @@ import dataclasses
 import typing as tp
 
 from cirbo.core import Circuit
+from cirbo.exceptions import CirboError
 
 __all__ = [
+    'ABCUnavailableError',
     "ABCCommand",
     "abc_transform",
 ]
+
+
+class ABCUnavailableError(CirboError):
+    """Raised when an ABC mutation is used without the native ABC extension."""
+
+    pass
 
 
 @dataclasses.dataclass(frozen=True)
@@ -62,7 +70,7 @@ def abc_transform(ckt: Circuit, cmd: tp.Union[str, ABCCommand]) -> Circuit:
     try:
         from abc_wrapper import run_abc_commands_c
     except ImportError as exc:
-        raise RuntimeError(
+        raise ABCUnavailableError(
             "ABC support is not available in this Cirbo installation"
         ) from exc
 

@@ -2,7 +2,6 @@
 
 from .abc import ABC_HEAVY_COMMANDS, ABCHeavyMutation
 from .exceptions import (
-    ABCUnavailableError,
     InvalidFrontierError,
     InvalidSearchConfigError,
     MetaheuristicError,
@@ -37,7 +36,6 @@ __all__ = [
     'MetaheuristicError',
     'InvalidSearchConfigError',
     'InvalidFrontierError',
-    'ABCUnavailableError',
     'CircuitStats',
     'InstanceDescriptor',
     'InstanceFrontier',
