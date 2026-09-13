@@ -202,6 +202,9 @@ class MultiStartRandomWalk(SearchStrategy):
         current_frontier = copy.deepcopy(instance_frontier)
 
         while _termination_reason == TerminationReason.UNKNOWN:
+            if _check_time_limit():
+                break
+
             if (
                 config.max_iterations is not None
                 and _iterations >= config.max_iterations

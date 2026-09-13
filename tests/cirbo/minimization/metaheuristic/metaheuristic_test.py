@@ -186,7 +186,7 @@ def test_search_rejects_empty_frontier():
 
 def test_frontier_validates_equivalence():
     frontier = ParetoFrontier([_duplicate_and_circuit()])
-    frontier.instances.append(
+    frontier._instances.append(
         InstanceDescriptor.from_circuit(_simplified_and_circuit())
     )
     frontier.validate_equivalence()
@@ -194,7 +194,7 @@ def test_frontier_validates_equivalence():
     different = Circuit.bare_circuit(2)
     different.add_gate(Gate('out', gate.OR, ('0', '1')))
     different.mark_as_output('out')
-    frontier.instances.append(InstanceDescriptor.from_circuit(different))
+    frontier._instances.append(InstanceDescriptor.from_circuit(different))
     with pytest.raises(InvalidFrontierError, match='must be equivalent'):
         frontier.validate_equivalence()
 

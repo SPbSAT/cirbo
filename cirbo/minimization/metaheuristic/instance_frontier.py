@@ -25,7 +25,8 @@ class CircuitStats:
     """
     Objective values used by the built-in Pareto search.
 
-    Depth and Size doesn't include LNOT, RNOT, IFF, LIFF, RIFF gates.
+    Depth and Size don't include LNOT, RNOT, IFF, LIFF, RIFF gates.
+
     """
 
     depth: int
@@ -129,7 +130,8 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
 
         :param path: The path to the directory to write to.
         :param prefix: The name of the function (prefix for each file name).
-        :param remove_existing: Whether to remove existing files in the directory.
+        :param remove_existing: Whether to remove and recreate the existing output
+            directory.
 
         """
         raise NotImplementedError
@@ -202,9 +204,9 @@ class ParetoFrontier(InstanceFrontier):
 
     def __init__(
         self,
-        circuits: tp.Sequence[tp.Union[Circuit, pathlib.Path]],
+        circuits: tp.Sequence[tp.Union[Circuit, str, os.PathLike[str]]],
     ):
-        self.instances: tp.List[InstanceDescriptor] = []
+        self._instances: tp.List[InstanceDescriptor] = []
         for ckt in circuits:
             self.consider_circuit(ckt)
 
@@ -245,33 +247,33 @@ class ParetoFrontier(InstanceFrontier):
                 f"Expected Circuit or pathlib.Path, got {type(new_circuit)}"
             )
 
-        for instance in self.instances:
+        for instance in self._instances:
             if instance.dominates(new_instance):
                 return False
             if instance.metrics == new_instance.metrics:
                 return False
 
-        self.instances = [
+        self._instances = [
             instance
-            for instance in self.instances
+            for instance in self._instances
             if not new_instance.dominates(instance)
         ]
-        self.instances.append(
+        self._instances.append(
             new_instance,
         )
         return True
 
     def get_frontier(self) -> tp.Sequence[InstanceDescriptor]:
-        return tuple(self.instances)
+        return tuple(self._instances)
 
     def get_smallest(self) -> InstanceDescriptor:
-        return min(self.instances, key=lambda instance: instance.metrics.size)
+        return min(self._instances, key=lambda instance: instance.metrics.size)
 
     def get_shallowest(self) -> InstanceDescriptor:
-        return min(self.instances, key=lambda instance: instance.metrics.depth)
+        return min(self._instances, key=lambda instance: instance.metrics.depth)
 
     def some_instance(self, rng: random.Random) -> InstanceDescriptor:
-        return self.instances[0]
+        return self._instances[0]
 
     def __len__(self) -> int:
-        return len(self.instances)
+        return len(self._instances)

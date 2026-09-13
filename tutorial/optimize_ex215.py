@@ -4,8 +4,6 @@ to improve pareto frontier of the ex215 IWLS 2026 benchmark.
 """
 
 import logging
-import os
-import shutil
 from pathlib import Path
 
 from cirbo.circuits_db.data_utils import resolve_default_data_path
@@ -36,6 +34,4 @@ print(f"Initial frontier size: {len(ex215_initial_frontier)}")
 print(f"Resulting frontier size: {len(res.frontier)}")
 
 result_dir = Path("ex215_optimized_frontier")
-if os.path.exists(result_dir):
-    shutil.rmtree(result_dir)
-res.frontier.write_dir(result_dir, prefix="ex215")
+res.frontier.write_dir(result_dir, prefix="ex215", remove_existing=True)

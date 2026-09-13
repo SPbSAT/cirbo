@@ -335,14 +335,14 @@ class Circuit(Function):
         """
         Computes the logical depth of the circuit.
 
-        The depth of a circuit is defined as the length of the longest path from any
-        input or constant gate to any output gate in the circuit. Input and constant
-        gates have depth 0. Every other gate has depth equal to the maximum depth of
-        its operands plus 1, unless its type is in `exclusion_list`, in which case
-        it does not increase the depth.
+        Input and constant gates have depth 0. Every other gate has depth
+        equal to the maximum depth of its effective operands plus 1, unless
+        its type is in `exclusion_list`, in which case it does not increase
+        the depth.
 
-        :param exclusion_list: Gate types that do not contribute to the circuit depth.
-        :return: an integer value representing the maximum depth of the circuit.
+        :param exclusion_list: Gate types that do not contribute to the
+               circuit depth.
+        :return: maximum depth among circuit outputs.
 
         """
         if not self.gates or not self.outputs:
@@ -359,37 +359,32 @@ class Circuit(Function):
             ]
 
         depths: dict[gate.Label, int] = {}
-        operands_left: dict[gate.Label, int] = {}
-        max_operand_depth: dict[gate.Label, int] = {}
-        queue: collections.deque[gate.Label] = collections.deque()
 
-        for current_gate in self.gates.values():
-            if current_gate.gate_type == gate.INPUT or not current_gate.operands:
+        for current_gate in self.top_sort(inverse=True):
+            gate_type = current_gate.gate_type
+
+            if gate_type in (
+                gate.INPUT,
+                gate.ALWAYS_FALSE,
+                gate.ALWAYS_TRUE,
+            ):
                 depths[current_gate.label] = 0
-                queue.append(current_gate.label)
+                continue
+
+            if gate_type in (gate.LNOT, gate.LIFF):
+                max_operand_depth = depths[current_gate.operands[0]]
+            elif gate_type in (gate.RNOT, gate.RIFF):
+                max_operand_depth = depths[current_gate.operands[1]]
             else:
-                operands_left[current_gate.label] = len(current_gate.operands)
-                max_operand_depth[current_gate.label] = 0
-
-        while queue:
-            label = queue.popleft()
-
-            for user_label in self.get_gate_users(label):
-                max_operand_depth[user_label] = max(
-                    max_operand_depth[user_label],
-                    depths[label],
+                max_operand_depth = max(
+                    depths[operand] for operand in current_gate.operands
                 )
-                operands_left[user_label] -= 1
 
-                if operands_left[user_label] == 0:
-                    user_gate = self.gates[user_label]
-
-                    depths[user_label] = (
-                        max_operand_depth[user_label]
-                        if user_gate.gate_type in exclusion_list
-                        else max_operand_depth[user_label] + 1
-                    )
-                    queue.append(user_label)
+            depths[current_gate.label] = (
+                max_operand_depth
+                if gate_type in exclusion_list
+                else max_operand_depth + 1
+            )
 
         return max(depths[output] for output in self.outputs)
 

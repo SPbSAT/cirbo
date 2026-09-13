@@ -26,11 +26,13 @@ from cirbo.core.circuit.gate import (
     GT,
     INPUT,
     LEQ,
+    LIFF,
     LNOT,
     LT,
     NAND,
     NOT,
     OR,
+    RIFF,
     RNOT,
     XOR,
 )
@@ -197,6 +199,48 @@ def test_get_depth():
 
     circuit.set_outputs(['or_gate'])
     assert circuit.get_depth() == 2
+
+
+def test_get_depth_special_gates():
+    circuit = Circuit()
+
+    circuit.add_gate(Gate('x', INPUT))
+    circuit.add_gate(Gate('y', INPUT))
+
+    # depth = 1
+    circuit.add_gate(Gate('x1', AND, ('x', 'y')))
+
+    # depth = 2
+    circuit.add_gate(Gate('x2', AND, ('x1', 'y')))
+
+    # depth = 3
+    circuit.add_gate(Gate('deep', AND, ('x2', 'y')))
+
+    # Left gates must ignore the deep right operand.
+    circuit.add_gate(Gate('liff', LIFF, ('x1', 'deep')))
+    circuit.add_gate(Gate('lnot', LNOT, ('x1', 'deep')))
+
+    # Right gates must ignore the deep left operand.
+    circuit.add_gate(Gate('riff', RIFF, ('deep', 'x1')))
+    circuit.add_gate(Gate('rnot', RNOT, ('deep', 'x1')))
+
+    circuit.set_outputs(['liff', 'lnot', 'riff', 'rnot'])
+
+    assert circuit.get_depth() == 1
+
+
+def test_get_depth_special_gates_with_no_exclusions():
+    circuit = Circuit()
+    circuit.add_gate(Gate('x', INPUT))
+    circuit.add_gate(Gate('y', INPUT))
+    circuit.add_gate(Gate('a', AND, ('x', 'y')))  # 1
+    circuit.add_gate(Gate('b', AND, ('a', 'y')))  # 2
+    circuit.add_gate(Gate('liff', LIFF, ('a', 'b')))  # 2
+
+    circuit.set_outputs(['liff'])
+
+    assert circuit.get_depth() == 1
+    assert circuit.get_depth(exclusion_list=()) == 2
 
 
 def test_eq():
