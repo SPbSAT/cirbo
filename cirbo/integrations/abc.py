@@ -43,7 +43,7 @@ class ABCCommand:
             return NotImplemented
 
         return ABCCommand(
-            name=f"({self.name} + {other.name})",
+            name=f"({self.name} >> {other.name})",
             script=_join_scripts(self.script, other.script),
         )
 
@@ -60,7 +60,7 @@ def _join_scripts(*scripts: str) -> str:
 
 def _run_abc_commands(bench: str, script: str) -> str:
     try:
-        from abc_wrapper import run_abc_commands_c
+        from abc_wrapper import run_abc_commands_c  # type: ignore[import-not-found]
     except ImportError as exc:
         raise ABCUnavailableError(
             'ABC support is not available in this Cirbo installation'

@@ -13,7 +13,7 @@ from cirbo.minimization import (
     SearchConfig,
     MultiStartRandomWalk,
 )
-from cirbo.minimization.metaheuristic.abc import ABCHeavyMutation
+from cirbo.minimization.metaheuristic.abc import ABCRandomHeavyMutation
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,7 +23,7 @@ ex215_initial_frontier = ParetoFrontier.read_dir(ex215_dir)
 # Requires a build with the optional abc_wrapper extension enabled.
 res = optimize(
     ex215_initial_frontier,
-    ABCHeavyMutation(),
+    ABCRandomHeavyMutation(),
     SearchConfig(50, 3, seed=42),
     search_strategy=MultiStartRandomWalk(20),
 )

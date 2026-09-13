@@ -7,7 +7,7 @@ from cirbo.integrations import abc
 from cirbo.minimization.metaheuristic import (
     abc as metaheuristics_abc,
     ABC_HEAVY_COMMANDS,
-    ABCHeavyMutation,
+    ABCRandomHeavyMutation,
 )
 
 
@@ -21,7 +21,7 @@ def _circuit() -> Circuit:
 @pytest.mark.parametrize(
     'mutation_type, commands',
     [
-        (ABCHeavyMutation, ABC_HEAVY_COMMANDS),
+        (ABCRandomHeavyMutation, ABC_HEAVY_COMMANDS),
     ],
 )
 def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
@@ -65,7 +65,7 @@ def test_abc_mutation_propagates_transform_error(monkeypatch):
     monkeypatch.setattr(metaheuristics_abc, 'abc_transform', unavailable)
 
     with pytest.raises(abc.ABCUnavailableError, match='extension is unavailable'):
-        ABCHeavyMutation().mutate(_circuit(), random.Random(1))
+        ABCRandomHeavyMutation().mutate(_circuit(), random.Random(1))
 
 
 @pytest.mark.parametrize(
@@ -75,7 +75,7 @@ def test_abc_mutation_propagates_transform_error(monkeypatch):
 @pytest.mark.ABC
 def test_all_abc_commands_are_valid(monkeypatch, command):
     commands = [command]
-    monkeypatch.setattr(ABCHeavyMutation, '_commands', commands)
+    monkeypatch.setattr(ABCRandomHeavyMutation, '_commands', commands)
 
-    ckt = ABCHeavyMutation().mutate(_circuit(), random.Random(1))
+    ckt = ABCRandomHeavyMutation().mutate(_circuit(), random.Random(1))
     assert isinstance(ckt, Circuit)
