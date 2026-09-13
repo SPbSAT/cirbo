@@ -1,9 +1,6 @@
 """Extensible metaheuristics for optimization of the Boolean circuits."""
 
-from .abc import (
-    ABC_HEAVY_COMMANDS,
-    ABCHeavyMutation,
-)
+from .abc import ABC_HEAVY_COMMANDS, ABCHeavyMutation
 from .exceptions import (
     ABCUnavailableError,
     InvalidFrontierError,

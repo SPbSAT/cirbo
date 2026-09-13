@@ -4,8 +4,8 @@ import pytest
 
 from cirbo.core import Circuit, Gate, gate
 from cirbo.minimization.metaheuristic import (
-    CircuitStats,
     CircuitMutation,
+    CircuitStats,
     InstanceDescriptor,
     InvalidFrontierError,
     InvalidSearchConfigError,

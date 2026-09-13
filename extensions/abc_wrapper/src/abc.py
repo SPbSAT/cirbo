@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class ABCCommand:
     """
     Named ABC command or a sequence of ABC commands.

@@ -6,8 +6,8 @@ composition in the method `cleanup` and subcircuit minimization algorithm define
 from .metaheuristic import (
     ABC_HEAVY_COMMANDS,
     ABCHeavyMutation,
-    CircuitStats,
     CircuitMutation,
+    CircuitStats,
     InstanceDescriptor,
     InstanceFrontier,
     InvalidFrontierError,

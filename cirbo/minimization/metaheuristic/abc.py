@@ -4,8 +4,9 @@ import importlib
 import random
 import typing as tp
 
-from cirbo.core.circuit import Circuit
 from extensions.abc_wrapper.src.abc import ABCCommand
+
+from cirbo.core.circuit import Circuit
 from .exceptions import ABCUnavailableError
 from .mutation import CircuitMutation
 

@@ -107,6 +107,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         Loads all instances from a directory.
 
         Currently, supports only .bench instances.
+
         """
         raise NotImplementedError
 
@@ -124,6 +125,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         :param path: The path to the directory to write to.
         :param prefix: The name of the function (prefix for each file name).
         :param remove_existing: Whether to remove existing files in the directory.
+
         """
         raise NotImplementedError
 

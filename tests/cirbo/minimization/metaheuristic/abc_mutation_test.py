@@ -38,7 +38,9 @@ def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
     assert result.get_truth_table() == _circuit().get_truth_table()
     assert mutation.last_command is not None
     assert calls == [mutation.last_command]
-    assert mutation.last_command.removeprefix('strash;') in commands
+    assert mutation.last_command.removeprefix('strash;') in set(
+        cmd.script for cmd in commands
+    )
 
 
 def test_abc_mutation_reports_missing_extension(monkeypatch):
