@@ -4,7 +4,7 @@ properties: the number of gates and the logical depth.  The first value in each 
 cell is the gate count, and the second one is the depth (``gates/depth``).
 """
 
-from cirbo.core.circuit import Circuit, gate
+from cirbo.core.circuit import Circuit
 from cirbo.synthesis.generation.arithmetics import (
     add_sum_two_numbers,
     add_sum_two_numbers_log_depth,
@@ -44,5 +44,5 @@ for name, adder in adders.items():
         # Rebuild the circuit for every width and calculate its parameters.
         circuit = make_adder(adder, width)
         size = circuit.gates_number()
-        values.append(f"{size:3}/{circuit.get_depth(exclusion_list=(gate.NOT,)):<2}")
+        values.append(f"{size:3}/{circuit.get_depth():<2}")
     print(f"{name:12} " + "  ".join(values))

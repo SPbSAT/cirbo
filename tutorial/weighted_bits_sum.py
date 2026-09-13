@@ -7,7 +7,7 @@ The example uses the columns of an 8-by-8 multiplication table.  The printed val
 compare the gate count and logical depth of three implementations.
 """
 
-from cirbo.core.circuit import Circuit, gate
+from cirbo.core.circuit import Circuit
 from cirbo.synthesis.generation.arithmetics import (
     add_sum_n_weighted_bits_log_depth,
     generate_sum_weighted_bits_efficient,
@@ -46,6 +46,4 @@ summators = {
 }
 
 for name, circuit in summators.items():
-    print(
-        f"{name:9} gates={circuit.gates_number():3}, depth={circuit.get_depth(exclusion_list=(gate.NOT,)):2}"
-    )
+    print(f"{name:9} gates={circuit.gates_number():3}, depth={circuit.get_depth():2}")

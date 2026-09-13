@@ -187,14 +187,16 @@ def test_get_depth():
     circuit.add_gate(Gate('and_gate', AND, ('x', 'not_x')))
     circuit.add_gate(Gate('or_gate', OR, ('and_gate', 'zero')))
     circuit.set_outputs(['not_x', 'or_gate'])
-    assert circuit.get_depth() == 3
+    assert circuit.get_depth(exclusion_list=()) == 3
+    assert circuit.get_depth(exclusion_list=(NOT,)) == 2
+    assert circuit.get_depth(exclusion_list=(AND, NOT)) == 1
 
     circuit.add_gate(Gate('and_x_x', AND, ('x', 'x')))
     circuit.set_outputs(['and_x_x'])
     assert circuit.get_depth() == 1
 
     circuit.set_outputs(['or_gate'])
-    assert circuit.get_depth() == 3
+    assert circuit.get_depth() == 2
 
 
 def test_eq():

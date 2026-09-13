@@ -348,7 +348,15 @@ class Circuit(Function):
         if not self.gates or not self.outputs:
             return 0
 
-        excluded = exclusion_list if exclusion_list is not None else ()
+        if exclusion_list is None:
+            exclusion_list = [
+                gate.NOT,
+                gate.LNOT,
+                gate.RNOT,
+                gate.IFF,
+                gate.LIFF,
+                gate.RIFF,
+            ]
 
         depths: dict[gate.Label, int] = {}
         operands_left: dict[gate.Label, int] = {}
@@ -378,7 +386,7 @@ class Circuit(Function):
 
                     depths[user_label] = (
                         max_operand_depth[user_label]
-                        if user_gate.gate_type in excluded
+                        if user_gate.gate_type in exclusion_list
                         else max_operand_depth[user_label] + 1
                     )
                     queue.append(user_label)

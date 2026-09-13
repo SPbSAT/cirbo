@@ -23,7 +23,11 @@ __all__ = [
 
 @dataclasses.dataclass(frozen=True, order=True)
 class CircuitStats:
-    """Objective values used by the built-in Pareto search."""
+    """
+    Objective values used by the built-in Pareto search.
+
+    Depth ans Size doesn't include LNOT, RNOT, IFF, LIFF, RIFF gates.
+    """
 
     depth: int
     size: int
@@ -32,7 +36,7 @@ class CircuitStats:
     def from_circuit(cls, circuit: Circuit) -> "CircuitStats":
         """Measure gate count and the longest non-input gate path to an output."""
         return CircuitStats(
-            depth=circuit.get_depth(exclusion_list=(gate.NOT,)),
+            depth=circuit.get_depth(),
             size=circuit.gates_number(),
         )
 
@@ -195,7 +199,7 @@ class ParetoFrontier(InstanceFrontier):
     @classmethod
     def read_dir(cls, path: tp.Union[str, os.PathLike[str]]) -> tp_ext.Self:
         path = pathlib.Path(path)
-        return cls(list(sorted(path.glob("*.bench"))))
+        return cls(sorted(path.glob("*.bench")))
 
     def __init__(
         self,
