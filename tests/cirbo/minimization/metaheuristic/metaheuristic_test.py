@@ -1,3 +1,5 @@
+import os
+import pathlib
 import random
 
 import pytest
@@ -207,3 +209,42 @@ def test_optimize_validates_frontier_only_when_enabled(monkeypatch):
 
     optimize(frontier, [], SearchConfig(max_iterations=0, check_equivalence=True))
     assert calls == [True]
+
+
+def test_negative_max_stagnation_iterations_is_rejected():
+    with pytest.raises(
+        InvalidSearchConfigError,
+        match='max_stagnation_iterations must be non-negative',
+    ):
+        SearchConfig(max_stagnation_iterations=-1)
+
+
+@pytest.mark.parametrize('inner_log_step', [0, -1])
+def test_non_positive_inner_log_step_is_rejected(inner_log_step):
+    with pytest.raises(
+        InvalidSearchConfigError,
+        match='inner_log_step must be positive',
+    ):
+        MultiStartRandomWalk(inner_log_step=inner_log_step)
+
+
+def test_read_dir_preserves_source_path(tmp_path):
+    circuit = _simplified_and_circuit()
+
+    circuit_path = tmp_path / 'circuit.bench'
+    circuit.save_to_file(circuit_path)
+
+    frontier = ParetoFrontier.read_dir(tmp_path)
+
+    assert len(frontier) == 1
+    assert frontier.get_frontier()[0].source_path == circuit_path
+
+
+def test_instance_descriptor_normalizes_source_path(tmp_path):
+    circuit_path = tmp_path / 'circuit.bench'
+    _simplified_and_circuit().save_to_file(circuit_path)
+
+    descriptor = InstanceDescriptor.from_path(os.fspath(circuit_path))
+
+    assert descriptor.source_path == circuit_path
+    assert isinstance(descriptor.source_path, pathlib.Path)

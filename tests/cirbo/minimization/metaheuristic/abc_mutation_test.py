@@ -3,9 +3,9 @@ import random
 import pytest
 
 from cirbo.core import Circuit, Gate, gate
-from cirbo.integrations.abc import ABCUnavailableError
+from cirbo.integrations import abc
 from cirbo.minimization.metaheuristic import (
-    abc,
+    abc as metaheuristics_abc,
     ABC_HEAVY_COMMANDS,
     ABCHeavyMutation,
 )
@@ -31,7 +31,7 @@ def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
         calls.append(command)
         return circuit
 
-    monkeypatch.setattr(abc, 'abc_transform', transform)
+    monkeypatch.setattr(metaheuristics_abc, 'abc_transform', transform)
     mutation = mutation_type()
     result = mutation.mutate(_circuit(), random.Random(17))
 
@@ -43,13 +43,28 @@ def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
     )
 
 
-def test_abc_mutation_reports_missing_extension(monkeypatch):
+def test_abc_transform_propagates_unavailable_error(monkeypatch):
     def unavailable(*args, **kwargs):
-        raise ABCUnavailableError('extension is unavailable')
+        raise abc.ABCUnavailableError(
+            'ABC support is not available in this Cirbo installation'
+        )
 
-    monkeypatch.setattr(abc, 'abc_transform', unavailable)
+    monkeypatch.setattr(abc, '_run_abc_commands', unavailable)
 
-    with pytest.raises(ABCUnavailableError, match='extension is unavailable'):
+    with pytest.raises(
+        abc.ABCUnavailableError,
+        match='ABC support is not available',
+    ):
+        abc.abc_transform(_circuit(), 'strash;')
+
+
+def test_abc_mutation_propagates_transform_error(monkeypatch):
+    def unavailable(*args, **kwargs):
+        raise abc.ABCUnavailableError('extension is unavailable')
+
+    monkeypatch.setattr(metaheuristics_abc, 'abc_transform', unavailable)
+
+    with pytest.raises(abc.ABCUnavailableError, match='extension is unavailable'):
         ABCHeavyMutation().mutate(_circuit(), random.Random(1))
 
 

@@ -58,6 +58,17 @@ def _join_scripts(*scripts: str) -> str:
     )
 
 
+def _run_abc_commands(bench: str, script: str) -> str:
+    try:
+        from abc_wrapper import run_abc_commands_c
+    except ImportError as exc:
+        raise ABCUnavailableError(
+            'ABC support is not available in this Cirbo installation'
+        ) from exc
+
+    return run_abc_commands_c(bench, script)
+
+
 def abc_transform(ckt: Circuit, cmd: tp.Union[str, ABCCommand]) -> Circuit:
     """
     Transform a Boolean circuit using ABC.
@@ -67,15 +78,8 @@ def abc_transform(ckt: Circuit, cmd: tp.Union[str, ABCCommand]) -> Circuit:
     :return: The transformed boolean circuit after processing by the ABC tool
 
     """
-    try:
-        from abc_wrapper import run_abc_commands_c
-    except ImportError as exc:
-        raise ABCUnavailableError(
-            "ABC support is not available in this Cirbo installation"
-        ) from exc
-
     script = cmd.script if isinstance(cmd, ABCCommand) else cmd
 
     bench = ckt.into_bench().format_circuit()
-    bench = run_abc_commands_c(bench, script)
+    bench = _run_abc_commands(bench, script)
     return Circuit.from_bench_string(bench)
