@@ -4,7 +4,7 @@ import random
 import typing as tp
 
 from cirbo.core.circuit import Circuit
-from cirbo.integrations.abc import ABCCommand, abc_transform
+from cirbo.integrations.abc import abc_transform, ABCCommand
 from .mutation import CircuitMutation
 
 __all__ = [

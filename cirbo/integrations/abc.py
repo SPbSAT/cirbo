@@ -17,6 +17,7 @@ class ABCCommand:
     Supports composition using the `>>` operator.
 
     Example: DEEPSYN >> REWIRE >> DC2
+
     """
 
     name: str
@@ -56,6 +57,7 @@ def abc_transform(ckt: Circuit, cmd: tp.Union[str, ABCCommand]) -> Circuit:
     :param ckt: The input boolean circuit to be transformed.
     :param cmd: The command to be executed by the ABC tool
     :return: The transformed boolean circuit after processing by the ABC tool
+
     """
     try:
         from abc_wrapper import run_abc_commands_c

@@ -4,11 +4,11 @@ import pytest
 
 from cirbo.core import Circuit, Gate, gate
 from cirbo.minimization.metaheuristic import (
+    abc,
     ABC_HEAVY_COMMANDS,
     ABCHeavyMutation,
     ABCUnavailableError,
 )
-from cirbo.minimization.metaheuristic import abc
 
 
 def _circuit() -> Circuit:
