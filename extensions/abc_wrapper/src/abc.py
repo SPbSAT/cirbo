@@ -1,3 +1,4 @@
+import typing as tp
 from dataclasses import dataclass, replace
 
 from cirbo.core import Circuit
@@ -54,22 +55,7 @@ def _join_scripts(*scripts: str) -> str:
     )
 
 
-def abc_load_circuit(ckt: Circuit, cmd: str | ABCCommand) -> Circuit:
-    """
-    Loads a Boolean circuit into ABC memory.
-
-    :param ckt: The input boolean circuit to be transformed.
-    :param cmd: The command to be executed by the ABC tool
-    :return: The transformed boolean circuit after processing by the ABC tool
-    """
-    script = cmd.script if isinstance(cmd, ABCCommand) else cmd
-
-    bench = ckt.into_bench().format_circuit()
-    bench = run_abc_commands_c(bench, script)
-    return Circuit.from_bench_string(bench)
-
-
-def abc_transform(ckt: Circuit, cmd: str | ABCCommand) -> Circuit:
+def abc_transform(ckt: Circuit, cmd: tp.Union[str, ABCCommand]) -> Circuit:
     """
     Transform a Boolean circuit using ABC.
 

@@ -173,6 +173,8 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
     def any_instance(self, rng: random.Random) -> InstanceDescriptor:
         """
         :return: Any instance that is currently in the front.
+
+        Note: may or may not be random.
         """
         raise NotImplementedError
 
