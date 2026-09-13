@@ -4,11 +4,11 @@ import pytest
 
 from cirbo.core import Circuit, Gate, gate
 from cirbo.minimization.metaheuristic import (
-    abc as abc_mutations,
     ABC_HEAVY_COMMANDS,
     ABCHeavyMutation,
     ABCUnavailableError,
 )
+from cirbo.minimization.metaheuristic import abc
 
 
 def _circuit() -> Circuit:
@@ -31,7 +31,7 @@ def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
         calls.append(command)
         return circuit
 
-    monkeypatch.setattr(abc_mutations, '_get_abc_transform', lambda: transform)
+    monkeypatch.setattr(abc, 'abc_transform', transform)
     mutation = mutation_type()
     result = mutation.mutate(_circuit(), random.Random(17))
 
@@ -44,10 +44,10 @@ def test_abc_mutation_selects_a_command(monkeypatch, mutation_type, commands):
 
 
 def test_abc_mutation_reports_missing_extension(monkeypatch):
-    def unavailable():
+    def unavailable(*args, **kwargs):
         raise ABCUnavailableError('extension is unavailable')
 
-    monkeypatch.setattr(abc_mutations, '_get_abc_transform', unavailable)
+    monkeypatch.setattr(abc, 'abc_transform', unavailable)
 
     with pytest.raises(ABCUnavailableError, match='extension is unavailable'):
         ABCHeavyMutation().mutate(_circuit(), random.Random(1))

@@ -1,21 +1,15 @@
+import dataclasses
 import typing as tp
-from dataclasses import dataclass, replace
 
 from cirbo.core import Circuit
 
-try:
-    from abc_wrapper import run_abc_commands_c
-except ImportError:
-    pass
-
-
 __all__ = [
-    "abc_transform",
     "ABCCommand",
+    "abc_transform",
 ]
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class ABCCommand:
     """
     Named ABC command or a sequence of ABC commands.
@@ -46,7 +40,7 @@ class ABCCommand:
 
     def named(self, name: str) -> "ABCCommand":
         """Give this command (or pipeline) another name."""
-        return replace(self, name=name)
+        return dataclasses.replace(self, name=name)
 
 
 def _join_scripts(*scripts: str) -> str:
@@ -63,6 +57,13 @@ def abc_transform(ckt: Circuit, cmd: tp.Union[str, ABCCommand]) -> Circuit:
     :param cmd: The command to be executed by the ABC tool
     :return: The transformed boolean circuit after processing by the ABC tool
     """
+    try:
+        from abc_wrapper import run_abc_commands_c
+    except ImportError as exc:
+        raise RuntimeError(
+            "ABC support is not available in this Cirbo installation"
+        ) from exc
+
     script = cmd.script if isinstance(cmd, ABCCommand) else cmd
 
     bench = ckt.into_bench().format_circuit()

@@ -1,5 +1,6 @@
 import abc
 import dataclasses
+import os
 import pathlib
 import random
 import shutil
@@ -52,7 +53,7 @@ class InstanceDescriptor:
     metrics: CircuitStats
 
     @classmethod
-    def from_path(cls, path: pathlib.Path) -> "InstanceDescriptor":
+    def from_path(cls, path: os.PathLike) -> "InstanceDescriptor":
         circuit = Circuit.from_bench_file(path)
         return InstanceDescriptor(
             circuit=circuit,
@@ -102,7 +103,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def read_dir(cls, path: tp.Union[str, pathlib.Path]) -> tp_ext.Self:
+    def read_dir(cls, path: tp.Union[str, os.PathLike]) -> tp_ext.Self:
         """
         Loads all instances from a directory.
 
@@ -114,7 +115,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def write_dir(
         self,
-        path: tp.Union[str, pathlib.Path],
+        path: tp.Union[str, os.PathLike],
         *,
         prefix: str = "",
         remove_existing: bool = False,
@@ -130,7 +131,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def consider_circuit(self, new_circuit: Circuit) -> bool:
+    def consider_circuit(self, new_circuit: tp.Union[Circuit, os.PathLike]) -> bool:
         """
         Considers a new circuit for the front.
 
@@ -170,9 +171,9 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def any_instance(self, rng: random.Random) -> InstanceDescriptor:
+    def some_instance(self, rng: random.Random) -> InstanceDescriptor:
         """
-        :return: Any instance that is currently in the front.
+        :return: Some instance that is currently in the front.
 
         Note: may or may not be random.
         """
@@ -189,7 +190,7 @@ class InstanceFrontier(metaclass=abc.ABCMeta):
 
 class ParetoFrontier(InstanceFrontier):
     @classmethod
-    def read_dir(cls, path: tp.Union[str, pathlib.Path]) -> tp_ext.Self:
+    def read_dir(cls, path: tp.Union[str, os.PathLike]) -> tp_ext.Self:
         from cirbo.core.parser.bench import BenchToCircuit
 
         path = pathlib.Path(path)
@@ -201,9 +202,17 @@ class ParetoFrontier(InstanceFrontier):
 
         return cls(_circuits)
 
+    def __init__(
+        self,
+        circuits: tp.Sequence[tp.Union[Circuit, pathlib.Path]],
+    ):
+        self.instances: tp.List[InstanceDescriptor] = []
+        for ckt in circuits:
+            self.consider_circuit(ckt)
+
     def write_dir(
         self,
-        path: tp.Union[str, pathlib.Path],
+        path: tp.Union[str, os.PathLike],
         *,
         prefix: str = "",
         remove_existing: bool = False,
@@ -226,16 +235,16 @@ class ParetoFrontier(InstanceFrontier):
 
         print(f"Saved frontier to {output_dir}")
 
-    def __init__(
-        self,
-        circuits: tp.Sequence[Circuit],
-    ):
-        self.instances: tp.List[InstanceDescriptor] = []
-        for ckt in circuits:
-            self.consider_circuit(ckt)
+    def consider_circuit(self, new_circuit: tp.Union[Circuit, os.PathLike]) -> bool:
+        if isinstance(new_circuit, Circuit):
+            new_instance = InstanceDescriptor.from_circuit(new_circuit)
+        elif isinstance(new_circuit, os.PathLike):
+            new_instance = InstanceDescriptor.from_path(new_circuit)
+        else:
+            raise TypeError(
+                f"Expected Circuit or pathlib.Path, got {type(new_circuit)}"
+            )
 
-    def consider_circuit(self, new_circuit: Circuit) -> bool:
-        new_instance = InstanceDescriptor.from_circuit(new_circuit)
         for instance in self.instances:
             if instance.dominates(new_instance):
                 return False
@@ -261,7 +270,7 @@ class ParetoFrontier(InstanceFrontier):
     def get_shallowest(self) -> InstanceDescriptor:
         return min(self.instances, key=lambda instance: instance.metrics.depth)
 
-    def any_instance(self, rng: random.Random) -> InstanceDescriptor:
+    def some_instance(self, rng: random.Random) -> InstanceDescriptor:
         return self.instances[0]
 
     def __len__(self) -> int:

@@ -56,6 +56,14 @@ class SearchConfig:
         if self.max_iterations is not None and self.max_iterations < 0:
             raise InvalidSearchConfigError('max_iterations must be non-negative.')
 
+        if (
+            self.max_stagnation_iterations is not None
+            and self.max_stagnation_iterations < 0
+        ):
+            raise InvalidSearchConfigError(
+                'max_stagnation_iterations must be non-negative.'
+            )
+
         if self.time_limit_sec is not None and (
             self.time_limit_sec < 0 or not math.isfinite(self.time_limit_sec)
         ):
@@ -148,6 +156,9 @@ class MultiStartRandomWalk(SearchStrategy):
     ):
         self._one_walk_length = one_walk_length
         self._inner_log_step = inner_log_step
+
+        if self._inner_log_step <= 0:
+            raise InvalidSearchConfigError('inner_log_step must be positive!')
 
         if self._one_walk_length <= 0:
             raise InvalidSearchConfigError('one_walk_length must be positive!')
@@ -291,7 +302,7 @@ class MultiStartRandomWalk(SearchStrategy):
                     _evaluated += 1
 
                     if config.check_equivalence and not check_circuits_equivalence(
-                        current_frontier.any_instance(rng=rng).circuit,
+                        current_frontier.some_instance(rng=rng).circuit,
                         candidate,
                     ):
                         _rejected += 1

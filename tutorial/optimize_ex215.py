@@ -33,4 +33,4 @@ print(res.frontier)
 print(f"Initial frontier size: {len(ex215_initial_frontier)}")
 print(f"Resulting frontier size: {len(res.frontier)}")
 
-res.frontier.write_dir(Path("ex215_optimized_frontier"), prefix="ex215_")
+res.frontier.write_dir(Path("ex215_optimized_frontier"), prefix="ex215")
