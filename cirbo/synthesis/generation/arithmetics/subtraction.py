@@ -242,14 +242,14 @@ def _kogge_stone_borrow_lookahead(
     n = len(a)
 
     difference_, borrow_gen_, borrow_prop_ = zip(
-        *[
+        *(
             (
                 (xor_bit := xor_two_bits(circuit, a[i], b[i], basis=basis)),
                 add_gate_from_tt(circuit, a[i], b[i], '0100'),
                 add_gate_from_tt(circuit, xor_bit, xor_bit, '1100'),
             )
             for i in range(n)
-        ]
+        )
     )
     difference: list[gate.Label] = list(difference_)
     borrow_gen: list[gate.Label] = list(borrow_gen_)

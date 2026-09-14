@@ -126,7 +126,7 @@ def add_sum_two_numbers_with_shift(
                 '0000',  # FIXME: ALWAYS_FALSE gates are unsupported in AIG/XAIG bases.
                 # The generator should simplify the circuit before returning.
             )
-            for i in range(n, shift - n):
+            for i in range(n, shift):
                 d[i] = [zero]
         for i in range(m):
             d[i + shift] = [input_labels_b[i]]
