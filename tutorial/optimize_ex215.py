@@ -24,8 +24,8 @@ ex215_initial_frontier = ParetoFrontier.read_dir(ex215_dir)
 res = optimize(
     ex215_initial_frontier,
     ABCHeavyMutation(),
-    SearchConfig(1, 3, seed=42),
-    search_strategy=MultiStartRandomWalk(1),
+    SearchConfig(50, 3, seed=42),
+    search_strategy=MultiStartRandomWalk(20),
 )
 
 print(res)
