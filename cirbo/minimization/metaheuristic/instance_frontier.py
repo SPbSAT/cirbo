@@ -25,7 +25,7 @@ class CircuitStats:
     """
     Objective values used by the built-in Pareto search.
 
-    Depth and Size don't include LNOT, RNOT, IFF, LIFF, RIFF gates.
+    Depth and Size don't include NOT, LNOT, RNOT, IFF, LIFF, RIFF gates.
 
     """
 
