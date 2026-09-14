@@ -1,16 +1,7 @@
 import pytest
 
-from extensions.abc_wrapper.src.abc import abc_transform
-
-# Package can be compiled without ABC extension when
-# environment variable DISABLE_ABC_CEXT=1 is set.
-#
-try:
-    from abc_wrapper import run_abc_commands_c
-except ImportError:
-    pass
-
 from cirbo.core.circuit import AND, Circuit, Gate, INPUT, NOT, OR
+from cirbo.integrations.abc import abc_transform
 
 ckt1 = Circuit()
 ckt1.add_gate(Gate('x', INPUT))
@@ -48,11 +39,6 @@ ckt2.add_gate(Gate('g9', OR, ('g2', 'g4')))
 ckt2.add_gate(Gate('g10', OR, ('g9', 'g6')))
 ckt2.add_gate(Gate('g11', OR, ('g10', 'g8')))
 ckt2.mark_as_output('g11')
-
-
-@pytest.mark.ABC
-def test_run_abc_commands():
-    assert callable(run_abc_commands_c)
 
 
 @pytest.mark.ABC

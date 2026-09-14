@@ -4,24 +4,24 @@ version = "1.0.0"
 requires-python = ">= 3.9"
 description = "A New Tool for Boolean Circuit Analysis and Synthesis."
 authors = [
-    {name = "Cirbo contributors"},
-#    {name = "Alexander S. Kulikov"},
-#    {name = "Daniil Averkov"},
-#    {name = "Tatiana Belova"},
-#    {name = "Gregory Emdin"},
-#    {name = "Mikhail Goncharov"},
-#    {name = "Viktoriia Krivogornitsyna"},
-#    {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"},
-#    {name = "Daniil Levtsov"},
-#    {name = "Georgie Levtsov"},
-#    {name = "Vsevolod Vaskin"},
-#    {name = "Aleksey Vorobiev"}
+    { name = "Cirbo contributors" },
+    #    {name = "Alexander S. Kulikov"},
+    #    {name = "Daniil Averkov"},
+    #    {name = "Tatiana Belova"},
+    #    {name = "Gregory Emdin"},
+    #    {name = "Mikhail Goncharov"},
+    #    {name = "Viktoriia Krivogornitsyna"},
+    #    {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"},
+    #    {name = "Daniil Levtsov"},
+    #    {name = "Georgie Levtsov"},
+    #    {name = "Vsevolod Vaskin"},
+    #    {name = "Aleksey Vorobiev"}
 ]
 maintainers = [
-    {name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com"}
+    { name = "Fedor Kurmazov", email = "f.kurmazov.b@gmail.com" }
 ]
 readme = "README.md"
-license = {file = "LICENCE"}
+license = { file = "LICENCE" }
 # Temporary guard against occasional publishing.
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -60,7 +60,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.cibuildwheel]
 test-command = [
-  "pytest {package}/tests -v",
+    "pytest {package}/tests -v",
 ]
 
 [tool.poetry.build]
@@ -153,6 +153,7 @@ ignore_missing_imports = true
 module = [
     "pysat.*",
     "pebble.*",
+    "abc_wrapper.*",
     "mockturtle_wrapper.*",
     "graphviz.*",
     "sortedcontainers.*",
@@ -167,7 +168,6 @@ markers = [
     "db_aig: marks tests that use aig database",
     "db_xaig: marks tests that use xaig database",
     "ABC: marks tests that use ABC extension (deselect with '-m \"not ABC\"')",
-
 ]
 filterwarnings = [
     "ignore:invalid escape sequence:DeprecationWarning"

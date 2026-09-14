@@ -299,7 +299,7 @@ class Circuit(Function):
     @property
     def size(self) -> int:
         """
-        :return: number of gates into the circuit.
+        :return: number of gates in the circuit.
 
         """
         return len(self._gates)
@@ -327,44 +327,64 @@ class Circuit(Function):
             1 for _gate in self._gates.values() if _gate.gate_type not in exclusion_list
         )
 
-    def get_depth(self) -> int:
+    def get_depth(
+        self,
+        *,
+        exclusion_list: tp.Optional[tp.Container[gate.GateType]] = None,
+    ) -> int:
         """
         Computes the logical depth of the circuit.
 
-        The depth of a circuit is defined as the length of the longest path from any
-        input or constant gate to any output gate in the circuit. Input and constant
-        gates have depth 0, and every other gate has depth equal to 1 plus the maximum
-        depth of its operands.
+        Input and constant gates have depth 0. Every other gate has depth
+        equal to the maximum depth of its effective operands plus 1, unless
+        its type is in `exclusion_list`, in which case it does not increase
+        the depth.
 
-        :return: integer value representing the maximum depth of the circuit.
+        :param exclusion_list: Gate types that do not contribute to the
+               circuit depth.
+        :return: maximum depth among circuit outputs.
 
         """
         if not self.gates or not self.outputs:
             return 0
 
+        if exclusion_list is None:
+            exclusion_list = [
+                gate.NOT,
+                gate.LNOT,
+                gate.RNOT,
+                gate.IFF,
+                gate.LIFF,
+                gate.RIFF,
+            ]
+
         depths: dict[gate.Label, int] = {}
-        operands_left: dict[gate.Label, int] = {}
-        max_operand_depth: dict[gate.Label, int] = {}
-        queue: collections.deque[gate.Label] = collections.deque()
 
-        for current_gate in self.gates.values():
-            if current_gate.gate_type == gate.INPUT or not current_gate.operands:
+        for current_gate in self.top_sort(inverse=True):
+            gate_type = current_gate.gate_type
+
+            if gate_type in (
+                gate.INPUT,
+                gate.ALWAYS_FALSE,
+                gate.ALWAYS_TRUE,
+            ):
                 depths[current_gate.label] = 0
-                queue.append(current_gate.label)
-            else:
-                operands_left[current_gate.label] = len(current_gate.operands)
-                max_operand_depth[current_gate.label] = 0
+                continue
 
-        while queue:
-            label = queue.popleft()
-            for user_label in self.get_gate_users(label):
-                max_operand_depth[user_label] = max(
-                    max_operand_depth[user_label], depths[label]
+            if gate_type in (gate.LNOT, gate.LIFF):
+                max_operand_depth = depths[current_gate.operands[0]]
+            elif gate_type in (gate.RNOT, gate.RIFF):
+                max_operand_depth = depths[current_gate.operands[1]]
+            else:
+                max_operand_depth = max(
+                    depths[operand] for operand in current_gate.operands
                 )
-                operands_left[user_label] -= 1
-                if operands_left[user_label] == 0:
-                    depths[user_label] = max_operand_depth[user_label] + 1
-                    queue.append(user_label)
+
+            depths[current_gate.label] = (
+                max_operand_depth
+                if gate_type in exclusion_list
+                else max_operand_depth + 1
+            )
 
         return max(depths[output] for output in self.outputs)
 
@@ -1983,11 +2003,11 @@ class Circuit(Function):
         )
         graph.view()
 
-    def save_to_file(self, path: str) -> None:
+    def save_to_file(self, path: tp.Union[str, pathlib.Path]) -> None:
         """
         Save circuit to file.
 
-        :param path: path to file with file's name and file's extension.
+        :param path: path to the file with the file's name and file's extension.
 
         """
         p = pathlib.Path(path)

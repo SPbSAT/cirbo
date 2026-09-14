@@ -3,6 +3,23 @@ simplification algorithms located in pacakge `simplification` and represented in
 composition in the method `cleanup` and subcircuit minimization algorithm defined by
 `minimize_subcircuits` method."""
 
+from .metaheuristic import (
+    ABC_HEAVY_COMMANDS,
+    ABCHeavyMutation,
+    CircuitMutation,
+    CircuitStats,
+    InstanceDescriptor,
+    InstanceFrontier,
+    InvalidFrontierError,
+    MultiStartRandomWalk,
+    optimize,
+    ParetoFrontier,
+    SearchConfig,
+    SearchResult,
+    SearchStrategy,
+    TerminationReason,
+    TransformerMutation,
+)
 from .simplification import cleanup, MergeUnaryOperators, RemoveRedundantGates
 from .subcircuit import minimize_subcircuits
 
@@ -13,4 +30,20 @@ __all__ = [
     'cleanup',
     # subcircuit.py
     'minimize_subcircuits',
+    # metaheuristic
+    'ABC_HEAVY_COMMANDS',
+    'ABCHeavyMutation',
+    'SearchConfig',
+    'SearchResult',
+    'SearchStrategy',
+    'TerminationReason',
+    'MultiStartRandomWalk',
+    'optimize',
+    'CircuitMutation',
+    'TransformerMutation',
+    'CircuitStats',
+    'InstanceDescriptor',
+    'InstanceFrontier',
+    'ParetoFrontier',
+    'InvalidFrontierError',
 ]
