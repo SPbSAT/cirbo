@@ -2,6 +2,8 @@ import pytest
 from cirbo.circuits_db.circuits_encoding import decode_circuit, encode_circuit
 from cirbo.core.circuit import Circuit
 from cirbo.core.circuit.gate import (
+    ALWAYS_FALSE,
+    ALWAYS_TRUE,
     AND,
     Gate,
     GEQ,
@@ -59,6 +61,18 @@ def create_test_circuit(gates):
             ("C", AND, ("A", "B")),
             ("D", NOT, ("C",)),
             ("E", AND, ("B", "D")),
+        ],
+        # Constant gates. These take no operands, so they are the one case where the
+        # number of operands the encoder writes and the number the decoder reads can
+        # disagree.
+        [("A", ALWAYS_FALSE, ())],
+        [("A", ALWAYS_TRUE, ())],
+        [
+            ("A", INPUT, ()),
+            ("B", INPUT, ()),
+            ("C", AND, ("A", "B")),
+            ("D", ALWAYS_TRUE, ()),
+            ("E", ALWAYS_FALSE, ()),
         ],
     ],
 )
