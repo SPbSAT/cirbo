@@ -5,13 +5,19 @@ from ._utils import xor_two_bits
 from .div_mod import add_div_mod, generate_div_mod
 from .equality import add_equal, generate_equal
 from .multiplication import (
+    add_dadda_karatsuba,
     add_mul,
     add_mul_alter,
+    add_mul_constant,
     add_mul_dadda,
     add_mul_karatsuba,
     add_mul_karatsuba_with_efficient_sum,
+    add_mul_log_depth_sum,
     add_mul_pow2_m1,
     add_mul_wallace,
+    add_simple_karatsuba,
+    add_smul_dadda,
+    add_smul_wallace,
     generate_mul,
     MulMode,
 )
@@ -58,10 +64,16 @@ __all__ = [
     'add_mul',
     'add_mul_karatsuba_with_efficient_sum',
     'add_mul_karatsuba',
+    'add_simple_karatsuba',
+    'add_dadda_karatsuba',
+    'add_mul_log_depth_sum',
     'add_mul_alter',
     'add_mul_dadda',
     'add_mul_wallace',
     'add_mul_pow2_m1',
+    'add_smul_dadda',
+    'add_smul_wallace',
+    'add_mul_constant',
     'generate_mul',
     'MulMode',
     # sqrt.py
