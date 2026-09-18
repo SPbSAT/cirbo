@@ -108,8 +108,8 @@ def add_square(
     bb = add_square(circuit, b, basis=basis)
     ab = add_mul_karatsuba(circuit, a, b)
 
-    res = add_sum_two_numbers_with_shift(circuit, mid + 1, aa, ab)
-    final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, bb)
+    res = add_sum_two_numbers_with_shift(circuit, mid + 1, aa, ab, basis=basis)
+    final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, bb, basis=basis)
     final_res = final_res[: 2 * n]
     return reverse_if_big_endian(final_res, big_endian)
 

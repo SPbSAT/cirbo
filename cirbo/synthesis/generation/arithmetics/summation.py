@@ -88,6 +88,7 @@ def add_sum_two_numbers_with_shift(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
     big_endian: bool = False,
 ) -> list[gate.Label]:  # shift for second
     """
@@ -97,12 +98,14 @@ def add_sum_two_numbers_with_shift(
     :param shift: The number of bit positions to shift the second number.
     :param input_labels_a: List of bits representing the first binary number.
     :param input_labels_b: List of bits representing the second binary number.
+    :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
     :return: List of bits representing the sum of the two numbers after applying the
         shift.
 
     """
+    basis = conventional_basis(basis)
     input_labels_a = list(input_labels_a)
     input_labels_b = list(input_labels_b)
     n = len(input_labels_a)
@@ -134,7 +137,9 @@ def add_sum_two_numbers_with_shift(
     d = [[PLACEHOLDER_STR] for _ in range(max(n, m + shift) + 1)]
     for i in range(shift):
         d[i] = [input_labels_a[i]]
-    res_sum = add_sum_two_numbers(circuit, input_labels_a[shift:n], input_labels_b)
+    res_sum = add_sum_two_numbers(
+        circuit, input_labels_a[shift:n], input_labels_b, basis=basis
+    )
     for i in range(shift, max(n, m + shift) + 1):
         d[i] = [res_sum[i - shift]]
     return reverse_if_big_endian(

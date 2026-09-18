@@ -639,8 +639,9 @@ def test_sum_two_numbers(func, size, basis, big_endian):
         pytest.param([8, 2], 1, marks=pytest.mark.slow),
     ],
 )
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize("big_endian", [True, False])
-def test_sum_two_numbers_with_shift(size, shift, big_endian):
+def test_sum_two_numbers_with_shift(size, shift, basis, big_endian):
     x, y = size
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x + y)]
@@ -653,10 +654,12 @@ def test_sum_two_numbers_with_shift(size, shift, big_endian):
         shift,
         input_labels[:x],
         input_labels[x:],
+        basis=basis,
         big_endian=big_endian,
     )
     res = [zero if label == PLACEHOLDER_STR else label for label in res]
     ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
 
     for test in range(TEST_SIZE):
         input_labels_a = [random.choice([0, 1]) for _ in range(x)]
