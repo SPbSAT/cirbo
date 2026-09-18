@@ -6,6 +6,7 @@ from cirbo.circuits_db.exceptions import CircuitsDatabaseError
 from cirbo.core.boolean_function import RawTruthTableModel
 from cirbo.core.circuit import Circuit, gate, Gate, GateType
 from cirbo.core.logic import DontCare
+from cirbo.core.normalization import is_normalized
 
 _gate_types = [
     gate.NOT,
@@ -54,8 +55,10 @@ def create_all_gates_db(use_label: bool) -> CircuitsDatabase:
     db.open()
     for gate_type in _gate_types:
         circuit = create_one_gate_circuit(gate_type)
-        if not use_label and circuit.get_truth_table()[0][0]:
-            # Skip not normalized circuits, as db needs ony normalized circuits
+        if not use_label and not is_normalized(circuit.get_truth_table()):
+            # Skip not normalized circuits, as db needs ony normalized circuits.
+            # A gate computing a constant or an input is among them: its output is
+            # free, so the database answers it without an entry.
             continue
         if use_label:
             db.add_circuit(circuit, gate_type.name)
@@ -99,12 +102,20 @@ def test_get_by_raw_truth_table_model_works():
         circuit = create_one_gate_circuit(gate.AND)
         db.add_circuit(circuit)
 
+        # Fully specified, so only the stored circuit fits.
+        exact: RawTruthTableModel = [[False, False, False, True]]
+        assert db.get_by_raw_truth_table_model(exact).get_truth_table() == (
+            circuit.get_truth_table()
+        )
+
+        # One row unspecified, so the model also admits x0, which needs no gate.
         truth_table: RawTruthTableModel = [[False, False, DontCare, True]]
 
         retrieved_circuit = db.get_by_raw_truth_table_model(truth_table)
 
         assert retrieved_circuit is not None
-        assert retrieved_circuit.get_truth_table() == circuit.get_truth_table()
+        assert retrieved_circuit.gates_number() == 0
+        assert retrieved_circuit.get_truth_table() == [[False, False, True, True]]
 
 
 def test_get_by_raw_truth_table_model_returns_minimal_size():
@@ -113,10 +124,18 @@ def test_get_by_raw_truth_table_model_returns_minimal_size():
         large_circuit = create_alternative_and_gate()
         db.add_circuit(small_circuit)
         db.add_circuit(large_circuit)
+        # Two rows unspecified, so the model admits the stored OR at one gate, the
+        # stored AND at two, and x0 at none.
         truth_table = [[False, DontCare, DontCare, True]]
         retrieved_circuit = db.get_by_raw_truth_table_model(truth_table)
+        assert retrieved_circuit.gates_number() == 0
+        assert retrieved_circuit.get_truth_table() == [[False, False, True, True]]
+
+        # Fully specified, so the stored circuits are the only candidates.
+        pinned = [[False, True, True, True]]
+        retrieved_circuit = db.get_by_raw_truth_table_model(pinned)
         assert retrieved_circuit.gates_number() == 1
-        assert retrieved_circuit.get_truth_table() == [[False, True, True, True]]
+        assert retrieved_circuit.get_truth_table() == pinned
 
 
 @pytest.mark.parametrize(

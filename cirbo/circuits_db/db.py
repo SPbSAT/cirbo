@@ -14,11 +14,11 @@ from cirbo.circuits_db.exceptions import (
     CircuitDatabaseOpenError,
     CircuitsDatabaseError,
 )
-from cirbo.circuits_db.normalization import NormalizationInfo
 from cirbo.core.boolean_function import RawTruthTable, RawTruthTableModel
 from cirbo.core.circuit.circuit import Circuit
 from cirbo.core.circuit.gate import GateType, IFF, INPUT, NOT
 from cirbo.core.logic import DontCare
+from cirbo.core.normalization import is_normalized, TruthTableNormalization
 
 __all__ = ['CircuitsDatabase']
 
@@ -133,18 +133,21 @@ class CircuitsDatabase:
         :return: The circuit if found, otherwise None.
 
         """
-        normalization = NormalizationInfo(truth_table)
-        normalized_truth_table = normalization.truth_table
-        label = _truth_table_to_label(normalized_truth_table)
-        circuit = self.get_by_label(label)
+        normalization = TruthTableNormalization(truth_table)
+        if normalization.all_outputs_are_free:
+            return normalization.free_circuit()
+        circuit = self.get_by_label(_truth_table_to_label(normalization.truth_table))
         if circuit is None:
             return None
-        normalization.denormalize(circuit)
-        return circuit
+        return normalization.denormalize(circuit)
 
     def add_circuit(self, circuit: Circuit, label: tp.Optional[str] = None) -> None:
         """
         Add a circuit to the database.
+
+        A circuit whose truth table is not normalized cannot be added without a label,
+        and that includes one whose output is free, since such a function is answered
+        without an entry.
 
         :param circuit: The circuit to add.
         :param label: An optional label for the circuit.
@@ -157,11 +160,9 @@ class CircuitsDatabase:
             raise CircuitDatabaseNotOpenedError()
         if label is None:
             truth_table = circuit.get_truth_table()
-            normalization = NormalizationInfo(truth_table)
-            normalized_truth_table = normalization.truth_table
-            if normalized_truth_table != truth_table:
+            if not is_normalized(truth_table):
                 raise CircuitsDatabaseError("Cannot add not normalized circuit")
-            label = _truth_table_to_label(normalized_truth_table)
+            label = _truth_table_to_label(truth_table)
         if label in self._dict.keys():
             raise CircuitsDatabaseError(
                 f"Label: {label} is already in Circuits Database"
