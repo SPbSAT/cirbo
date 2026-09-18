@@ -3,8 +3,8 @@ import pytest
 from cirbo.core.circuit import Circuit
 from cirbo.core.circuit.gate import AND, Gate, INPUT
 from cirbo.core.exceptions import TruthTableNormalizationError
-from cirbo.core.normalization import TruthTableNormalization
 from cirbo.core.logic import DontCare
+from cirbo.core.normalization import TruthTableNormalization
 
 CONSTANT_FALSE = [False, False, False, False]
 CONSTANT_TRUE = [True, True, True, True]

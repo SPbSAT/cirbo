@@ -63,4 +63,3 @@ class TruthTableNormalizationError(CirboError):
     given to."""
 
     pass
-

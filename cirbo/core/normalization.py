@@ -4,16 +4,9 @@ import typing as tp
 
 from cirbo.core.boolean_function import RawTruthTable, RawTruthTableModel
 from cirbo.core.circuit import Circuit
-from cirbo.core.circuit.gate import (
-    ALWAYS_FALSE,
-    ALWAYS_TRUE,
-    Gate,
-    INPUT,
-    Label,
-    NOT,
-)
+from cirbo.core.circuit.gate import ALWAYS_FALSE, ALWAYS_TRUE, Gate, INPUT, Label, NOT
 from cirbo.core.exceptions import TruthTableNormalizationError
-from cirbo.core.logic import DontCare
+from cirbo.core.logic import DontCare, TriValue
 
 __all__ = [
     'TruthTableNormalization',
@@ -39,7 +32,8 @@ def is_normalized(truth_table: RawTruthTable) -> bool:
 
 
 class _FreeOutput(tp.NamedTuple):
-    """A function an output may compute without a gate of its own.
+    """
+    A function an output may compute without a gate of its own.
 
     `input_index` is None for the two constants, otherwise the output is that input,
     negated when `negated` is set.
@@ -78,7 +72,8 @@ def _free_outputs(input_size: int) -> tp.List[_FreeOutput]:
 
 
 class TruthTableNormalization:
-    """Normalization of the outputs of a boolean function, and the way to undo it.
+    """
+    Normalization of the outputs of a boolean function, and the way to undo it.
 
     Four steps, none of which changes the size of a smallest circuit:
 
@@ -186,11 +181,12 @@ class TruthTableNormalization:
         return circuit
 
     def _negate_outputs(self, truth_table: RawTruthTableModel) -> RawTruthTableModel:
-        negated = []
+        negated: tp.List[tp.MutableSequence[TriValue]] = []
         negations = []
         for output in truth_table:
             negations.append(bool(output[0]))
-            negated.append([not value for value in output] if output[0] else output)
+            flipped: tp.List[TriValue] = [not value for value in output]
+            negated.append(flipped if output[0] else output)
         self.negations = negations
         return negated
 

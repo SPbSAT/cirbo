@@ -2,7 +2,6 @@ import itertools
 import typing as tp
 
 import pytest
-from pysat.solvers import Solver
 
 from cirbo.core.boolean_function import RawTruthTable, RawTruthTableModel
 from cirbo.core.circuit import Circuit
@@ -22,6 +21,7 @@ from cirbo.synthesis.exception import (
     NoSolutionError,
     SolverTimeOutError,
 )
+from pysat.solvers import Solver
 
 
 def check_exact_circuit_size(size, truth_tables, basis, hasdontcares=False):

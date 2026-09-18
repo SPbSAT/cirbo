@@ -133,10 +133,14 @@ class CircuitsDatabase:
         :return: The circuit if found, otherwise None.
 
         """
-        normalization = TruthTableNormalization(truth_table)
+        normalization = TruthTableNormalization(
+            tp.cast(RawTruthTableModel, truth_table)
+        )
         if normalization.all_outputs_are_free:
             return normalization.free_circuit()
-        circuit = self.get_by_label(_truth_table_to_label(normalization.truth_table))
+        # Normalizing a fully defined function leaves it fully defined.
+        normalized = tp.cast(RawTruthTable, normalization.truth_table)
+        circuit = self.get_by_label(_truth_table_to_label(normalized))
         if circuit is None:
             return None
         return normalization.denormalize(circuit)

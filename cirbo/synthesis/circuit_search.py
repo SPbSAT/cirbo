@@ -36,8 +36,8 @@ from cirbo.core.circuit import (
     RNOT,
     XOR,
 )
-from cirbo.core.normalization import TruthTableNormalization
 from cirbo.core.logic import DontCare
+from cirbo.core.normalization import TruthTableNormalization
 from cirbo.sat import PySATSolverNames
 from cirbo.synthesis.exception import (
     FixGateError,
