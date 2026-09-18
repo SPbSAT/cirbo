@@ -11,6 +11,7 @@ __all__ = [
     'BadBooleanValue',
     'TruthTableBadShapeError',
     'BadCallableError',
+    'TruthTableNormalizationError',
 ]
 
 
@@ -54,3 +55,12 @@ class BadCallableError(CirboError):
     """Represents error raised provided unsupported callable to PyFunction."""
 
     pass
+
+
+class TruthTableNormalizationError(CirboError):
+    """Represents error raised when a truth table cannot be normalized, or when a
+    circuit cannot be denormalized because it does not match the normalization it is
+    given to."""
+
+    pass
+

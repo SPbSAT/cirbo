@@ -62,9 +62,6 @@ def create_test_circuit(gates):
             ("D", NOT, ("C",)),
             ("E", AND, ("B", "D")),
         ],
-        # Constant gates. These take no operands, so they are the one case where the
-        # number of operands the encoder writes and the number the decoder reads can
-        # disagree.
         [("A", ALWAYS_FALSE, ())],
         [("A", ALWAYS_TRUE, ())],
         [
