@@ -1,0 +1,10 @@
+format_name,description
+.aig,standard
+.aag,standard
+.bench,standard
+.blif,standard
+.v,standard
+.verilog,standard
+.pla,standard
+.baf,standard
+.eqn,standard
