@@ -2,6 +2,7 @@ import itertools
 import typing as tp
 
 import pytest
+from pysat.solvers import Solver
 
 from cirbo.core.boolean_function import RawTruthTable, RawTruthTableModel
 from cirbo.core.circuit import Circuit
@@ -21,7 +22,6 @@ from cirbo.synthesis.exception import (
     NoSolutionError,
     SolverTimeOutError,
 )
-from pysat.solvers import Solver
 
 
 def check_exact_circuit_size(size, truth_tables, basis, hasdontcares=False):
@@ -167,7 +167,7 @@ def test_aig_basis(inputs: int, size: int):
 
 def test_simple_operations():
     tt = [op.value for op in Operation][:10]
-    check_exact_circuit_size(10, tt, Basis.FULL)
+    check_exact_circuit_size(4, tt, Basis.FULL)
     tt = [op.value for op in Operation][10:]
     check_exact_circuit_size(6, tt, Basis.FULL)
 
@@ -269,3 +269,23 @@ def test_fix_forbid():
     circuit_finder.forbid_wire(1, 4)
     with pytest.raises(NoSolutionError):
         circuit_finder.find_circuit()
+
+
+@pytest.mark.parametrize(
+    "tt, output_label",
+    [
+        pytest.param(['0011'], "0", id="output is equivalent to input 0"),
+        pytest.param(['0101'], "1", id="output is equivalent to input 1"),
+        pytest.param(['0000'], "always_false", id="output is constant False"),
+        pytest.param(['1111'], "always_true", id="output is constant True"),
+    ],
+)
+@pytest.mark.parametrize('size', [0, 1, 2])
+def test_empty_circuit_synthesis(tt, output_label, size):
+    ckt = CircuitFinderSat(
+        TruthTableModel(tt),
+        size,
+        basis=Basis.AIG,
+    ).find_circuit()
+    assert ckt.outputs == [output_label]
+    assert ckt.gates_number() == size

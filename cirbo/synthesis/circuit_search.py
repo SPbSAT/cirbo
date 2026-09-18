@@ -36,6 +36,7 @@ from cirbo.core.circuit import (
     RNOT,
     XOR,
 )
+from cirbo.core.normalization import TruthTableNormalization
 from cirbo.core.logic import DontCare
 from cirbo.sat import PySATSolverNames
 from cirbo.synthesis.exception import (
@@ -218,7 +219,12 @@ class CircuitFinderSat:
             _basis = basis
 
         self._boolean_function = boolean_function_model
-        self._output_truth_tables = boolean_function_model.get_model_truth_table()
+        self._original_truth_tables = boolean_function_model.get_model_truth_table()
+        self._normalization = TruthTableNormalization(
+            self._original_truth_tables, reorder_outputs=False
+        )
+        self._output_truth_tables = self._normalization.truth_table
+        self._output_size = len(self._output_truth_tables)
         self._basis_list = _basis
         self._forbidden_operations = list(set(Basis.FULL.value) - set(self._basis_list))
 
@@ -231,7 +237,7 @@ class CircuitFinderSat:
             )
         )
         self._gates = list(range(boolean_function_model.input_size + number_of_gates))
-        self._outputs = list(range(boolean_function_model.output_size))
+        self._outputs = list(range(self._output_size))
         self.need_normalized = need_normalized
         self._vpool = IDPool()
         self._cnf = CNF()
@@ -278,14 +284,23 @@ class CircuitFinderSat:
         """
 
         if circuit_db is not None and self._need_check_db:
+            # The whole function, which the database normalizes itself.
             db_ret: tp.Optional[Circuit] = circuit_db.get_by_raw_truth_table_model(
-                self._output_truth_tables
+                self._original_truth_tables
             )
             if db_ret is not None:
                 if db_ret.gates_number() <= self._number_of_gates:
                     return db_ret
                 else:
                     raise NoSolutionError()
+
+        # With no output left to encode there is nothing to solve, but only a request
+        # for no gates at all: `number_of_gates` is exact, so any other request still
+        # goes to the solver, which builds that many unconstrained gates.
+        if self._normalization.all_outputs_are_free and self._number_of_gates == 0:
+            return self._normalization.free_circuit(
+                [str(gate) for gate in self._input_gates]
+            )
 
         if self._need_init_cnf:
             self._init_default_cnf_formula()
@@ -319,7 +334,7 @@ class CircuitFinderSat:
         if model is None:
             raise NoSolutionError()
 
-        return self._get_circuit_by_model(model)
+        return self._normalization.denormalize(self._get_circuit_by_model(model))
 
     def fix_gate(
         self,
@@ -428,7 +443,7 @@ class CircuitFinderSat:
         # each output is computed somewhere
         for h in self._outputs:
             self._add_exactly_one_of(
-                [self._output_gate_variable(h, gate) for gate in self._internal_gates]
+                [self._output_gate_variable(h, gate) for gate in self._gates]
             )
 
         # truth values for inputs
@@ -466,7 +481,7 @@ class CircuitFinderSat:
             for t in range(1 << self._boolean_function.input_size):
                 if self._output_truth_tables[h][t] == DontCare:
                     continue
-                for gate in self._internal_gates:
+                for gate in self._gates:
                     self._cnf.append(
                         [
                             -self._output_gate_variable(h, gate),
@@ -513,10 +528,7 @@ class CircuitFinderSat:
         :return: True if all corresponding output bits are '*', otherwise False.
 
         """
-        output_col = (
-            self._output_truth_tables[g][t]
-            for g in range(self._boolean_function.output_size)
-        )
+        output_col = (self._output_truth_tables[g][t] for g in range(self._output_size))
         return all((o == DontCare for o in output_col))
 
     def _predecessors_variable(
@@ -632,5 +644,10 @@ class CircuitFinderSat:
         for h in self._outputs:
             for gate in self._gates:
                 if self._output_gate_variable(h, gate) in model:
-                    initial_circuit.mark_as_output('s' + str(gate))
+                    if gate in self._input_gates:
+                        initial_circuit.mark_as_output(str(gate))
+                    else:
+                        initial_circuit.mark_as_output("s" + str(gate))
+
+                    break
         return initial_circuit
