@@ -7,10 +7,6 @@ __all__ = [
     'CircuitDatabaseOpenError',
     'CircuitDatabaseCloseError',
     'CircuitDatabaseNotOpenedError',
-    'NormalizationError',
-    'NormalizationParametersError',
-    'NormalizationParametersAreNotInitialized',
-    'CircuitIsNotCompatibleWithNormalizationParameters',
     'CircuitEncodingError',
 ]
 
@@ -40,20 +36,4 @@ class BitIOError(CircuitsDatabaseError):
 
 
 class CircuitEncodingError(CircuitsDatabaseError):
-    pass
-
-
-class NormalizationError(CircuitsDatabaseError):
-    pass
-
-
-class NormalizationParametersError(NormalizationError):
-    pass
-
-
-class CircuitIsNotCompatibleWithNormalizationParameters(NormalizationParametersError):
-    pass
-
-
-class NormalizationParametersAreNotInitialized(NormalizationParametersError):
     pass
