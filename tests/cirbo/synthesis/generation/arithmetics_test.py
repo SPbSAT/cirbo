@@ -438,6 +438,12 @@ def test_gen_mul_with_basis(type, basis, big_endian):
         assert mul_naive(input_labels_a, input_labels_b) == res
 
 
+@pytest.mark.parametrize("type", [MulMode.ALTER, MulMode.KARATSUBA])
+def test_gen_mul_unsupported_basis(type):
+    with pytest.raises(BadBasisError):
+        generate_mul(3, 6, type=type, basis="AIG")
+
+
 @pytest.mark.parametrize(
     "x",
     [
@@ -459,7 +465,6 @@ def test_square(x, big_endian):
     res = add_square(
         ckt,
         input_labels,
-        basis=GenerationBasis.XAIG,
         big_endian=big_endian,
     )
     ckt.set_outputs(res)
@@ -473,22 +478,6 @@ def test_square(x, big_endian):
         else:
             res.reverse()
         assert square_naive(input_labels) == res
-
-
-@pytest.mark.parametrize("big_endian", [True, False])
-def test_square_unsupported_basis(big_endian):
-    ckt = Circuit()
-    input_labels = [f'x{i}' for i in range(2)]
-    for label in input_labels:
-        ckt.add_gate(Gate(label, INPUT))
-
-    with pytest.raises(BadBasisError):
-        add_square(
-            ckt,
-            input_labels,
-            basis=GenerationBasis.AIG,
-            big_endian=big_endian,
-        )
 
 
 @pytest.mark.parametrize("func", [add_square_pow2_m1, add_square_dadda])
@@ -564,15 +553,9 @@ def test_gen_square(number_inputs, type, basis, big_endian):
         assert square_naive(input_labels) == res
 
 
-@pytest.mark.parametrize("big_endian", [True, False])
-def test_gen_square_unsupported_basis(big_endian):
+def test_gen_square_unsupported_basis():
     with pytest.raises(BadBasisError):
-        generate_square(
-            2,
-            type=SquareMode.DEFAULT,
-            basis=GenerationBasis.AIG,
-            big_endian=big_endian,
-        )
+        generate_square(3, type=SquareMode.DEFAULT, basis="AIG")
 
 
 @pytest.mark.parametrize(

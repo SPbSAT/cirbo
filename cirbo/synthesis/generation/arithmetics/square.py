@@ -1,18 +1,17 @@
 import collections
 import enum
+import inspect
 import typing as tp
 
 from cirbo.core.circuit import Circuit, gate
 from cirbo.synthesis.generation.arithmetics._utils import (
+    add_fin_sum,
     add_gate_from_tt,
     conventional_basis,
     PLACEHOLDER_STR,
     reverse_if_big_endian,
 )
-from cirbo.synthesis.generation.arithmetics.multiplication import (
-    _add_fin_sum,
-    add_mul_karatsuba,
-)
+from cirbo.synthesis.generation.arithmetics.multiplication import add_mul_karatsuba
 from cirbo.synthesis.generation.arithmetics.summation import (
     add_sum2,
     add_sum3,
@@ -59,11 +58,15 @@ def generate_square(
     """
     basis = conventional_basis(basis)
     circuit = Circuit.bare_circuit(number_inputs)
+    kwargs: dict[str, tp.Any] = {"big_endian": big_endian}
+    if "basis" in inspect.signature(_process_square[type]).parameters:
+        kwargs["basis"] = basis
+    elif basis != GenerationBasis.XAIG:
+        raise BadBasisError(f"Basis {basis} is unsupported for {type.value} square")
     outputs = _process_square[type](
         circuit,
         circuit.inputs,
-        big_endian=big_endian,
-        basis=basis,
+        **kwargs,
     )
     circuit.set_outputs(outputs)
     return circuit
@@ -74,7 +77,6 @@ def add_square(
     input_labels: tp.Iterable[gate.Label],
     *,
     big_endian: bool = False,
-    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> list[gate.Label]:
     """
     Compute the square of a number represented by the given input labels in the circuit.
@@ -83,14 +85,9 @@ def add_square(
     :param input_labels: Iterable of gate labels representing the input number.
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
-    :param basis: in which basis should generated function lie. Supported [XAIG].
     :return: A list of gate labels representing the square of the input number.
 
     """
-    basis = conventional_basis(basis)
-    if basis != GenerationBasis.XAIG:
-        raise BadBasisError("Only XAIG is supported for square")
-
     input_labels = list(input_labels)
     n = len(input_labels)
     if big_endian:
@@ -98,18 +95,18 @@ def add_square(
 
     if n < 48 or n in [49, 53]:
         return reverse_if_big_endian(
-            add_square_pow2_m1(circuit, input_labels, basis=basis), big_endian
+            add_square_pow2_m1(circuit, input_labels), big_endian
         )
 
     mid = n // 2
     a = input_labels[:mid]
     b = input_labels[mid:]
-    aa = add_square(circuit, a, basis=basis)
-    bb = add_square(circuit, b, basis=basis)
+    aa = add_square(circuit, a)
+    bb = add_square(circuit, b)
     ab = add_mul_karatsuba(circuit, a, b)
 
-    res = add_sum_two_numbers_with_shift(circuit, mid + 1, aa, ab, basis=basis)
-    final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, bb, basis=basis)
+    res = add_sum_two_numbers_with_shift(circuit, mid + 1, aa, ab)
+    final_res = add_sum_two_numbers_with_shift(circuit, 2 * mid, res, bb)
     final_res = final_res[: 2 * n]
     return reverse_if_big_endian(final_res, big_endian)
 
@@ -181,7 +178,7 @@ def add_square_dadda(
         else:
             di = (2 * di + 2) // 3
 
-    out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: 2 * n]
+    out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: 2 * n]
     return reverse_if_big_endian(out, big_endian)
 
 
