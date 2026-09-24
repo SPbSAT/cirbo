@@ -5,6 +5,7 @@ import typing as tp
 
 from cirbo.core.circuit import Circuit, gate
 from cirbo.synthesis.generation.arithmetics._utils import (
+    add_fin_sum,
     add_gate_from_tt,
     conventional_basis,
     PLACEHOLDER_STR,
@@ -21,6 +22,7 @@ from cirbo.synthesis.generation.arithmetics.summation import (
     add_sum_two_numbers_log_depth,
     add_sum_two_numbers_with_shift,
 )
+from cirbo.synthesis.generation.exceptions import BadBasisError
 from cirbo.synthesis.generation.helpers import GenerationBasis
 
 
@@ -162,6 +164,8 @@ def generate_mul(
     kwargs: dict[str, tp.Any] = {"big_endian": big_endian}
     if "basis" in inspect.signature(_process_mul[type]).parameters:
         kwargs["basis"] = basis
+    elif basis != GenerationBasis.XAIG:
+        raise BadBasisError(f"Basis {basis} is unsupported for {type.value} mul")
     outputs = _process_mul[type](
         circuit,
         circuit.inputs[:size_of_input_a],
@@ -545,38 +549,6 @@ def add_dadda_karatsuba(
     return reverse_if_big_endian(final_res[:out_size], big_endian)
 
 
-def _add_fin_sum(
-    circuit: Circuit,
-    c: list[tp.Deque[str]],
-    *,
-    sum_func: _SumFuncProtocol = add_sum_two_numbers_log_depth,
-    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
-) -> list[gate.Label]:
-    basis = conventional_basis(basis)
-    out = []
-    a = []
-    b = []
-    zero = add_gate_from_tt(circuit, c[0][0], c[0][0], '0000')
-    ch = 0
-    for i in range(0, len(c)):
-        if len(c[i]) == 0:
-            if ch == 0:
-                out.append(zero)
-        elif len(c[i]) == 1 and ch == 0:
-            out.append(c[i][0])
-        else:
-            ch = 1
-            if len(c[i]) > 1:
-                a.append(c[i].popleft())
-                b.append(c[i].popleft())
-            else:
-                a.append(c[i].popleft())
-                b.append(zero)
-
-    out += sum_func(circuit, a, b, basis=basis, big_endian=False)
-    return out
-
-
 def add_mul_dadda(
     circuit: Circuit,
     input_labels_a: tp.Iterable[gate.Label],
@@ -647,7 +619,7 @@ def add_mul_dadda(
         else:
             di = (2 * di + 2) // 3
 
-    out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+    out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
 
     return reverse_if_big_endian(out, big_endian)
 
@@ -697,7 +669,7 @@ def add_smul_dadda(
             add_gate_from_tt(circuit, input_labels_a[-1], input_labels_b[0], '0100')
         )
         c[0].append(input_labels_b[0])
-        out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+        out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
 
         return reverse_if_big_endian(out, big_endian)
 
@@ -752,7 +724,7 @@ def add_smul_dadda(
         else:
             di = (2 * di + 2) // 3
 
-    out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+    out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
 
     return reverse_if_big_endian(out, big_endian)
 
@@ -801,7 +773,7 @@ def add_smul_wallace(
             add_gate_from_tt(circuit, input_labels_a[-1], input_labels_b[0], '0100')
         )
         c[0].append(input_labels_b[0])
-        out = _add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
+        out = add_fin_sum(circuit, c, sum_func=sum_func, basis=basis)[: n + m]
 
         return reverse_if_big_endian(out, big_endian)
 
@@ -848,7 +820,7 @@ def add_smul_wallace(
 
     # And then the final carry-propagate sum.
     c_ = [collections.deque(x for x in col if x != PLACEHOLDER_STR) for col in c]
-    out = _add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
+    out = add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
 
     return reverse_if_big_endian(out, big_endian)
 
@@ -920,7 +892,7 @@ def add_mul_wallace(
         c = cn
 
     c_ = [collections.deque(x for x in col if x != PLACEHOLDER_STR) for col in c]
-    out = _add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
+    out = add_fin_sum(circuit, c_, sum_func=sum_func, basis=basis)[: n + m]
 
     return reverse_if_big_endian(out, big_endian)
 

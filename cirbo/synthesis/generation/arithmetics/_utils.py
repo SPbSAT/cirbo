@@ -21,6 +21,7 @@ __all__ = [
     'reverse_if_big_endian',
     'conventional_basis',
     'xor_two_bits',
+    'add_fin_sum',
 ]
 
 
@@ -93,6 +94,38 @@ def reverse_if_big_endian(
     if big_endian:
         res.reverse()
     return res
+
+
+def add_fin_sum(
+    circuit: Circuit,
+    c: list[tp.Deque[str]],
+    *,
+    sum_func: tp.Callable[..., list[gate.Label]],
+    basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
+) -> list[gate.Label]:
+    basis = conventional_basis(basis)
+    out = []
+    a = []
+    b = []
+    zero = add_gate_from_tt(circuit, c[0][0], c[0][0], '0000')
+    ch = 0
+    for i in range(0, len(c)):
+        if len(c[i]) == 0:
+            if ch == 0:
+                out.append(zero)
+        elif len(c[i]) == 1 and ch == 0:
+            out.append(c[i][0])
+        else:
+            ch = 1
+            if len(c[i]) > 1:
+                a.append(c[i].popleft())
+                b.append(c[i].popleft())
+            else:
+                a.append(c[i].popleft())
+                b.append(zero)
+
+    out += sum_func(circuit, a, b, basis=basis, big_endian=False)
+    return out
 
 
 def xor_two_bits(

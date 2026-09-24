@@ -25,6 +25,7 @@ from cirbo.synthesis.generation.arithmetics import (
     add_smul_wallace,
     add_sqrt,
     add_square,
+    add_square_dadda,
     add_square_pow2_m1,
     add_sub_two_numbers,
     add_sub_two_numbers_log_depth,
@@ -56,6 +57,7 @@ from cirbo.synthesis.generation.arithmetics._utils import (
     binary_tt_to_type,
     PLACEHOLDER_STR,
 )
+from cirbo.synthesis.generation.exceptions import BadBasisError
 
 TEST_SIZE = 100
 random.seed(42)
@@ -436,7 +438,12 @@ def test_gen_mul_with_basis(type, basis, big_endian):
         assert mul_naive(input_labels_a, input_labels_b) == res
 
 
-@pytest.mark.parametrize("func", [add_square, add_square_pow2_m1])
+@pytest.mark.parametrize("type", [MulMode.ALTER, MulMode.KARATSUBA])
+def test_gen_mul_unsupported_basis(type):
+    with pytest.raises(BadBasisError):
+        generate_mul(3, 6, type=type, basis="AIG")
+
+
 @pytest.mark.parametrize(
     "x",
     [
@@ -449,14 +456,19 @@ def test_gen_mul_with_basis(type, basis, big_endian):
     ],
 )
 @pytest.mark.parametrize("big_endian", [True, False])
-def test_square(func, x, big_endian):
+def test_square(x, big_endian):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
     for i in range(x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
 
-    res = func(ckt, input_labels, big_endian=big_endian)
+    res = add_square(
+        ckt,
+        input_labels,
+        big_endian=big_endian,
+    )
     ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, GenerationBasis.XAIG)
 
     for test in range(TEST_SIZE):
         input_labels = [random.choice([0, 1]) for _ in range(x)]
@@ -468,7 +480,49 @@ def test_square(func, x, big_endian):
         assert square_naive(input_labels) == res
 
 
-@pytest.mark.parametrize("type", [SquareMode.DEFAULT, SquareMode.POW2_M1])
+@pytest.mark.parametrize("func", [add_square_pow2_m1, add_square_dadda])
+@pytest.mark.parametrize(
+    "x",
+    [
+        1,
+        2,
+        5,
+        7,
+        pytest.param(17, marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_square_with_basis(func, x, basis, big_endian):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x)]
+    for i in range(x):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res = func(ckt, input_labels, basis=basis, big_endian=big_endian)
+    ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
+
+    for test in range(TEST_SIZE):
+        input_labels = [random.choice([0, 1]) for _ in range(x)]
+        res = ckt.evaluate(input_labels)
+        if big_endian:
+            input_labels.reverse()
+        else:
+            res.reverse()
+        assert square_naive(input_labels) == res
+
+
+@pytest.mark.parametrize(
+    "type,basis",
+    [
+        (SquareMode.DEFAULT, GenerationBasis.XAIG),
+        (SquareMode.POW2_M1, GenerationBasis.XAIG),
+        (SquareMode.POW2_M1, "AIG"),
+        (SquareMode.DADDA, GenerationBasis.XAIG),
+        (SquareMode.DADDA, "AIG"),
+    ],
+)
 @pytest.mark.parametrize(
     "number_inputs",
     [
@@ -481,12 +535,14 @@ def test_square(func, x, big_endian):
     ],
 )
 @pytest.mark.parametrize("big_endian", [True, False])
-def test_gen_square(number_inputs, type, big_endian):
+def test_gen_square(number_inputs, type, basis, big_endian):
     ckt: Circuit = generate_square(
         number_inputs,
         type=type,
+        basis=basis,
         big_endian=big_endian,
     )
+    assert_circuit_in_basis(ckt, basis)
     for test in range(TEST_SIZE):
         input_labels = [random.choice([0, 1]) for _ in range(number_inputs)]
         res = ckt.evaluate(input_labels)
@@ -495,6 +551,11 @@ def test_gen_square(number_inputs, type, big_endian):
         else:
             res.reverse()
         assert square_naive(input_labels) == res
+
+
+def test_gen_square_unsupported_basis():
+    with pytest.raises(BadBasisError):
+        generate_square(3, type=SquareMode.DEFAULT, basis="AIG")
 
 
 @pytest.mark.parametrize(
@@ -561,8 +622,9 @@ def test_sum_two_numbers(func, size, basis, big_endian):
         pytest.param([8, 2], 1, marks=pytest.mark.slow),
     ],
 )
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize("big_endian", [True, False])
-def test_sum_two_numbers_with_shift(size, shift, big_endian):
+def test_sum_two_numbers_with_shift(size, shift, basis, big_endian):
     x, y = size
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x + y)]
@@ -575,10 +637,12 @@ def test_sum_two_numbers_with_shift(size, shift, big_endian):
         shift,
         input_labels[:x],
         input_labels[x:],
+        basis=basis,
         big_endian=big_endian,
     )
     res = [zero if label == PLACEHOLDER_STR else label for label in res]
     ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
 
     for test in range(TEST_SIZE):
         input_labels_a = [random.choice([0, 1]) for _ in range(x)]
