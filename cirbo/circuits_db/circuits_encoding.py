@@ -140,7 +140,7 @@ def _encode_gate(
     if gate_type_id is None:
         raise CircuitEncodingError("Tried to encode unsupported gate type")
     bit_writer.write_number(gate_type_id, GATE_TYPE_BIT_SIZE)
-    for operand_label in gate_.operands:
+    for operand_label in gate_.operands[: _get_arity(gate_.gate_type)]:
         bit_writer.write_number(gate_identifiers[operand_label], word_size)
 
 
@@ -224,6 +224,8 @@ def _enumerate_gates(circuit: Circuit) -> tp.Dict[Label, int]:
 
 
 def _get_arity(gate_type: GateType) -> int:
+    if gate_type == gate.ALWAYS_TRUE or gate_type == gate.ALWAYS_FALSE:
+        return 0
     if gate_type == gate.IFF or gate_type == gate.NOT:
         return 1
     else:
