@@ -10,6 +10,7 @@ from cirbo.synthesis.generation import GenerationBasis
 from cirbo.synthesis.generation.arithmetics import (
     add_dadda_karatsuba,
     add_div_mod,
+    add_div_mod_by_const,
     add_equal,
     add_mul,
     add_mul_alter,
@@ -41,6 +42,7 @@ from cirbo.synthesis.generation.arithmetics import (
     add_sum_two_numbers_log_depth_brent_kung,
     add_sum_two_numbers_log_depth_krapchenko,
     add_sum_two_numbers_with_shift,
+    generate_div_mod,
     generate_equal,
     generate_mul,
     generate_square,
@@ -57,7 +59,7 @@ from cirbo.synthesis.generation.arithmetics._utils import (
     binary_tt_to_type,
     PLACEHOLDER_STR,
 )
-from cirbo.synthesis.generation.exceptions import BadBasisError
+from cirbo.synthesis.generation.exceptions import BadBasisError, BadDivisorError
 
 TEST_SIZE = 100
 random.seed(42)
@@ -826,16 +828,24 @@ def test_sqrt(x, big_endian):
         pytest.param(128, marks=pytest.mark.slow),
     ],
 )
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("zero_div", [True, False])
 @pytest.mark.parametrize("big_endian", [True, False])
-def test_div_mod(x, big_endian):
+def test_div_mod(x, basis, zero_div, big_endian):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(2 * x)]
     for i in range(2 * x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
     res_div, res_mod = add_div_mod(
-        ckt, input_labels[:x], input_labels[x:], big_endian=big_endian
+        ckt,
+        input_labels[:x],
+        input_labels[x:],
+        zero_div=zero_div,
+        basis=basis,
+        big_endian=big_endian,
     )
     ckt.set_outputs(res_div + res_mod)
+    assert_circuit_in_basis(ckt, basis)
     for test in range(TEST_SIZE):
         input_labels_a = [random.choice([0, 1]) for _ in range(x)]
         input_labels_b = [random.choice([0, 1]) for _ in range(x)]
@@ -848,6 +858,153 @@ def test_div_mod(x, big_endian):
         else:
             res = res[:x][::-1] + res[x:][::-1]
         assert div_mod_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("zero_div", [True, False])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_div_mod_zero_divisor(basis, zero_div, big_endian):
+    x = 4
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(2 * x)]
+    for i in range(2 * x):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    res_div, res_mod = add_div_mod(
+        ckt,
+        input_labels[:x],
+        input_labels[x:],
+        zero_div=zero_div,
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res_div + res_mod)
+    assert_circuit_in_basis(ckt, basis)
+
+    input_labels_a = [1, 0, 1, 1]
+    input_labels_b = [0] * x
+    res = ckt.evaluate(input_labels_a + input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+    else:
+        res = res[:x][::-1] + res[x:][::-1]
+
+    if zero_div:
+        assert [0] * (2 * x) == res
+    else:
+        dividend = to_bin(to_num(input_labels_a), x)
+        assert dividend + dividend == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("zero_div", [True, False])
+@pytest.mark.parametrize("big_endian", [True, False])
+def test_div_mod_with_short_divisor(basis, zero_div, big_endian):
+    x = 5
+    y = 3
+    ckt = Circuit()
+    input_labels_a = [f'a{i}' for i in range(x)]
+    input_labels_b = [f'b{i}' for i in range(y)]
+    for label in input_labels_a + input_labels_b:
+        ckt.add_gate(Gate(label, INPUT))
+
+    res_div, res_mod = add_div_mod(
+        ckt,
+        input_labels_a,
+        input_labels_b,
+        zero_div=zero_div,
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(res_div + res_mod)
+    assert_circuit_in_basis(ckt, basis)
+
+    for test in range(TEST_SIZE):
+        inputs_a = [random.choice([0, 1]) for _ in range(x)]
+        inputs_b = [random.choice([0, 1]) for _ in range(y)]
+        res = ckt.evaluate(inputs_a + inputs_b)
+        if big_endian:
+            inputs_a.reverse()
+            inputs_b.reverse()
+        else:
+            res = res[: len(res_div)][::-1] + res[len(res_div) :][::-1]
+        value_b = to_num(inputs_b)
+        if value_b == 0 and zero_div:
+            expected = [0] * (len(res_div) + len(res_mod))
+        else:
+            value_a = to_num(inputs_a)
+            if value_b == 0:
+                expected = to_bin(value_a, len(res_div)) + to_bin(value_a, len(res_mod))
+            else:
+                expected = to_bin(value_a // value_b, len(res_div)) + to_bin(
+                    value_a % value_b, len(res_mod)
+                )
+        assert expected == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("big_endian", [True, False])
+@pytest.mark.parametrize("x", [2, 5, pytest.param(17, marks=pytest.mark.slow)])
+def test_generate_div_mod(x, basis, big_endian):
+    ckt = generate_div_mod(x, basis=basis, big_endian=big_endian)
+    assert_circuit_in_basis(ckt, basis)
+    for test in range(TEST_SIZE):
+        input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+        input_labels_b = [random.choice([0, 1]) for _ in range(x)]
+        if sum(input_labels_b) == 0:
+            continue
+        res = ckt.evaluate(input_labels_a + input_labels_b)
+        if big_endian:
+            input_labels_a.reverse()
+            input_labels_b.reverse()
+        else:
+            res = res[:x][::-1] + res[x:][::-1]
+        assert div_mod_naive(input_labels_a, input_labels_b) == res
+
+
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("big_endian", [True, False])
+@pytest.mark.parametrize("constant", [1, 2, 3, 5, 13])
+@pytest.mark.parametrize("x", [2, 5, pytest.param(17, marks=pytest.mark.slow)])
+def test_div_mod_by_const(x, constant, basis, big_endian):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(x)]
+    for i in range(x):
+        ckt.add_gate(Gate(input_labels[i], INPUT))
+
+    div, mod = add_div_mod_by_const(
+        ckt,
+        input_labels,
+        constant,
+        basis=basis,
+        big_endian=big_endian,
+    )
+    ckt.set_outputs(div + mod)
+    assert_circuit_in_basis(ckt, basis)
+
+    for test in range(TEST_SIZE):
+        inputs = [random.choice([0, 1]) for _ in range(x)]
+        res = ckt.evaluate(inputs)
+        if big_endian:
+            inputs.reverse()
+        else:
+            res = res[: len(div)][::-1] + res[len(div) :][::-1]
+
+        value = to_num(inputs)
+        expected_div = value // constant
+        expected_mod = value % constant
+        assert to_bin(expected_div, len(div)) + to_bin(expected_mod, len(mod)) == res
+
+
+@pytest.mark.parametrize("constant", [0, -1])
+def test_div_mod_by_const_bad_divisor(constant):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(3)]
+    for label in input_labels:
+        ckt.add_gate(Gate(label, INPUT))
+
+    with pytest.raises(BadDivisorError):
+        add_div_mod_by_const(ckt, input_labels, constant)
 
 
 @pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
