@@ -2,6 +2,7 @@
 circuits by several methods."""
 
 from ._utils import xor_two_bits
+from .crt import add_crt, add_crt_calc, extended_euclidean, modular_inverse
 from .div_mod import add_div_mod, add_div_mod_by_const, generate_div_mod
 from .equality import add_equal, generate_equal
 from .multiplication import (
@@ -60,6 +61,11 @@ from .summation import (
 
 
 __all__ = [
+    # crt.py
+    'add_crt',
+    'add_crt_calc',
+    'extended_euclidean',
+    'modular_inverse',
     # div_mod.py
     'generate_div_mod',
     'add_div_mod',
