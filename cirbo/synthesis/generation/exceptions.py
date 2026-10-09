@@ -7,6 +7,7 @@ __all__ = [
     'DifferentShapesError',
     'BadBasisError',
     'BadDivisorError',
+    'BadModulusError',
     'PairwiseXorDifferentShapesError',
     'PairwiseIfThenElseDifferentShapesError',
 ]
@@ -33,6 +34,12 @@ class BadBasisError(CirboError):
 
 class BadDivisorError(CirboError):
     """Error that occurs when generation method is given a bad divisor."""
+
+    pass
+
+
+class BadModulusError(CirboError):
+    """Error that occurs when generation method is given a bad modulus."""
 
     pass
 
