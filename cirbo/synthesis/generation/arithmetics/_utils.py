@@ -20,6 +20,7 @@ __all__ = [
     'generate_list_of_input_labels',
     'reverse_if_big_endian',
     'conventional_basis',
+    'constant_to_bits',
     'xor_two_bits',
     'add_fin_sum',
 ]
@@ -94,6 +95,31 @@ def reverse_if_big_endian(
     if big_endian:
         res.reverse()
     return res
+
+
+def constant_to_bits(
+    circuit: Circuit,
+    ref_label: gate.Label,
+    n: int,
+) -> list[gate.Label]:
+    """
+    Convert an integer constant to little-endian bit labels.
+
+    :param circuit: The general circuit.
+    :param ref_label: Existing gate label used to synthesize constant gates.
+    :param n: Integer constant to encode.
+    :return: A list of gate labels representing the constant in little-endian order.
+
+    """
+    if n < 0:
+        raise ValueError("Constant must be non-negative")
+
+    zero = add_gate_from_tt(circuit, ref_label, ref_label, '0000')
+    one = add_gate_from_tt(circuit, ref_label, ref_label, '1111')
+    bits = []
+    for i in range(max(n.bit_length(), 1)):
+        bits.append(one if (n >> i) & 1 else zero)
+    return bits
 
 
 def add_fin_sum(
