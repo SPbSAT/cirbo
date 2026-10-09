@@ -43,6 +43,7 @@ from cirbo.synthesis.generation.arithmetics import (
     add_sum_two_numbers_with_shift,
     generate_equal,
     generate_mul,
+    generate_sqrt,
     generate_square,
     generate_sub_two_numbers,
     generate_sum_n_bits,
@@ -798,13 +799,41 @@ def test_gen_add_equal(num):
     ],
 )
 @pytest.mark.parametrize("big_endian", [True, False])
-def test_sqrt(x, big_endian):
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+def test_sqrt(x, basis, big_endian):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(x)]
     for i in range(x):
         ckt.add_gate(Gate(input_labels[i], INPUT))
-    res = add_sqrt(ckt, input_labels, big_endian=big_endian)
+    res = add_sqrt(ckt, input_labels, basis=basis, big_endian=big_endian)
     ckt.set_outputs(res)
+    assert_circuit_in_basis(ckt, basis)
+    for test in range(TEST_SIZE):
+        input_labels = [random.choice([0, 1]) for _ in range(x)]
+        res = ckt.evaluate(input_labels)
+        if big_endian:
+            input_labels.reverse()
+        else:
+            res.reverse()
+        assert sqrt_naive(input_labels) == res
+
+
+@pytest.mark.parametrize(
+    "x",
+    [
+        2,
+        4,
+        9,
+        pytest.param(21, marks=pytest.mark.slow),
+        pytest.param(40, marks=pytest.mark.slow),
+        pytest.param(64, marks=pytest.mark.slow),
+    ],
+)
+@pytest.mark.parametrize("big_endian", [True, False])
+@pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+def test_gen_sqrt(x, basis, big_endian):
+    ckt = generate_sqrt(x, basis=basis, big_endian=big_endian)
+    assert_circuit_in_basis(ckt, basis)
     for test in range(TEST_SIZE):
         input_labels = [random.choice([0, 1]) for _ in range(x)]
         res = ckt.evaluate(input_labels)
