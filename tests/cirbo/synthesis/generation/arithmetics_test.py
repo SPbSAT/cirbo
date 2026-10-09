@@ -943,10 +943,11 @@ def test_div_mod_with_short_divisor(basis, zero_div, big_endian):
 
 
 @pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
+@pytest.mark.parametrize("zero_div", [True, False])
 @pytest.mark.parametrize("big_endian", [True, False])
 @pytest.mark.parametrize("x", [2, 5, pytest.param(17, marks=pytest.mark.slow)])
-def test_generate_div_mod(x, basis, big_endian):
-    ckt = generate_div_mod(x, basis=basis, big_endian=big_endian)
+def test_generate_div_mod(x, basis, zero_div, big_endian):
+    ckt = generate_div_mod(x, zero_div=zero_div, basis=basis, big_endian=big_endian)
     assert_circuit_in_basis(ckt, basis)
     for test in range(TEST_SIZE):
         input_labels_a = [random.choice([0, 1]) for _ in range(x)]
@@ -960,6 +961,19 @@ def test_generate_div_mod(x, basis, big_endian):
         else:
             res = res[:x][::-1] + res[x:][::-1]
         assert div_mod_naive(input_labels_a, input_labels_b) == res
+
+    input_labels_a = [random.choice([0, 1]) for _ in range(x)]
+    input_labels_b = [0] * x
+    res = ckt.evaluate(input_labels_a + input_labels_b)
+    if big_endian:
+        input_labels_a.reverse()
+    else:
+        res = res[:x][::-1] + res[x:][::-1]
+    if zero_div:
+        assert [0] * (2 * x) == res
+    else:
+        dividend = to_bin(to_num(input_labels_a), x)
+        assert dividend + dividend == res
 
 
 @pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])

@@ -29,6 +29,7 @@ __all__ = [
 def generate_div_mod(
     n: int,
     *,
+    zero_div: bool = True,
     big_endian: bool = False,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> Circuit:
@@ -37,6 +38,8 @@ def generate_div_mod(
     other is second n bits) in result.
 
     :param n: the number of bits in each number.
+    :param zero_div: if true, division by zero maps both quotient and remainder to zero;
+        otherwise quotient and remainder are mapped to the dividend.
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
     :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
@@ -50,6 +53,7 @@ def generate_div_mod(
         circuit,
         circuit.inputs[:n],
         circuit.inputs[n:],
+        zero_div=zero_div,
         big_endian=big_endian,
         basis=basis,
     )
@@ -62,7 +66,7 @@ def add_div_mod(
     input_labels_a: tp.Iterable[gate.Label],
     input_labels_b: tp.Iterable[gate.Label],
     *,
-    zero_div: bool = False,
+    zero_div: bool = True,
     big_endian: bool = False,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
 ) -> tuple[list[gate.Label], list[gate.Label]]:
