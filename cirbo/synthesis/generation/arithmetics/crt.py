@@ -10,32 +10,14 @@ from cirbo.synthesis.generation.arithmetics._utils import (
 from cirbo.synthesis.generation.arithmetics.div_mod import add_div_mod
 from cirbo.synthesis.generation.arithmetics.multiplication import add_mul_constant
 from cirbo.synthesis.generation.arithmetics.summation import add_sum_n_weighted_bits
-from cirbo.synthesis.generation.exceptions import BadModulusError
+from cirbo.synthesis.generation.exceptions import BadModulusError, BadShapesError
 from cirbo.synthesis.generation.helpers import GenerationBasis
 
 __all__ = [
     'add_crt',
     'add_crt_calc',
-    'extended_euclidean',
     'modular_inverse',
 ]
-
-
-def extended_euclidean(a: int, b: int) -> tuple[int, int, int]:
-    """
-    Calculates the greatest common divisor and Bezout coefficients.
-
-    :param a: The first integer.
-    :param b: The second integer.
-    :return: A tuple ``(gcd, x, y)`` such that ``a * x + b * y == gcd``.
-
-    """
-    if a < 0 or b < 0:
-        raise ValueError("Arguments must be non-negative")
-    if b == 0:
-        return a, 1, 0
-    gcd, x, y = extended_euclidean(b, a % b)
-    return gcd, y, x - (a // b) * y
 
 
 def modular_inverse(value: int, modulus: int) -> int:
@@ -52,10 +34,10 @@ def modular_inverse(value: int, modulus: int) -> int:
         raise ValueError("Arguments must be non-negative")
     if modulus <= 0:
         raise BadModulusError("Modulus must be positive")
-    gcd, x, _ = extended_euclidean(value, modulus)
-    if gcd != 1:
-        raise ValueError(f"Inverse does not exist for {value} mod {modulus}")
-    return x % modulus
+    try:
+        return pow(value, -1, modulus)
+    except ValueError as exc:
+        raise ValueError(f"Inverse does not exist for {value} mod {modulus}") from exc
 
 
 def _weighted_bits_to_labels(
@@ -96,7 +78,7 @@ def add_crt(
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing concatenated residues.
         For each modulus ``m``, the residue occupies ``(m - 1).bit_length()`` bits.
-    :param moduli: List of pairwise coprime moduli.
+    :param moduli: List of pairwise coprime moduli greater than one.
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
     :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
@@ -107,6 +89,8 @@ def add_crt(
     basis = conventional_basis(basis)
     product = 1
     for modulus in moduli:
+        if modulus <= 1:
+            raise BadModulusError("Moduli must be greater than one")
         product *= modulus
 
     product_parts = [product // modulus for modulus in moduli]
@@ -123,7 +107,8 @@ def add_crt(
         circuit,
         input_labels_a,
         moduli,
-        [*factors, product],
+        factors,
+        product,
         big_endian=big_endian,
         basis=basis,
     )
@@ -134,6 +119,7 @@ def add_crt_calc(
     input_labels_a: tp.Iterable[gate.Label],
     moduli: list[int],
     factors: list[int],
+    final_modulus: int,
     *,
     big_endian: bool = False,
     basis: tp.Union[str, GenerationBasis] = GenerationBasis.XAIG,
@@ -144,31 +130,41 @@ def add_crt_calc(
     :param circuit: The general circuit.
     :param input_labels_a: Iterable of gate labels representing concatenated residues.
         For each modulus ``m``, the residue occupies ``(m - 1).bit_length()`` bits.
-    :param moduli: List of moduli defining how to split the input labels.
+    :param moduli: List of moduli greater than one defining how to split the input labels.
     :param factors: Precomputed crt factors. Each residue is multiplied by the factor
-        with the same index, and the last element is used as the final modulus.
+        with the same index.
+    :param final_modulus: Positive modulus used to reduce the weighted sum.
     :param big_endian: defines how to interpret numbers, big-endian or little-endian
         format
     :param basis: in which basis should generated function lie. Supported [XAIG, AIG].
     :return: A list of gate labels representing the reconstructed number reduced by the
-        final modulus from ``factors``.
+        ``final_modulus``.
 
     """
     basis = conventional_basis(basis)
-    if len(factors) != len(moduli) + 1:
-        raise BadModulusError("Factors length must be equal to moduli length plus one")
+    if len(factors) != len(moduli):
+        raise BadModulusError("Factors length must be equal to moduli length")
+    if any(modulus <= 1 for modulus in moduli):
+        raise BadModulusError("Moduli must be greater than one")
+    if final_modulus <= 0:
+        raise BadModulusError("Final modulus must be positive")
 
     input_labels_a = list(input_labels_a)
-    if big_endian:
-        input_labels_a.reverse()
-
+    expected_bits = sum((modulus - 1).bit_length() for modulus in moduli)
+    if len(input_labels_a) != expected_bits:
+        raise BadShapesError(
+            f"Expected {expected_bits} input bits, got {len(input_labels_a)}"
+        )
     pointer = 0
     power_bits = []
     for index, modulus in enumerate(moduli):
         bit_len = (modulus - 1).bit_length()
+        residue = input_labels_a[pointer : pointer + bit_len]
+        if big_endian:
+            residue.reverse()
         res = add_mul_constant(
             circuit,
-            input_labels_a[pointer : pointer + bit_len],
+            residue,
             factors[index],
             basis=basis,
         )
@@ -178,6 +174,9 @@ def add_crt_calc(
 
     weighted_sum = add_sum_n_weighted_bits(circuit, power_bits, basis=basis)
     sum_bits = _weighted_bits_to_labels(circuit, weighted_sum)
-    product_bits = constant_to_bits(circuit, sum_bits[0], factors[-1])
+    product_bits = constant_to_bits(circuit, sum_bits[0], final_modulus)
+    if len(sum_bits) < len(product_bits):
+        zero = add_gate_from_tt(circuit, sum_bits[0], sum_bits[0], '0000')
+        sum_bits.extend([zero] * (len(product_bits) - len(sum_bits)))
     _, ans = add_div_mod(circuit, sum_bits, product_bits, basis=basis)
     return reverse_if_big_endian(ans, big_endian)

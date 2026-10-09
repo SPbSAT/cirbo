@@ -44,7 +44,6 @@ from cirbo.synthesis.generation.arithmetics import (
     add_sum_two_numbers_log_depth_brent_kung,
     add_sum_two_numbers_log_depth_krapchenko,
     add_sum_two_numbers_with_shift,
-    extended_euclidean,
     generate_div_mod,
     generate_equal,
     generate_mul,
@@ -67,6 +66,7 @@ from cirbo.synthesis.generation.exceptions import (
     BadBasisError,
     BadDivisorError,
     BadModulusError,
+    BadShapesError,
 )
 
 TEST_SIZE = 100
@@ -1033,12 +1033,6 @@ def test_modular_inverse():
         modular_inverse(6, 9)
 
 
-@pytest.mark.parametrize("args", [(-1, 3), (3, -1)])
-def test_extended_euclidean_negative_args(args):
-    with pytest.raises(ValueError):
-        extended_euclidean(*args)
-
-
 @pytest.mark.parametrize("args", [(-1, 3)])
 def test_modular_inverse_negative_args(args):
     with pytest.raises(ValueError):
@@ -1051,7 +1045,7 @@ def test_modular_inverse_bad_modulus(args):
         modular_inverse(*args)
 
 
-@pytest.mark.parametrize("factors", [[70, 21, 15], [70, 21, 15, 105, 1]])
+@pytest.mark.parametrize("factors", [[70, 21], [70, 21, 15, 105]])
 def test_crt_calc_bad_factors_length(factors):
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(8)]
@@ -1059,15 +1053,63 @@ def test_crt_calc_bad_factors_length(factors):
         ckt.add_gate(Gate(label, INPUT))
 
     with pytest.raises(BadModulusError):
-        add_crt_calc(ckt, input_labels, [3, 5, 7], factors)
+        add_crt_calc(ckt, input_labels, [3, 5, 7], factors, 105)
 
 
 @pytest.mark.parametrize("func", [add_crt, add_crt_calc])
+@pytest.mark.parametrize("modulus", [1, 0, -1])
+def test_crt_bad_modulus(func, modulus):
+    kwargs = (
+        {"factors": [70, 21, 15], "final_modulus": 105} if func is add_crt_calc else {}
+    )
+    with pytest.raises(BadModulusError, match="Moduli must be greater than one"):
+        func(Circuit(), [], [3, modulus, 7], **kwargs)
+
+
+@pytest.mark.parametrize("modulus", [0, -1])
+def test_crt_calc_bad_final_modulus(modulus):
+    with pytest.raises(BadModulusError, match="Final modulus must be positive"):
+        add_crt_calc(Circuit(), [], [3, 5, 7], [70, 21, 15], modulus)
+
+
+@pytest.mark.parametrize("func", [add_crt, add_crt_calc])
+@pytest.mark.parametrize("input_len", [0, 7, 9])
+def test_crt_bad_input_length(func, input_len):
+    ckt = Circuit()
+    input_labels = [f'x{i}' for i in range(input_len)]
+    for label in input_labels:
+        ckt.add_gate(Gate(label, INPUT))
+
+    kwargs = (
+        {"factors": [70, 21, 15], "final_modulus": 105} if func is add_crt_calc else {}
+    )
+    with pytest.raises(BadShapesError, match=f"Expected 8 input bits, got {input_len}"):
+        func(ckt, iter(input_labels), [3, 5, 7], **kwargs)
+
+
 @pytest.mark.parametrize("basis", [GenerationBasis.XAIG, "AIG"])
 @pytest.mark.parametrize("big_endian", [True, False])
-def test_crt(func, basis, big_endian):
-    moduli = [3, 5, 7]
-    factors = [70, 21, 15, 105]
+@pytest.mark.parametrize(
+    "func, moduli, factors, final_modulus",
+    [
+        (func, *case)
+        for func in [add_crt, add_crt_calc]
+        for case in [
+            ([3, 5, 7], [70, 21, 15], 105),
+            ([2], [1], 2),
+            ([4], [1], 4),
+            ([8], [1], 8),
+        ]
+    ]
+    + [
+        (add_crt_calc, [3, 5], [20, 12], 30),
+        (add_crt_calc, [4, 6], [3, 10], 12),
+        (add_crt_calc, [3, 5, 4], [10, 9, 11], 15),
+        (add_crt_calc, [3, 5], [0, 0], 16),
+        (add_crt_calc, [3, 5], [10, 6], 1),
+    ],
+)
+def test_crt(func, basis, big_endian, moduli, factors, final_modulus):
     input_len = sum((modulus - 1).bit_length() for modulus in moduli)
     ckt = Circuit()
     input_labels = [f'x{i}' for i in range(input_len)]
@@ -1082,6 +1124,7 @@ def test_crt(func, basis, big_endian):
             input_labels,
             moduli,
             factors,
+            final_modulus,
             basis=basis,
             big_endian=big_endian,
         )
@@ -1093,13 +1136,20 @@ def test_crt(func, basis, big_endian):
         input_bits = []
         for residue, modulus in zip(residues, moduli):
             bit_len = (modulus - 1).bit_length()
-            input_bits.extend((residue >> bit) & 1 for bit in range(bit_len))
+            residue_bits = [(residue >> bit) & 1 for bit in range(bit_len)]
+            input_bits.extend(residue_bits[::-1] if big_endian else residue_bits)
 
-        res = ckt.evaluate(input_bits[::-1] if big_endian else input_bits)
+        res = ckt.evaluate(input_bits)
         if not big_endian:
             res.reverse()
 
-        expected = crt_naive(residues, moduli)
+        if func is add_crt:
+            expected = crt_naive(residues, moduli)
+        else:
+            expected = (
+                sum(residue * factor for residue, factor in zip(residues, factors))
+                % final_modulus
+            )
         assert to_bin(expected, len(out)) == res
 
 
