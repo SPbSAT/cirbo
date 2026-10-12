@@ -1,6 +1,17 @@
-name: Build Wheels
+name: Release
 
-on: workflow_dispatch
+# Release flow (see "Release" in README_DEV.md):
+#   push tag vX.Y.Z -> build wheels -> checks -> [approve] TestPyPI -> [approve] PyPI -> GitHub Release.
+# Manual run (workflow_dispatch) on any branch is a dry run: wheels are built and
+# checked, then available as the `wheels` artifact, nothing is published.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build_wheels:
@@ -37,7 +48,8 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.3.1
         env:
-          CIBW_BUILD: "cp3{9,10,11,12,13}-*"
+          # Free-threaded builds (cp314t) are intentionally not built.
+          CIBW_BUILD: "cp3{9,10,11,12,13,14}-*"
           CIBW_BUILD_FRONTEND: "pip"
           CIBW_BUILD_VERBOSITY: "2"
           # win32 conflicts with mockturtle
@@ -45,11 +57,27 @@ jobs:
           CIBW_SKIP: "*-win32"
           CIBW_ARCHS_MACOS: ${{ matrix.cibw_archs_macos }}
           CIBW_ARCHS_WINDOWS: "AMD64"
+          # ABC does not depend on Python version, but is compiled separately for
+          # each of them (own build tree per interpreter). ccache lets all
+          # interpreters of a job reuse the ABC objects built by the first one.
+          # If ccache is not installed, launcher is empty and build goes as usual.
+          CIBW_ENVIRONMENT_LINUX: >-
+            CMAKE_BUILD_PARALLEL_LEVEL=4
+            CMAKE_C_COMPILER_LAUNCHER=$(command -v ccache)
+            CMAKE_CXX_COMPILER_LAUNCHER=$(command -v ccache)
           CIBW_ENVIRONMENT_MACOS: >-
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}
             CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}"
-          CIBW_BEFORE_ALL_MACOS: "HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja readline"
-          CIBW_BEFORE_ALL_LINUX: "yum install -y ninja-build; python -m pip install ninja"
+            CMAKE_BUILD_PARALLEL_LEVEL=4
+            CMAKE_C_COMPILER_LAUNCHER=$(command -v ccache)
+            CMAKE_CXX_COMPILER_LAUNCHER=$(command -v ccache)
+          CIBW_BEFORE_ALL_MACOS: "HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja readline ccache"
+          # manylinux images use yum/dnf, musllinux (Alpine) uses apk.
+          CIBW_BEFORE_ALL_LINUX: >-
+            (yum install -y epel-release && yum install -y ccache) || apk add ccache || true;
+            yum install -y ninja-build; python -m pip install ninja
+          # Prints ccache hit statistics, to verify that ABC is not rebuilt.
+          CIBW_AFTER_BUILD: "ccache --show-stats || true"
           CIBW_TEST_REQUIRES: pytest mock
           CIBW_TEST_COMMAND: pytest -m "not manual" {package}/tests
           CIBW_TEST_SKIP: "*-musllinux_*"
@@ -59,10 +87,148 @@ jobs:
           config-file: "{package}/pyproject.toml"
 
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: cibw-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cmake-logs-${{ matrix.os }}
           path: |
-            wheelhouse/*.whl
             **/CMakeFiles/CMakeOutput.log
             **/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore
+
+  check_dist:
+    name: Check distribution
+    needs: build_wheels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-wheels-*
+          path: dist
+          merge-multiple: true
+
+      - name: Check version, changelog and package metadata
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "pyproject version: ${VERSION}"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            if [[ "${GITHUB_REF_NAME}" != "v${VERSION}" ]]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match pyproject version v${VERSION}"
+              exit 1
+            fi
+            if ! grep -qF "## [${VERSION}]" CHANGELOG.md; then
+              echo "::error::CHANGELOG.md has no '## [${VERSION}]' section"
+              exit 1
+            fi
+          fi
+
+          ls -l dist
+          python -m pip install twine
+          twine check --strict dist/*
+
+      # Single artifact with all wheels, can be downloaded from the run page.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels
+          path: dist/*.whl
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error
+
+  publish_testpypi:
+    name: Publish to TestPyPI
+    if: github.ref_type == 'tag'
+    needs: check_dist
+    runs-on: ubuntu-latest
+    # Environment must have required reviewers: it is the manual approval step.
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/cirbo
+    permissions:
+      id-token: write  # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  publish_pypi:
+    name: Publish to PyPI
+    if: github.ref_type == 'tag'
+    needs: publish_testpypi
+    runs-on: ubuntu-latest
+    # Environment must have required reviewers: it is the manual approval step.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/cirbo
+    permissions:
+      id-token: write  # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github_release:
+    name: Create GitHub Release
+    if: github.ref_type == 'tag'
+    needs: publish_pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create release
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels
+          path: dist
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          # Release notes: body of the `## [VERSION]` section of CHANGELOG.md.
+          awk -v header="## [${VERSION}]" '
+            index($0, "## [") == 1 {
+              if (found) exit
+              if (index($0, header) == 1) { found = 1; next }
+            }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [[ ! -s notes.md ]]; then
+            echo "::error::No release notes found for ${VERSION} in CHANGELOG.md"
+            exit 1
+          fi
+
+          flags=()
+          if [[ "${VERSION}" =~ [A-Za-z] ]]; then
+            flags+=(--prerelease)
+          fi
+
+          gh release create "${GITHUB_REF_NAME}" dist/*.whl \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            --verify-tag \
+            "${flags[@]}"

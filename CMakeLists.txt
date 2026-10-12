@@ -20,6 +20,9 @@ target_include_directories(mockturtle_wrapper PRIVATE third_party)
 
 # ABC related libs can be disabled using environment variable.
 IF(NOT DISABLE_ABC_CEXT)
+    # Do not download and configure ABC's googletest-based tests.
+    set(ABC_SKIP_TESTS ON)
+
     # Disabled because it requires gnu readline to be installed on build
     # machine, but is not necessary for the ABC compilation as library.
     set(READLINE_FOUND FALSE CACHE BOOL "" FORCE)
