@@ -4,13 +4,13 @@
 
 `Python 3.9` is used to cover all currently [maintained Python versions](https://devguide.python.org/versions/).
 
-Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
+Package is checked in CI on `Ubuntu`, `macOS` and `Windows`.
 
 1. Update submodules `git submodule update --init --recursive`
 1. Install following packages using your package manager:
     - dev version of `python3.9-dev` and `python3.9-distutils`
     - `build-essential` package for Ubuntu.
-    - `cmake` and suitable C++ compiler, e.g. `gcc`
+    - `cmake` (version `3.15` or newer) and suitable C++ compiler, e.g. `gcc`
     - `graphviz` library
 
    Command for Ubuntu:
@@ -183,7 +183,8 @@ Besides main source directory `cirbo/` this repo contains:
 GitHub Actions are used for CI. Following checks are executed automatically for
 each pull request and for each commit to the `main` branch.
 
-Flow currently runs for `ubuntu` and `macos`, for python `3.9`.
+Flow runs on `ubuntu`, `macos` (arm64 and x86_64) and `windows` for python
+`3.9` and `3.13`. Release process is described in the [Release](#release) section.
 
 CI checks include `pytest`, `mypy`, `flake8` for static code checks and `black`,
 `docformatter` and `usort` are used to check if code is formatted properly.
@@ -246,4 +247,4 @@ Notes:
 - Source distribution (sdist) is not published: it does not include C++ sources
   of extensions yet.
 - Wheels are built for CPython 3.9-3.14 on `manylinux` and `musllinux` (x86_64)
-  and macOS (x86_64, arm64). Builds and Windows are not supported yet.
+  and macOS (x86_64, arm64). Free-threaded builds and Windows are not supported yet.
