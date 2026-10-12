@@ -43,7 +43,7 @@ Prebuilt wheels (including the `ABC` and `mockturtle` extensions) are published 
 CPython 3.9–3.14 on Linux (`manylinux` and `musllinux`, x86_64) and macOS (x86_64 and arm64). Windows and other
 platforms are not supported yet.
 
-Instructions on how to set up the development environment are provided in the separate [dev README](README_DEV.md).
+Instructions on how to set up the development environment are provided in the separate [dev README](https://github.com/SPbSAT/cirbo/blob/main/README_DEV.md).
 
 ## Documentation
 
@@ -51,9 +51,9 @@ The main library features are described in the paper "Cirbo: A New Tool for Bool
 ([arXiv](https://arxiv.org/abs/2412.14933), [AAAI-25](https://ojs.aaai.org/index.php/AAAI/article/view/33207)).
 
 Currently, `cirbo` does not have web-hosted documentation, but it can be built locally using Sphinx (see
-the [dev README](README_DEV.md) for details).
+the [dev README](https://github.com/SPbSAT/cirbo/blob/main/README_DEV.md) for details).
 
-Release notes are available in [CHANGELOG.md](CHANGELOG.md) and on the
+Release notes are available in [CHANGELOG.md](https://github.com/SPbSAT/cirbo/blob/main/CHANGELOG.md) and on the
 [GitHub Releases](https://github.com/SPbSAT/cirbo/releases) page.
 
 ## Package structure
