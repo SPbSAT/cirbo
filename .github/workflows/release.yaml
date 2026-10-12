@@ -60,22 +60,26 @@ jobs:
           # ABC does not depend on Python version, but is compiled separately for
           # each of them (own build tree per interpreter). ccache lets all
           # interpreters of a job reuse the ABC objects built by the first one.
-          # If ccache is not installed, launcher is empty and build goes as usual.
+          # ccache is installed in before_all and is required: build fails without it.
+          # Launchers are passed through CMAKE_ARGS (see build.py), command
+          # substitution `$(...)` must not be used here: cibuildwheel evaluates it
+          # before before_all.
           CIBW_ENVIRONMENT_LINUX: >-
             CMAKE_BUILD_PARALLEL_LEVEL=4
-            CMAKE_C_COMPILER_LAUNCHER=$(command -v ccache)
-            CMAKE_CXX_COMPILER_LAUNCHER=$(command -v ccache)
+            CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
           CIBW_ENVIRONMENT_MACOS: >-
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}
-            CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }}"
             CMAKE_BUILD_PARALLEL_LEVEL=4
-            CMAKE_C_COMPILER_LAUNCHER=$(command -v ccache)
-            CMAKE_CXX_COMPILER_LAUNCHER=$(command -v ccache)
+            CMAKE_ARGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos_deploy_target }} -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
           CIBW_BEFORE_ALL_MACOS: "HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja readline ccache"
-          # manylinux images use yum/dnf, musllinux (Alpine) uses apk.
+          # manylinux images use yum (ccache is in EPEL), musllinux (Alpine) uses apk.
           CIBW_BEFORE_ALL_LINUX: >-
-            (yum install -y epel-release && yum install -y ccache) || apk add ccache || true;
-            yum install -y ninja-build; python -m pip install ninja
+            if command -v apk >/dev/null 2>&1;
+            then apk add ccache;
+            else yum install -y epel-release && yum install -y ccache;
+            fi
+            && (yum install -y ninja-build || true)
+            && python -m pip install ninja
           # Prints ccache hit statistics, to verify that ABC is not rebuilt.
           CIBW_AFTER_BUILD: "ccache --show-stats || true"
           CIBW_TEST_REQUIRES: pytest mock
