@@ -221,10 +221,25 @@ Release process:
    Wheels are uploaded to [PyPI](https://pypi.org/project/cirbo/) and a GitHub
    Release with notes from `CHANGELOG.md` and attached wheels is created.
 
+Release candidates:
+
+A candidate goes through the same process, only the version is `X.Y.ZrcN`
+(canonical PEP 440 form, e.g. `1.1.0rc1`) everywhere: `version` in `pyproject.toml`,
+tag `v1.1.0rc1` and section `## [1.1.0rc1] - YYYY-MM-DD` in `CHANGELOG.md`
+(keep an empty `## [Unreleased]` above it). GitHub Release is marked as pre-release,
+and `pip` installs it only with `--pre` or an exact version.
+
+To replace a candidate with the full release:
+
+1. Make a PR which sets `version = "X.Y.Z"` and merges all `rc` sections of
+   `CHANGELOG.md` into a single `## [X.Y.Z] - YYYY-MM-DD` section (full list of
+   changes since the previous release, `rc` sections are removed).
+1. Tag `vX.Y.Z` from `main` and follow the usual process above.
+
 Notes:
 
-- Versions are immutable on PyPI and TestPyPI: a broken release is fixed by
-  a new version (use a pre-release tag like `vX.Y.ZrcN` to rehearse the flow).
+- Versions are immutable on PyPI and TestPyPI: a broken release or candidate is
+  fixed by a new version, every attempt needs a new `rcN`.
 - Manual run of the workflow (`Actions` -> `Release` -> `Run workflow`) on any
   branch is a dry run: it builds and checks wheels, but publishes nothing.
   All built wheels are available as the `wheels` artifact on the run page.

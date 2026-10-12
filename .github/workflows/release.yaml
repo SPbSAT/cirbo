@@ -186,7 +186,11 @@ jobs:
           name: wheels
           path: dist
 
+      # `skip-existing` allows to finish an interrupted upload by re-running
+      # failed jobs: the artifact is the same, so already uploaded files are identical.
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
 
   github_release:
     name: Create GitHub Release
