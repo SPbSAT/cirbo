@@ -4,24 +4,25 @@
 
 `Python 3.9` is used to cover all currently [maintained Python versions](https://devguide.python.org/versions/).
 
-Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
+Package is checked in CI on `Ubuntu`, `macOS` and `Windows`.
 
 1. Update submodules `git submodule update --init --recursive`
 1. Install following packages using your package manager:
-   - dev version of `python3.9-dev` and `python3.9-distutils`
-   - `build-essential` package for Ubuntu.
-   - `cmake` and suitable C++ compiler, e.g. `gcc`
-   - `graphviz` library
+    - dev version of `python3.9-dev` and `python3.9-distutils`
+    - `build-essential` package for Ubuntu.
+    - `cmake` (version `3.15` or newer) and suitable C++ compiler, e.g. `gcc`
+    - `graphviz` library
 
    Command for Ubuntu:
    ```shell
    sudo apt install python3-dev python3.9-dev python3.9-distutils gcc cmake graphviz build-essential
    ```
-   
+
    > Note: python3.9 is unavailable in latest versions of Ubuntu, so `deadsnakes`
    > ppa may be useful: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
 
-1. Install `poetry` ([official instruction](https://python-poetry.org/docs/)) (`cirbo` requires `poetry` version to be `>= 2.0.0`)
+1. Install `poetry` ([official instruction](https://python-poetry.org/docs/)) (`cirbo` requires `poetry` version to be
+   `>= 2.0.0`)
 1. Build dist with extensions locally by running `poetry build`
 
    > Note: building `ABC` extension may take long time, one can skip it
@@ -30,7 +31,7 @@ Package was tested on `Ubuntu` and `Mac OS Ventura 13` machines.
 
 1. Setup virtual environment by running `poetry install`
 1. Execute `poetry env activate`
-1. Enable virtual environment using command, which was printed by previous command. 
+1. Enable virtual environment using command, which was printed by previous command.
 
 > Note: it may be necessary to restart an IDE after extensions
 > are built and installed to refresh its index and stubs.
@@ -57,19 +58,18 @@ To build the dependencies, run `poetry build`, and then install the package with
 One should follow simple rules:
 
 1. For each public function unit tests should be written, covering:
-   1. main usage cases.
-   2. corner cases.
-   3. wrong usage behaviour.
+    1. main usage cases.
+    2. corner cases.
+    3. wrong usage behaviour.
 2. Type hints must be specified for all arguments and return values, as well
-as for class attributes. Typehints for local variables are also welcome when
-well-placed, but not obligatory.
+   as for class attributes. Typehints for local variables are also welcome when
+   well-placed, but not obligatory.
 3. All public Python objects (functions, classes, modules) must have docstrings.
-For private and protected objects docstrings are encouraged but not obligatory.
+   For private and protected objects docstrings are encouraged but not obligatory.
 4. All Python modules should include `__all__` definition, to avoid occasional
-export of unwanted objects (e.g. export of imported objects).
+   export of unwanted objects (e.g. export of imported objects).
 5. Import of "all" objects (`from x import *`) must not be used.
-6. All standard libraries should be imported as packages
-(e.g. `import itertools`).
+6. All standard libraries should be imported as packages (e.g. `import itertools`).
 7. For package `typing` shortening `tp` should be used (`import typing as tp`).
 
 ## Checks
@@ -113,13 +113,15 @@ Tests are written and executed using `pytest`.
 To execute unit tests run `poetry run pytest`.
 To execute all tests run `poetry run pytest -m 'not manual'`.
 
-In addition to the standard tests, there are optional slow tests that interact with circuit databases. 
+In addition to the standard tests, there are optional slow tests that interact with circuit databases.
 These tests require the corresponding database files. To execute these tests, use the following command:
 
 ```
 poetry run pytest tests/ -m "db_xaig or db_aig" --db-xaig-path /path/to/xaig_db.bin --db-aig-path /path/to/aig_db.bin
 ```
-Replace `/path/to/xaig_db.bin` and `/path/to/aig_db.bin` with the actual paths to your XAIG and AIG database files, respectively.
+
+Replace `/path/to/xaig_db.bin` and `/path/to/aig_db.bin` with the actual paths to your XAIG and AIG database files,
+respectively.
 
 Tests are located at the `tests` subdirectory, and should be written for all
 functionalities of the package. Also, directory structure of `tests` should
@@ -130,8 +132,8 @@ repeat structure of main `cirbo` package.
 To add or update python dependencies do the following:
 
 1. Use `poetry add <package>` to add new dependency. To add dev-only dependency
-use `poetry add <package> --group dev`. To update package version to the latest
-of available execute `poetry update <package>`.
+   use `poetry add <package> --group dev`. To update package version to the latest
+   of available execute `poetry update <package>`.
 2. Commit changed `pyproject.toml` and `poetry.lock`.
 
 If conflict occurred during merge request, one should repeat both steps above
@@ -165,24 +167,84 @@ To do it simply navigate to `docs/` and execute `make html`.
 ## Dev Directories
 
 Besides main source directory `cirbo/` this repo contains:
-  - Directory `tutorial/` with several library usage examples.
-  - Directory `extensions/` with C/C++ extensions written using `pybind11`.
+
+- Directory `tutorial/` with several library usage examples.
+- Directory `extensions/` with C/C++ extensions written using `pybind11`.
   Those extensions allow usage of `ABC` and `mockturtle` within python env.
-  - Directory `third_party/` with all third party libraries (excluding ones
+- Directory `third_party/` with all third party libraries (excluding ones
   installed form `pypi`) distributed alongside current zip archive (whilts
   originally those dependencies are managed using `git submodule`). Those
   include: `ABC`, `mockturtle` and `pybind11`.
-  - Directory `tools/` with utilities helpful for running linting checks or formatters.
-  - Directory `tests/` with all tests that cover both `cirbo/` and `extensions/`.
+- Directory `tools/` with utilities helpful for running linting checks or formatters.
+- Directory `tests/` with all tests that cover both `cirbo/` and `extensions/`.
 
 ## CI flow
 
 GitHub Actions are used for CI. Following checks are executed automatically for
 each pull request and for each commit to the `main` branch.
 
-Flow currently runs for `ubuntu` and `macos`, for python `3.9`.
+Flow runs on `ubuntu`, `macos` (arm64 and x86_64) and `windows` for python
+`3.9` and `3.13`. Release process is described in the [Release](#release) section.
 
 CI checks include `pytest`, `mypy`, `flake8` for static code checks and `black`,
 `docformatter` and `usort` are used to check if code is formatted properly.
 
 Configuration of listed tools is located in `pyproject.toml`.
+
+## Release
+
+Wheels are built and published to PyPI by the `Release` GitHub Actions workflow (`.github/workflows/release.yaml`),
+nothing is built or uploaded from a local machine.
+A full build takes about an hour or more, mostly because of `ABC` compilation for each
+supported platform.
+
+Release process:
+
+1. Prepare a PR which sets the new `version` in `pyproject.toml` and renames
+   the `## [Unreleased]` section of `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`
+   (the section is used as GitHub Release notes). Merge it to `main`.
+1. Create and push a tag from the merged `main`:
+   ```shell
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+1. The workflow builds wheels for all supported platforms and Python versions and
+   checks them: tag must match `version` in `pyproject.toml`, `CHANGELOG.md`
+   must contain the section of this version, `twine check --strict` must pass.
+1. Approve the `testpypi` deployment in the workflow run. Wheels are uploaded to
+   [TestPyPI](https://test.pypi.org/project/cirbo/).
+1. Check the installation using some fresh virtual environment:
+   ```shell
+   python -m pip install --no-cache-dir -i https://test.pypi.org/simple/ \
+       --extra-index-url https://pypi.org/simple/ cirbo==X.Y.Z
+   python -c "import cirbo, abc_wrapper, mockturtle_wrapper"
+   ```
+1. Approve the `pypi` deployment (or reject it, if TestPyPI check has failed).
+   Wheels are uploaded to [PyPI](https://pypi.org/project/cirbo/) and a GitHub
+   Release with notes from `CHANGELOG.md` and attached wheels is created.
+
+Release candidates:
+
+A candidate goes through the same process, only the version is `X.Y.ZrcN`
+(canonical PEP 440 form, e.g. `1.1.0rc1`) everywhere: `version` in `pyproject.toml`,
+tag `v1.1.0rc1` and section `## [1.1.0rc1] - YYYY-MM-DD` in `CHANGELOG.md`
+(keep an empty `## [Unreleased]` above it). GitHub Release is marked as pre-release,
+and `pip` installs it only with `--pre` or an exact version.
+
+To replace a candidate with the full release:
+
+1. Make a PR which sets `version = "X.Y.Z"` and merges all `rc` sections of
+   `CHANGELOG.md` into a single `## [X.Y.Z] - YYYY-MM-DD` section (full list of
+   changes since the previous release, `rc` sections are removed).
+1. Tag `vX.Y.Z` from `main` and follow the usual process above.
+
+Notes:
+
+- Versions are immutable on PyPI and TestPyPI: a broken release or candidate is
+  fixed by a new version, every attempt needs a new `rcN`.
+- Manual run of the workflow (`Actions` -> `Release` -> `Run workflow`) on any
+  branch is a dry run: it builds and checks wheels, but publishes nothing.
+  All built wheels are available as the `wheels` artifact on the run page.
+- Source distribution (sdist) is not published: it does not include C++ sources
+  of extensions yet.
+- Wheels are built for CPython 3.9-3.14 on `manylinux` and `musllinux` (x86_64)
+  and macOS (x86_64, arm64). Free-threaded builds and Windows are not supported yet.
