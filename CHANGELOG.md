@@ -25,9 +25,18 @@ workflow uses it as GitHub Release notes (see "Release" in `README_DEV.md`).
   `add_dadda_karatsuba`, signed `add_smul_dadda` / `add_smul_wallace`,
   `add_mul_constant`; functions with a final adder accept `sum_func`.
 - `SquareMode.DADDA` / `add_square_dadda` (#143).
+- Division by a constant: `add_div_mod_by_const` computes quotient and remainder of
+  an unsigned number by a non-zero constant using multiplication; `BadDivisorError`
+  is raised for non-positive divisors (#146).
+- `add_div_mod` / `generate_div_mod` accept `zero_div` (`False` maps division by zero
+  to the dividend instead of zero) and a divisor shorter than the dividend: the
+  remainder then has the width of the divisor (#146).
+- Chinese remainder theorem: `add_crt` and `add_crt_calc` (precomputed factors)
+  reconstruct a number from its residues, `modular_inverse` is a helper;
+  `BadModulusError` is raised for invalid moduli (#147).
 - AIG basis (`basis="AIG"`) for summation, subtraction, multiplication (`DEFAULT`, `DADDA`, `WALLACE`, `POW2_M1`),
-  squaring (`POW2_M1`, `DADDA`) and
-  square root (#133, #136, #138, #143, #144). Other combinations (`MulMode.KARATSUBA`, `MulMode.ALTER`,
+  squaring (`POW2_M1`, `DADDA`), square root, division with remainder and CRT
+  (#133, #136, #138, #143, #144, #146, #147). Other combinations (`MulMode.KARATSUBA`, `MulMode.ALTER`,
   `SquareMode.DEFAULT`) raise `BadBasisError`.
 
 #### Core, SAT and integrations
