@@ -14,93 +14,88 @@ workflow uses it as GitHub Release notes (see "Release" in `README_DEV.md`).
 
 #### Synthesis
 
-- `generate_circuit_pm1971`: solver-free synthesis by Preparata and Muller (1971),
-  depth at most `n + 1` for up to `2**8 + 8` inputs (#131).
-- Log-depth summation (#133): `add_sum_two_numbers_log_depth` (Kogge-Stone),
-  `..._brent_kung`, `..._krapchenko`, `add_sum_n_weighted_bits_log_depth`,
-  `mdfa_sum_weighted_bits` (XAIG only), helper `xor_two_bits`.
-- Log-depth subtraction: `add_sub_two_numbers_log_depth`,
+- Added depth-oriented synthesis of Boolean functions by Preparata and Muller (1971):
+  `generate_circuit_pm1971` (#131).
+- Added logarithmic-depth adders (Kogge-Stone, Brent-Kung, Krapchenko) and a
+  logarithmic-depth sum of weighted bits: `add_sum_two_numbers_log_depth`,
+  `add_sum_two_numbers_log_depth_brent_kung`,
+  `add_sum_two_numbers_log_depth_krapchenko`, `add_sum_n_weighted_bits_log_depth`,
+  `mdfa_sum_weighted_bits` (#133).
+- Added logarithmic-depth subtraction: `add_sub_two_numbers_log_depth` and
   `add_subtract_with_compare_log_depth` (#136).
-- Multiplication (#138): `add_mul_log_depth_sum`, `add_simple_karatsuba`,
-  `add_dadda_karatsuba`, signed `add_smul_dadda` / `add_smul_wallace`,
-  `add_mul_constant`; functions with a final adder accept `sum_func`.
-- `SquareMode.DADDA` / `add_square_dadda` (#143).
-- Division by a constant: `add_div_mod_by_const` computes quotient and remainder of
-  an unsigned number by a non-zero constant using multiplication; `BadDivisorError`
-  is raised for non-positive divisors (#146).
-- `add_div_mod` / `generate_div_mod` accept `zero_div` (`False` maps division by zero
-  to the dividend instead of zero) and a divisor shorter than the dividend: the
-  remainder then has the width of the divisor (#146).
-- Chinese remainder theorem: `add_crt` and `add_crt_calc` (precomputed factors)
-  reconstruct a number from its residues, `modular_inverse` is a helper;
-  `BadModulusError` is raised for invalid moduli (#147).
-- AIG basis (`basis="AIG"`) for summation, subtraction, multiplication (`DEFAULT`, `DADDA`, `WALLACE`, `POW2_M1`),
-  squaring (`POW2_M1`, `DADDA`), square root, division with remainder and CRT
-  (#133, #136, #138, #143, #144, #146, #147). Other combinations (`MulMode.KARATSUBA`, `MulMode.ALTER`,
-  `SquareMode.DEFAULT`) raise `BadBasisError`.
+- Added new multiplication algorithms: logarithmic-depth, Karatsuba variants, signed
+  Dadda and Wallace, and multiplication by a constant (`add_mul_log_depth_sum`,
+  `add_simple_karatsuba`, `add_dadda_karatsuba`, `add_smul_dadda`, `add_smul_wallace`,
+  `add_mul_constant`) (#138).
+- Added Dadda squaring: `SquareMode.DADDA` and `add_square_dadda` (#143).
+- Added division with remainder by a constant: `add_div_mod_by_const` (#146).
+- Added `zero_div` option to `add_div_mod` and `generate_div_mod` (division by zero
+  returns the dividend instead of zero) and support of a divisor shorter than the
+  dividend (#146).
+- Added number reconstruction from residues by the Chinese remainder theorem:
+  `add_crt`, `add_crt_calc` and `modular_inverse` (#147).
+- Added AIG basis (`basis="AIG"`) for summation, subtraction, multiplication,
+  squaring, square root, division with remainder and CRT (#133, #136, #138, #143,
+  #144, #146, #147). Karatsuba and Alter multiplication and default squaring still
+  support only XAIG.
 
 #### Core, SAT and integrations
 
-- `Circuit.get_depth(exclusion_list=...)`. Only effective operands count (`LNOT`/`LIFF` use the first one, `RNOT`/`RIFF`
-  the second), constants have
-  depth 0, and by default `NOT`, `LNOT`, `RNOT`, `IFF`, `LIFF`, `RIFF` do not add
-  to depth; pass `exclusion_list=()` to count every gate (#133, #125).
-- `cirbo.sat.check_circuits_equivalence` (#125).
-- `cirbo.integrations.abc`: `abc_transform`, `ABCCommand` (composable with `>>`),
-  `ABCUnavailableError` (#125).
+- Added `Circuit.get_depth`. By default negations and identity gates (`NOT`, `LNOT`,
+  `RNOT`, `IFF`, `LIFF`, `RIFF`) do not add to depth; pass `exclusion_list=()` to
+  count every gate (#133, #125).
+- Added `check_circuits_equivalence` which checks equivalence of two circuits with
+  a SAT solver (#125).
+- Added `cirbo.integrations.abc` with `abc_transform` and `ABCCommand` for composing
+  ABC commands with `>>` (#125).
 
 #### Circuit minimization
 
-- Metaheuristic search in `cirbo.minimization`: `optimize`, `SearchConfig`,
-  `MultiStartRandomWalk`, custom mutations (`CircuitMutation`,
-  `TransformerMutation`) and Pareto frontiers (`InstanceFrontier`,
-  `ParetoFrontier`) (#125).
-- `ABCHeavyMutation` and `ABC_HEAVY_COMMANDS`: mutations based on ABC scripts (#125).
-- IWLS 2026 `ex215` benchmarks (MIT) in `cirbo/data/ex215_frontier` (~300 KiB)
-  and tutorials for the features above (#125).
+- Added metaheuristic search for circuit minimization: `optimize`, search
+  strategies, custom mutations and Pareto frontiers of circuit size and depth (#125).
+- Added mutations based on ABC command scripts: `ABCHeavyMutation` (#125).
+- Added IWLS 2026 `ex215` benchmark circuits to the package data (about 300 KiB)
+  (#125).
 
 ### Changed
 
-- **`MulMode.DADDA` / `MulMode.WALLACE` use a log-depth final adder by default**:
-  more gates, much lower depth (32x32 size/depth: Dadda 5952/185 -> 6760/37,
-  Wallace 6207/127 -> 6906/38). Pass `sum_func=add_sum_two_numbers` for the
-  previous ripple-carry adder (#138).
-- `add_sum_n_bits` circuits are shallower at the same size (128 bits: depth
-  134 -> 128); `add_sum_n_weighted_bits`, and so `MulMode.DEFAULT` and Karatsuba,
-  are slightly smaller and shallower (32x32 default: 5503 -> 5487 gates, depth
-  710 -> 655) (#133).
-- `abc_transform` moved from `extensions.abc_wrapper.src.abc` to
-  `cirbo.integrations.abc`; raises `ABCUnavailableError` if ABC is not built (#125).
-- `abc_wrapper.run_abc_commands_c` raises `RuntimeError` when the network cannot
-  be read or an ABC command fails (errors were ignored before) (#135).
-- Parser progress is logged at `DEBUG` instead of `INFO`; `Circuit.save_to_file`
-  and `resolve_default_data_path` accept `str` and path-like objects (#125).
-- Dependencies: `python-sat >= 1.9.dev7` (was `>= 1.8.dev26`) (#128, #145),
-  updated `ABC` (#135) and `pybind11` 3.0.4.
+- Changed `MulMode.DADDA` and `MulMode.WALLACE` to use a logarithmic-depth final
+  adder by default: circuits have more gates, but much lower depth. Pass
+  `sum_func=add_sum_two_numbers` to get the previous circuits (#138).
+- Made `add_sum_n_bits` circuits shallower and `add_sum_n_weighted_bits` circuits
+  (and so default and Karatsuba multiplication) slightly smaller and shallower (#133).
+  Size / depth of 32x32 multipliers:
+
+  | `generate_mul(32, 32, type=...)` | Before     | After      |
+  |----------------------------------|------------|------------|
+  | `MulMode.DADDA`                  | 5952 / 185 | 6760 / 37  |
+  | `MulMode.WALLACE`                | 6207 / 127 | 6906 / 38  |
+  | `MulMode.DEFAULT`                | 5503 / 710 | 5487 / 655 |
+
+- Moved `abc_transform` from `extensions.abc_wrapper.src.abc` to
+  `cirbo.integrations.abc` (#125).
+- Stopped silently ignoring errors of ABC commands (#135).
+- Parser progress is now logged at `DEBUG` instead of `INFO` level (#125).
+- Raised minimal `python-sat` version to `1.9.dev7` and updated bundled ABC
+  (#128, #135).
 
 ### Fixed
 
-- `add_subtract_with_compare` gave wrong results with `big_endian=True` and
+- Fixed wrong result of `add_subtract_with_compare` with `big_endian=True` and
   operands of different lengths (#136).
-- `add_sum_two_numbers_with_shift` raised `CircuitValidationError` when `shift`
-  was larger than the first operand (#138).
-- `add_sum_n_weighted_bits_naive` ignored `basis="AIG"` passed as a string and
-  generated XAIG gates (#133).
-- `abc_wrapper`: circuits larger than the internal 4 MiB buffer were truncated,
-  buffers were leaked, and ABC's `-fno-exceptions` leaked into the wrapper (#135).
-- `python-sat` was pinned to an exact version by mistake (#145).
+- Fixed `add_sum_two_numbers_with_shift` failing when the shift is larger than the
+  first operand (#138).
+- Fixed `add_sum_n_weighted_bits_naive` ignoring `basis="AIG"` passed as a string
+  (#133).
+- Fixed truncation of circuits larger than 4 MiB in the ABC wrapper (#135).
 
 ### Build and release
 
-- Python 3.14 wheels (pybind11 >= 3.0).
-- `build.py` passes `Python_EXECUTABLE`: pybind11 >= 3.0 ignores
-  `PYTHON_EXECUTABLE` and could pick another interpreter from `PATH`.
-- Wheel builds reuse ABC objects between Python versions (ccache) and no longer
-  download `googletest`.
-- Release is done by the `Release` GitHub Actions workflow: TestPyPI, PyPI and
-  GitHub Release instead of manual upload.
+- Added wheels for Python 3.14.
+- Added `Release` GitHub Actions workflow which publishes wheels to TestPyPI and PyPI
+  and creates a GitHub Release.
 
 ## [1.0.0] - 2026-02-08
 
-First release with prebuilt wheels on PyPI (CPython 3.9-3.13, manylinux,
-musllinux, macOS x86_64 and arm64).
+First release with prebuilt wheels on PyPI (CPython 3.9-3.13, manylinux, musllinux,
+macOS x86_64 and arm64).
