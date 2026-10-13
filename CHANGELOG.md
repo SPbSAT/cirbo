@@ -10,7 +10,7 @@ workflow uses it as GitHub Release notes (see "Release" in `README_DEV.md`).
 
 ## [Unreleased]
 
-## [1.1.0rc1] - 2026-10-13
+## [1.1.0] - 2026-10-13
 
 ### Added
 
