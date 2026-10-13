@@ -10,6 +10,8 @@ workflow uses it as GitHub Release notes (see "Release" in `README_DEV.md`).
 
 ## [Unreleased]
 
+## [1.1.0rc1] - 2026-10-13
+
 ### Added
 
 #### Synthesis
@@ -62,22 +64,21 @@ workflow uses it as GitHub Release notes (see "Release" in `README_DEV.md`).
 - Changed `MulMode.DADDA` and `MulMode.WALLACE` to use a logarithmic-depth final
   adder by default: circuits have more gates, but much lower depth. Pass
   `sum_func=add_sum_two_numbers` to get the previous circuits (#138).
-- Made `add_sum_n_bits` circuits shallower and `add_sum_n_weighted_bits` circuits
-  (and so default and Karatsuba multiplication) slightly smaller and shallower (#133).
+- Made `add_sum_n_bits` circuits shallower and `add_sum_n_weighted_bits` circuits (and so default and Karatsuba
+  multiplication) slightly smaller and shallower (#133).
   Size / depth of 32x32 multipliers:
 
-  | `generate_mul(32, 32, type=...)` | Before     | After      |
-  |----------------------------------|------------|------------|
-  | `MulMode.DADDA`                  | 5952 / 185 | 6760 / 37  |
-  | `MulMode.WALLACE`                | 6207 / 127 | 6906 / 38  |
-  | `MulMode.DEFAULT`                | 5503 / 710 | 5487 / 655 |
+| `generate_mul(32, 32, type=...)` | Before     | After      |
+|----------------------------------|------------|------------|
+| `MulMode.DADDA`                  | 5952 / 185 | 6760 / 37  |
+| `MulMode.WALLACE`                | 6207 / 127 | 6906 / 38  |
+| `MulMode.DEFAULT`                | 5503 / 710 | 5487 / 655 |
 
 - Moved `abc_transform` from `extensions.abc_wrapper.src.abc` to
   `cirbo.integrations.abc` (#125).
 - Stopped silently ignoring errors of ABC commands (#135).
 - Parser progress is now logged at `DEBUG` instead of `INFO` level (#125).
-- Raised minimal `python-sat` version to `1.9.dev7` and updated bundled ABC
-  (#128, #135).
+- Raised minimal `python-sat` version to `1.9.dev7` and updated bundled ABC (#128, #135).
 
 ### Fixed
 
@@ -85,8 +86,7 @@ workflow uses it as GitHub Release notes (see "Release" in `README_DEV.md`).
   operands of different lengths (#136).
 - Fixed `add_sum_two_numbers_with_shift` failing when the shift is larger than the
   first operand (#138).
-- Fixed `add_sum_n_weighted_bits_naive` ignoring `basis="AIG"` passed as a string
-  (#133).
+- Fixed `add_sum_n_weighted_bits_naive` ignoring `basis="AIG"` passed as a string (#133).
 - Fixed truncation of circuits larger than 4 MiB in the ABC wrapper (#135).
 
 ### Build and release

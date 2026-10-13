@@ -1,6 +1,6 @@
 [project]
 name = "cirbo"
-version = "1.0.0"
+version = "1.1.0rc1"
 requires-python = ">= 3.9"
 description = "A New Tool for Boolean Circuit Analysis and Synthesis."
 authors = [
