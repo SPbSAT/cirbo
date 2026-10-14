@@ -5,7 +5,6 @@ import logging
 import multiprocessing as mp
 import os
 import typing as tp
-
 from concurrent.futures import TimeoutError
 
 import pebble
@@ -428,7 +427,7 @@ class CircuitFinderSat:
         # each output is computed somewhere
         for h in self._outputs:
             self._add_exactly_one_of(
-                [self._output_gate_variable(h, gate) for gate in self._internal_gates]
+                [self._output_gate_variable(h, gate) for gate in self._gates]
             )
 
         # truth values for inputs
@@ -466,7 +465,7 @@ class CircuitFinderSat:
             for t in range(1 << self._boolean_function.input_size):
                 if self._output_truth_tables[h][t] == DontCare:
                     continue
-                for gate in self._internal_gates:
+                for gate in self._gates:
                     self._cnf.append(
                         [
                             -self._output_gate_variable(h, gate),
@@ -632,5 +631,10 @@ class CircuitFinderSat:
         for h in self._outputs:
             for gate in self._gates:
                 if self._output_gate_variable(h, gate) in model:
-                    initial_circuit.mark_as_output('s' + str(gate))
+                    if gate in self._input_gates:
+                        initial_circuit.mark_as_output(str(gate))
+                    else:
+                        initial_circuit.mark_as_output("s" + str(gate))
+
+                    break
         return initial_circuit
